@@ -1,14 +1,15 @@
 const express = require("express");
 const ExcelJS = require("exceljs");
 const fs = require("fs");
-const cors=require('cors');
+const cors = require('cors');
 const app = express();
 const PORT = 5000;
-const connectDB=require('./config/db');
-const TaxInvoiceRegister=require('./model/taxInvoiceRegisterSchema');
-const dotenv=require('dotenv').config();
-
-
+const connectDB = require('./config/db');
+const TaxInvoiceRegister = require('./model/taxInvoiceRegisterSchema');
+const dotenv = require('dotenv').config();
+const Site = require('./model/Site');
+const upload = require('./config/multer')
+const checkCloudinaryConnection =require('./config/cloudinaryCheck')
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -137,8 +138,8 @@ app.post("/add-items", async (req, res) => {
   }
 });
 //  Register Tax Invoice 
-app.post("/tax-invoice-register",async (req,res)=>{
-   try {
+app.post("/tax-invoice-register", async (req, res) => {
+  try {
     const formData = req.body;
 
     const {
@@ -260,7 +261,7 @@ app.post("/tax-invoice-register",async (req,res)=>{
     await workbook.xlsx.writeFile(filePath);
 
     // FOr the save in MongoDB
-     // Find existing invoice
+    // Find existing invoice
     const existingInvoice = await TaxInvoiceRegister.findOne({
       invoiceNumber: invoiceNumber.trim(),
     });
@@ -272,7 +273,7 @@ app.post("/tax-invoice-register",async (req,res)=>{
         formData,
         { new: true }
       );
-    }   else {
+    } else {
       // CREATE new record
       const newInvoice = new TaxInvoiceRegister(formData);
       await newInvoice.save();
@@ -388,17 +389,17 @@ app.get("/tax-invoice-register/:taxInvoiceId", async (req, res) => {
     });
   }
 });
-// Get Total  Tax Invoice Register
+// Get Total  Tax Invoice Register Data
 app.get("/total-tax-invoice-register", async (req, res) => {
   try {
     const total = await TaxInvoiceRegister.countDocuments();
-    const taxInvoiceList=await TaxInvoiceRegister.find(); 
-    
+    const taxInvoiceList = await TaxInvoiceRegister.find();
+
     console.log(taxInvoiceList);
     res.status(200).json({
       message: "Total Tax Invoice Register in DB",
       total: total,
-      taxInvoiceList:taxInvoiceList
+      taxInvoiceList: taxInvoiceList
     });
 
   } catch (error) {
@@ -410,6 +411,408 @@ app.get("/total-tax-invoice-register", async (req, res) => {
     });
   }
 });
+// Insert Bulk Tax invoice Data
+app.post("/bulk-tax-invoice-register", async (req, res) => {
+  try {
+    const invoices = req.body;
+
+    if (!Array.isArray(invoices) || invoices.length === 0) {
+      return res.status(400).json({
+        message: "Please send an array of invoice data",
+      });
+    }
+
+    // Optional: auto calculate materialDifference
+    const formattedInvoices = invoices.map((invoice) => {
+      let materialDifference = "No Difference";
+
+      if (
+        invoice.quantitySent &&
+        invoice.quantityReceived &&
+        Number(invoice.quantitySent) !== Number(invoice.quantityReceived)
+      ) {
+        materialDifference = "Difference Found";
+      }
+
+      return {
+        ...invoice,
+        materialDifference,
+      };
+    });
+
+    // Insert all records at once
+    const savedData = await TaxInvoiceRegister.insertMany(
+      formattedInvoices
+    );
+
+    res.status(201).json({
+      message: "Bulk Tax Invoice Register saved successfully 🚀",
+      totalInserted: savedData.length,
+      data: savedData,
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+});
+// Deleted the  Tax Invoice Record
+app.delete("/delete-tax-invoice/:taxInvoiceId", async (req, res) => {
+  try {
+    const { taxInvoiceId } = req.params;
+
+    if (!taxInvoiceId) {
+      return res.status(400).json({
+        message: "Tax Invoice ID is required",
+      });
+    }
+
+    // Find and delete by MongoDB _id
+    const deletedInvoice = await TaxInvoiceRegister.findByIdAndDelete(
+      taxInvoiceId
+    );
+
+    if (!deletedInvoice) {
+      return res.status(404).json({
+        message: "Tax Invoice not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Tax Invoice deleted successfully 🚀",
+      data: deletedInvoice,
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+});
+// Convert Data into excel  sheet
+app.get("/export-tax-invoice-excel", async (req, res) => {
+  try {
+    const invoices = await TaxInvoiceRegister.find();
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Tax Invoice Register");
+
+    // Header Row
+    worksheet.columns = [
+      { header: "Invoice Date", key: "invoiceDate", width: 18 },
+      { header: "Invoice Number", key: "invoiceNumber", width: 25 },
+      { header: "Invoice Amount", key: "invoiceAmount", width: 18 },
+      { header: "Vendor Name", key: "vendorName", width: 35 },
+      { header: "Project Site", key: "projectSite", width: 30 },
+      { header: "Challan Created", key: "challanCreated", width: 18 },
+      { header: "Challan Number", key: "challanNumber", width: 25 },
+      { header: "Challan Date", key: "challanDate", width: 18 },
+      { header: "Delivery Status", key: "deliveryStatus", width: 18 },
+      { header: "Quantity Sent", key: "quantitySent", width: 18 },
+      { header: "Quantity Received", key: "quantityReceived", width: 20 },
+      { header: "Material Difference", key: "materialDifference", width: 20 }
+    ];
+
+    // Add Data Rows
+    invoices.forEach((invoice) => {
+      worksheet.addRow({
+        invoiceDate: invoice.invoiceDate,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceAmount: invoice.invoiceAmount,
+        vendorName: invoice.vendorName,
+        projectSite: invoice.projectSite,
+        challanCreated: invoice.challanCreated,
+        challanNumber: invoice.challanNumber,
+        challanDate: invoice.challanDate,
+        deliveryStatus: invoice.deliveryStatus,
+        quantitySent: invoice.quantitySent,
+        quantityReceived: invoice.quantityReceived,
+        materialDifference: invoice.materialDifference
+      });
+    });
+
+    // Response Headers
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=TaxInvoiceRegister.xlsx"
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message
+    });
+  }
+});
+// Filter  Tax invoice list
+app.get("/tax-invoice-register", async (req, res) => {
+  try {
+    const filters = req.query;
+
+    let query = {};
+
+    if (filters.invoiceNumber) {
+      query.invoiceNumber = filters.invoiceNumber;
+    }
+
+    if (filters.vendorName) {
+      query.vendorName = filters.vendorName;
+    }
+
+    if (filters.projectSite) {
+      query.projectSite = filters.projectSite;
+    }
+
+    if (filters.deliveryStatus) {
+      query.deliveryStatus = filters.deliveryStatus;
+    }
+
+    if (filters.invoiceDate) {
+      query.invoiceDate = filters.invoiceDate;
+    }
+
+    if (filters.challanNumber) {
+      query.challanNumber = filters.challanNumber;
+    }
+
+    const data = await TaxInvoiceRegister.find(query);
+
+    res.status(200).json({
+      message: "Filtered data fetched successfully",
+      data
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message
+    });
+  }
+});
+
+/* Start Add Sites */
+
+// Add-Sites Route
+app.post("/add-site", upload.single('poFile'), async (req, res) => {
+  try {
+
+    console.log("Upload started:", new Date());
+    console.log("========== ADD SITE DEBUG ==========");
+      console.log("BODY:", req.body);
+      console.log("FILE:", req.file);
+    const {
+      name,
+      code,
+      location,
+      manager,
+      phone,
+      startDate,
+      status,
+      progress
+    } = req.body;
+
+    // validation
+    if (
+      !name ||
+      !code ||
+      !location ||
+      !manager ||
+      !phone ||
+      !startDate
+    ) {
+      return res.status(400).json({
+        message: "Please fill all required fields"
+      });
+    }
+
+    // duplicate code check
+    const existingSite = await Site.findOne({ code });
+
+    if (existingSite) {
+      return res.status(400).json({
+        message: "Site code already exists"
+      });
+    }
+
+    // console.log("New Site Create  sai Phale")
+
+    const newSite = new Site({
+      name,
+      code,
+      location,
+      manager,
+      phone,
+      startDate,
+      status,
+      progress,
+      poFileUrl: req.file ? req.file.path : "",
+      poFilePublicId: req.file ? req.file.filename : ""
+    });
+
+    // console.log("New Site Create ke Baad")
+    await newSite.save();
+
+    res.status(201).json({
+      message: "Site added successfully 🚀",
+      data: newSite
+    });
+
+  } catch (error) {
+    console.log("Error haio bhai jii");
+    console.log("Upload finished:", new Date());
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message
+    });
+  }
+});
+
+// Get Site
+app.get('/sites', async (req, res) => {
+  try {
+    const allSites = await Site.find().sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "All sites fetched successfully",
+      data: allSites
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message
+    });
+  }
+})
+
+/*
+========================================
+DELETE SITE
+DELETE /delete-site/:siteId
+========================================
+*/
+
+app.delete("/delete-site/:siteId", async (req, res) => {
+  try {
+    const { siteId } = req.params;
+
+    const deletedSite = await Site.findByIdAndDelete(siteId);
+
+    if (!deletedSite) {
+      return res.status(404).json({
+        message: "Site not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Site deleted successfully",
+      data: deletedSite
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message
+    });
+  }
+});
+
+/*
+========================================
+UPDATE SITE
+PUT /update-site/:siteId
+========================================
+*/
+
+app.put("/update-site/:siteId", async (req, res) => {
+  try {
+    const { siteId } = req.params;
+
+    const updatedSite = await Site.findByIdAndUpdate(
+      siteId,
+      req.body,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updatedSite) {
+      return res.status(404).json({
+        message: "Site not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Site updated successfully",
+      data: updatedSite
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message
+    });
+  }
+});
+
+/*
+========================================
+GET SINGLE SITE
+GET /site/:siteId
+========================================
+*/
+
+app.get("/site/:siteId", async (req, res) => {
+  try {
+    const { siteId } = req.params;
+
+    const site = await Site.findById(siteId);
+
+    if (!site) {
+      return res.status(404).json({
+        message: "Site not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Site fetched successfully",
+      data: site
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message
+    });
+  }
+});
+
+/* End Add Sites */
 
 app.get("/", (req, res) => {
   res.send("Server Running...");
@@ -417,5 +820,8 @@ app.get("/", (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  // Cloudinary Connection Check
+checkCloudinaryConnection();
+// MongoDB
   connectDB(process.env.MONGO_DB_CONNECTION_URI);
 });

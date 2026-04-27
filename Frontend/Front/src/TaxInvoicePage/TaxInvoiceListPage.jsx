@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Pencil, Trash2, Receipt } from "lucide-react";
+import { Pencil, Trash2, Receipt,ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { projectSiteList, vendorList } from "../Constant";
 
 export default function TaxInvoiceListPage() {
-  const navigate=useNavigate();
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -11,7 +12,7 @@ export default function TaxInvoiceListPage() {
     try {
       const response = await fetch("http://localhost:5000/total-tax-invoice-register");
       const result = await response.json();
-    //   console.log(result)
+      //   console.log(result)
       setInvoices(result.taxInvoiceList || []);
     } catch (error) {
       console.log(error);
@@ -24,7 +25,7 @@ export default function TaxInvoiceListPage() {
     fetchInvoices();
   }, []);
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (taxInvoiceId) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this Tax Invoice?"
     );
@@ -33,7 +34,7 @@ export default function TaxInvoiceListPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/delete-tax-invoice/${id}`,
+        `http://localhost:5000/delete-tax-invoice/${taxInvoiceId}`,
         {
           method: "DELETE",
         }
@@ -49,23 +50,214 @@ export default function TaxInvoiceListPage() {
   };
 
   const handleEdit = (id) => {
-  //  console.log(id)
-       navigate(`/edit-tax-invoice/${id}`);
+    //  console.log(id)
+    navigate(`/edit-tax-invoice/${id}`);
+  };
+  const handleExportExcel = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/export-tax-invoice-excel"
+      );
+
+      const blob = await response.blob();
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "TaxInvoiceRegister.xlsx";
+      link.click();
+
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const [filters, setFilters] = useState({
+    invoiceNumber: "",
+    vendorName: "",
+    projectSite: "",
+    deliveryStatus: "",
+    invoiceDate: "",
+    challanNumber: ""
+  });
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const applyFilters = async () => {
+    try {
+      const query = new URLSearchParams(filters).toString();
+
+      const response = await fetch(
+        `http://localhost:5000/tax-invoice-register?${query}`
+      );
+
+      const result = await response.json();
+
+      setInvoices(result.data);
+
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      invoiceNumber: "",
+      vendorName: "",
+      projectSite: "",
+      deliveryStatus: "",
+      invoiceDate: "",
+      challanNumber: ""
+    });
+
+    fetchInvoices();
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 p-6">
       <div className="max-w-7xl mx-auto">
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-gray-100"
+        >
+          <ArrowLeft size={20} />
+          Back
+        </button>
+
         <div className="bg-white rounded-3xl shadow-lg p-6 mb-6 border border-gray-100">
-          <div className="flex items-center gap-3 mb-2">
-            <Receipt size={30} />
-            <h1 className="text-3xl font-bold">Tax Invoice Register List</h1>
+          <div className="flex justify-between items-start">
+
+            {/* Left Side */}
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <Receipt size={30} />
+                <h1 className="text-3xl font-bold">
+                  Tax Invoice Register List
+                </h1>
+              </div>
+
+              <p className="text-gray-500">
+                View, edit and manage all tax invoice records
+              </p>
+            </div>
+
+            {/* Right Side Button */}
+            <button
+              onClick={handleExportExcel}
+              className="bg-green-600 text-white px-5 py-3 rounded-xl hover:bg-green-700 transition"
+            >
+              Export Excel
+            </button>
+
           </div>
-          <p className="text-gray-500">
-            View, edit and manage all tax invoice records
-          </p>
         </div>
 
+        {/* Filter Section */}
+        <div className="bg-white rounded-3xl shadow-lg p-6 mb-6 border border-gray-100">
+          <h2 className="text-xl font-semibold mb-4">
+            Filter Tax Invoice Records
+          </h2>
+
+          <div className="grid md:grid-cols-4 gap-4">
+
+            {/* Invoice Number */}
+            <input
+              type="text"
+              name="invoiceNumber"
+              placeholder="Invoice Number"
+              value={filters.invoiceNumber}
+              onChange={handleFilterChange}
+              className="border rounded-xl px-4 py-3"
+            />
+
+            {/* Vendor Name */}
+            <select
+              name="vendorName"
+              value={filters.vendorName}
+              onChange={handleFilterChange}
+              className="border rounded-xl px-4 py-3"
+            >
+              <option value="">Select Vendor</option>
+              {vendorList.map((vendor, index) => (
+                <option key={index} value={vendor}>
+                  {vendor}
+                </option>
+              ))}
+            </select>
+
+            {/* Project Site */}
+            <select
+              name="projectSite"
+              value={filters.projectSite}
+              onChange={handleFilterChange}
+              className="border rounded-xl px-4 py-3"
+            >
+              <option value="">Select Project Site</option>
+              {projectSiteList.map((site, index) => (
+                <option key={index} value={site}>
+                  {site}
+                </option>
+              ))}
+            </select>
+
+            {/* Delivery Status */}
+            <select
+              name="deliveryStatus"
+              value={filters.deliveryStatus}
+              onChange={handleFilterChange}
+              className="border rounded-xl px-4 py-3"
+            >
+              <option value="">Delivery Status</option>
+              <option value="delivered">Delivered</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
+            </select>
+
+            {/* Invoice Date */}
+            <input
+              type="date"
+              name="invoiceDate"
+              value={filters.invoiceDate}
+              onChange={handleFilterChange}
+              className="border rounded-xl px-4 py-3"
+            />
+
+            {/* Challan Number */}
+            <input
+              type="text"
+              name="challanNumber"
+              placeholder="Challan Number"
+              value={filters.challanNumber}
+              onChange={handleFilterChange}
+              className="border rounded-xl px-4 py-3"
+            />
+
+            {/* Buttons */}
+            <button
+              onClick={applyFilters}
+              className="bg-blue-600 text-white rounded-xl px-4 py-3"
+            >
+              Apply Filter
+            </button>
+
+            <button
+              onClick={resetFilters}
+              className="bg-gray-500 text-white rounded-xl px-4 py-3"
+            >
+              Reset
+            </button>
+
+          </div>
+        </div>
         <div className="bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
           {loading ? (
             <div className="p-8 text-center text-lg font-medium">

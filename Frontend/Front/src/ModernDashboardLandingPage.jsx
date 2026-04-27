@@ -25,11 +25,12 @@ const quickActions = [
 
 export default function ModernDashboardLandingPage() {
 const [totalTaxRegister, setTotalTaxRegister] = useState(0);
+const [totalSitesRegister,setTotalSitesRegister]=useState(0);
 
 const stats = [
   {
     title: "Active Sites",
-    value: "3",
+    value: totalSitesRegister,
     icon: Building2,
   },
   {
@@ -58,7 +59,9 @@ const stats = [
     icon: TrendingUp,
   },
 ];
- useEffect(() => {
+
+// Fetch Total Tax Invoice Register to show in STATS
+
   const fetchTotalTaxRegister = async () => {
     try {
       const response = await fetch(
@@ -83,13 +86,43 @@ const stats = [
     }
   };
 
+    const fetchTotalSitesRegister = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/sites",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      console.log(result);
+
+      setTotalSitesRegister(()=>result.data.length);
+      console.log(totalSitesRegister)
+
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+
+ useEffect(() => {
+
   fetchTotalTaxRegister();
+  fetchTotalSitesRegister();
+  
 }, []);
   const navigate = useNavigate();
   const handleClick=(actionName)=>{
     // console.log(actionName)
   if(actionName=="Add Tax Invoice")  navigate("/add-tax-invoice")
   else if(actionName=="Total Tax Invoice Register")  navigate("/TaxInvoiceListPage")
+else if(actionName=="Active Sites") navigate('/sites')
 }
   return (
     <div className="min-h-screen bg-slate-100">

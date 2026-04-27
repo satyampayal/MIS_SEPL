@@ -10,6 +10,7 @@ import TaxInvoiceRegisterPage from './TaxInvoiceRegisterPage'
 import TaxInvoiceListPage from './TaxInvoicePage/TaxInvoiceListPage'
 import { useParams } from "react-router-dom";
 import EditTaxInvoicePage from './TaxInvoicePage/EditTaxInvoicePage'
+import SiteManagementWithProgress from '../SiteManagement/SiteManagementWithProgress'
 function App() {
 const { taxInvoiceId } = useParams();
 
@@ -29,6 +30,9 @@ const { taxInvoiceId } = useParams();
   //Edit Tax Invoice Page 
   <Route path={"/edit-tax-invoice/:taxInvoiceId"} element={<EditTaxInvoicePage/>}/>
   
+
+  /*  Site Management */
+  <Route path={'/sites'}  element={<SiteManagementWithProgress/>} />
 
     </Routes>
   )

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { vendorList, projectSiteList } from "./Constant";
 export default function TaxInvoiceRegisterPage() {
   const [formData, setFormData] = useState({
     itemDetailsRequired: "no",
@@ -15,64 +16,6 @@ export default function TaxInvoiceRegisterPage() {
     quantitySent: "",
     quantityReceived: "",
   });
-
-  const vendors = [
-"B.E.C CONDUITS PVT.LTD",
-  "MAKWELD LLP",
-  "ABHI TRADERS",
-  "SEPL",
-  "INTEGERATEDELECTRICAL SOLUTIONS",
-  "ORBITAL ENTERPRISES",
-  "A.N ELECTRICALS",
-  "GUJARAT MACHINERY AGENCY",
-  "RAMA CABELE HOUSE",
-  "RATHORE ELECTRICAL & HARDWARE",
-  "G.S DAGA & CO.",
-  "POLAR",
-  "From HO Store",
-  "BHAROTI INDUSTRIAL SUPPLIERS",
-  "Veraizen Earthing Pvt. Ltd.",
-  "Shree Nath Enterprices",
-  "MD STEEL WORLD",
-  "C.P Century Hardware Pvt. Ltd.",
-  "Shree Siddhivinayak Electric & Hardware",
-  "Radhika Enterprises",
-  "Deepak Electronic & Hardware Store",
-  "VEER INFOTECH",
-  "Shree Ganesh Enterprises",
-  "Shiv Electric & Hardware CO.",
-  "Jai Mata Trader",
-  "Radhika Enetrprices",
-  "VTR Infotech Pvt. Ltd.",
-  "Impex Machinery Corporation",
-  "Eagle Sales Corporation",
-  "Shiv Electric & Trending CO."
-  ];
-
-  const projectSites = [
-    "RLDA_DRA_ADI Project",
-  "L&T_CFCL_TAN_KOTA",
-  "M3M_CROWN_111",
-  "210_TPH_NIRMA",
-  "TPL_MAC145_Noida",
-  "TS_JUSCO",
-  "TS_JUSCO",
-  "DFCC-PRYJE-EL-MAINT-TRD",
-  "SPCPL_SONIPAT",
-  "SPCPL_ASSAM",
-  "SPCPL_RAJASTHAN",
-  "SPCPL_MUMBAI",
-  "SPCPL_Leh",
-  "Airport",
-  "JPW_SHALIMAR_Vande_Bharat",
-  "INTRC_ATVRM",
-  "Ozone BDD_Chawl",
-  "L&T_CFCL_TAN_KHURJA",
-  "MHS PACKAGE-BERTH5-AKPL",
-  "M3M_Merlin_67",
-  "HMM_Bawal"
-   
-  ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -90,46 +33,46 @@ export default function TaxInvoiceRegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-        
-         const [year,month,day] =formData.invoiceDate.split("-");
-         const formattedDate = `${day}-${month}-${year}`;
-         const payload = {
-  ...formData,
-  invoiceDate: formattedDate,
-};
-    const response = await fetch("http://localhost:5000/tax-invoice-register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
 
-    const result = await response.json();
+      // const [year, month, day] = formData.invoiceDate.split("-");
+      // const formattedDate = `${day}-${month}-${year}`;
+      
+      const payload = {
+        ...formData
+      };
+      const response = await fetch("http://localhost:5000/tax-invoice-register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    if (response.ok) {
-      alert("Data saved successfully 🚀");
-      console.log("Saved Successfully");
-    } else {
-      alert(result.message || "Something went wrong");
+      const result = await response.json();
+
+      if (response.ok) {
+        alert("Data saved successfully 🚀");
+        console.log("Saved Successfully");
+      } else {
+        alert(result.message || "Something went wrong");
+      }
+    } catch (error) {
+      console.log(error);
+      alert("Server connection failed");
     }
-  } catch (error) {
-    console.log(error);
-    alert("Server connection failed");
-  }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-md p-8">
         <button
-  onClick={() => window.history.back()}
-  className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-gray-100"
->
-  <ArrowLeft size={20} />
-  Back
-</button>
-          <h1 className="text-3xl font-bold mb-2">Tax Invoice Register</h1>
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-gray-100"
+        >
+          <ArrowLeft size={20} />
+          Back
+        </button>
+        <h1 className="text-3xl font-bold mb-2">Tax Invoice Register</h1>
         <p className="text-gray-500 mb-8">
           Manage invoice, challan and delivery verification
         </p>
@@ -183,7 +126,7 @@ export default function TaxInvoiceRegisterPage() {
                   className="w-full border rounded-lg px-4 py-2"
                 >
                   <option value="">Select Vendor</option>
-                  {vendors.map((vendor, index) => (
+                  {vendorList.map((vendor, index) => (
                     <option key={index} value={vendor}>
                       {vendor}
                     </option>
@@ -202,7 +145,7 @@ export default function TaxInvoiceRegisterPage() {
                   className="w-full border rounded-lg px-4 py-2"
                 >
                   <option value="">Select Project Site</option>
-                  {projectSites.map((site, index) => (
+                  {projectSiteList.map((site, index) => (
                     <option key={index} value={site}>
                       {site}
                     </option>
@@ -366,76 +309,76 @@ export default function TaxInvoiceRegisterPage() {
             </div>
 
             {formData.itemDetailsRequired === "yes" && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Material Item Entry
-              </h3>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Material Item Entry
+                </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block mb-2 font-medium">Item Description</label>
-                  <input
-                    type="text"
-                    placeholder="Enter item description"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block mb-2 font-medium">Item Description</label>
+                    <input
+                      type="text"
+                      placeholder="Enter item description"
+                      className="w-full border rounded-lg px-4 py-2"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">HSN Code</label>
-                  <input
-                    type="text"
-                    placeholder="Enter HSN code"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                  <div>
+                    <label className="block mb-2 font-medium">HSN Code</label>
+                    <input
+                      type="text"
+                      placeholder="Enter HSN code"
+                      className="w-full border rounded-lg px-4 py-2"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Quantity</label>
-                  <input
-                    type="number"
-                    placeholder="Enter quantity"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                  <div>
+                    <label className="block mb-2 font-medium">Quantity</label>
+                    <input
+                      type="number"
+                      placeholder="Enter quantity"
+                      className="w-full border rounded-lg px-4 py-2"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Rate</label>
-                  <input
-                    type="number"
-                    placeholder="Enter rate"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                  <div>
+                    <label className="block mb-2 font-medium">Rate</label>
+                    <input
+                      type="number"
+                      placeholder="Enter rate"
+                      className="w-full border rounded-lg px-4 py-2"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Per</label>
-                  <input
-                    type="text"
-                    placeholder="Nos / Kg / Mtr"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                  <div>
+                    <label className="block mb-2 font-medium">Per</label>
+                    <input
+                      type="text"
+                      placeholder="Nos / Kg / Mtr"
+                      className="w-full border rounded-lg px-4 py-2"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Discount</label>
-                  <input
-                    type="number"
-                    placeholder="Enter discount"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                  <div>
+                    <label className="block mb-2 font-medium">Discount</label>
+                    <input
+                      type="number"
+                      placeholder="Enter discount"
+                      className="w-full border rounded-lg px-4 py-2"
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block mb-2 font-medium">Taxable Value</label>
-                  <input
-                    type="number"
-                    placeholder="Enter taxable value"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
+                  <div className="md:col-span-2">
+                    <label className="block mb-2 font-medium">Taxable Value</label>
+                    <input
+                      type="number"
+                      placeholder="Enter taxable value"
+                      className="w-full border rounded-lg px-4 py-2"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
             )}
           </div>
 
