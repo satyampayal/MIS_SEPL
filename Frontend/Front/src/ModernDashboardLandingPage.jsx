@@ -12,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useState } from "react";
+import axios from "axios";
 
 
 
@@ -26,6 +27,8 @@ const quickActions = [
 export default function ModernDashboardLandingPage() {
 const [totalTaxRegister, setTotalTaxRegister] = useState(0);
 const [totalSitesRegister,setTotalSitesRegister]=useState(0);
+const [totalMasterStores,setTotalMasterStores]=useState(0);
+
 
 const stats = [
   {
@@ -35,7 +38,7 @@ const stats = [
   },
   {
     title: "Total Stores",
-    value: "4",
+    value: totalMasterStores,
     icon: Warehouse,
   },
   {
@@ -45,7 +48,7 @@ const stats = [
   },
   {
     title: "Total Challans",
-    value: "4",
+    value: "0",
     icon: FileText,
   },
   {
@@ -110,11 +113,24 @@ const stats = [
     }
   };
 
+    const fetchmasterStores=async()=>{
+    try{
+      const response=await axios.get('http://localhost:5000/store-master/all');
+      setTotalMasterStores(response.data.data.length);
+      // console.log("Master Stores:",response.data.data);
+      
+    }
+    catch(error){
+    console.log("error fetching master stores:",error);
+  }
+  } 
+
 
  useEffect(() => {
 
   fetchTotalTaxRegister();
   fetchTotalSitesRegister();
+  fetchmasterStores();
   
 }, []);
   const navigate = useNavigate();
@@ -123,6 +139,8 @@ const stats = [
   if(actionName=="Add Tax Invoice")  navigate("/add-tax-invoice")
   else if(actionName=="Total Tax Invoice Register")  navigate("/TaxInvoiceListPage")
 else if(actionName=="Active Sites") navigate('/sites')
+  else if(actionName=="Total Challans") navigate('/challan')
+else if(actionName=="Total Stores") navigate('/store');
 }
   return (
     <div className="min-h-screen bg-slate-100">

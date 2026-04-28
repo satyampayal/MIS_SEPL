@@ -9,7 +9,10 @@ const TaxInvoiceRegister = require('./model/taxInvoiceRegisterSchema');
 const dotenv = require('dotenv').config();
 const Site = require('./model/Site');
 const upload = require('./config/multer')
-const checkCloudinaryConnection =require('./config/cloudinaryCheck')
+const checkCloudinaryConnection =require('./config/cloudinaryCheck');
+const challanRouter = require("./routes/challanRoutes");
+const storeRouter = require("./routes/sroreRoutes");
+const storeMasterRouter = require("./routes/storeMasterRoutes");
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -813,6 +816,15 @@ app.get("/site/:siteId", async (req, res) => {
 });
 
 /* End Add Sites */
+
+/*  Challan start */
+app.use('/challan',challanRouter)
+
+/*  Store Routes  */
+app.use('/store',storeRouter)
+
+/* store Master Rotes*/
+app.use('/store-master',storeMasterRouter)
 
 app.get("/", (req, res) => {
   res.send("Server Running...");
