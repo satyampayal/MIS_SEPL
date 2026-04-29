@@ -13,6 +13,7 @@ const checkCloudinaryConnection =require('./config/cloudinaryCheck');
 const challanRouter = require("./routes/challanRoutes");
 const storeRouter = require("./routes/sroreRoutes");
 const storeMasterRouter = require("./routes/storeMasterRoutes");
+const projectMasterRouter = require("./Routes/projectMasterRoutes");
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -611,6 +612,7 @@ app.get("/tax-invoice-register", async (req, res) => {
 
 /* Start Add Sites */
 
+app.use('/project-master',projectMasterRouter);
 // Add-Sites Route
 app.post("/add-site", upload.single('poFile'), async (req, res) => {
   try {
@@ -713,11 +715,11 @@ DELETE /delete-site/:siteId
 ========================================
 */
 
-app.delete("/delete-site/:siteId", async (req, res) => {
+app.delete("/delete-site/:projectId", async (req, res) => {
   try {
     const { siteId } = req.params;
 
-    const deletedSite = await Site.findByIdAndDelete(siteId);
+    const deletedSite = await Site.findByIdAndDelete(projectId);
 
     if (!deletedSite) {
       return res.status(404).json({

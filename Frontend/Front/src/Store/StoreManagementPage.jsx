@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Pencil, Package } from "lucide-react";
+import { Plus, Pencil, Package,ArrowLeft } from "lucide-react";
 import axios from "axios";
 import { useState } from "react";
 import { useEffect } from "react";
@@ -63,49 +63,55 @@ const StoreManagementPage = () => {
 
   }
   const [store, setStore] = useState(
-  {
-    storeName: "",
-    storeType: "",
-    location: "",
-    storeIncharge: "",
-    contactNumber: "",
-    storeCode: "",
-    associtedSite: ""
-  },
-)
-// Get All Stores 
-const [masterStores,setMasterStores]=useState([]);
-const [getAllStoreItems,setGetAllStoreItems]=useState([]);
-  const fetchmasterStores=async()=>{
-    try{
-      const response=await axios.get('http://localhost:5000/store-master/all');
-      const allItemsResponse=await axios.get('http://localhost:5000/store/getAllItems');
+    {
+      storeName: "",
+      storeType: "",
+      location: "",
+      storeIncharge: "",
+      contactNumber: "",
+      storeCode: "",
+      associtedSite: ""
+    },
+  )
+  // Get All Stores 
+  const [masterStores, setMasterStores] = useState([]);
+  const [getAllStoreItems, setGetAllStoreItems] = useState([]);
+  const fetchmasterStores = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/store-master/all');
+      const allItemsResponse = await axios.get('http://localhost:5000/store/getAllItems');
 
       setMasterStores(response.data.data);
       setGetAllStoreItems(allItemsResponse.data.data);
-      console.log("Master Stores:",response.data.data);
-      
+      console.log("Master Stores:", response.data.data);
+
     }
-    catch(error){
-    console.log("error fetching master stores:",error);
+    catch (error) {
+      console.log("error fetching master stores:", error);
+    }
   }
-  } 
 
-useEffect(()=>{
-   fetchmasterStores();
-},[])
+  useEffect(() => {
+    fetchmasterStores();
+  }, [])
 
-const handleStoreChange = (e) => {
-  e.preventDefault();
-  setStore({ ...store, [e.target.name]: e.target.value })
+  const handleStoreChange = (e) => {
+    e.preventDefault();
+    setStore({ ...store, [e.target.name]: e.target.value })
 
-}
+  }
 
   return (
     <>
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-gray-600 hover:text-black mb-3"
+            >
+              <ArrowLeft size={18} /> Back
+            </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">
                 Store Management
@@ -180,7 +186,7 @@ const handleStoreChange = (e) => {
                 </div>
 
                 <div className="border-t px-6 py-5 flex items-center justify-between bg-gray-50">
-                  <div className="flex items-center gap-2 text-gray-700 font-medium" onClick={()=>navigate(`/store/${store._id}`)}>
+                  <div className="flex items-center gap-2 text-gray-700 font-medium" onClick={() => navigate(`/store/${store._id}`)}>
                     <Package size={18} />
                     Inventory ({store.inventoryCount} items) {getAllStoreItems?.length}
                   </div>

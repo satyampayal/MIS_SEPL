@@ -57,6 +57,10 @@ const siteSchema = new mongoose.Schema(
     poFilePublicId: {
       type: String,
       default: ""
+    },
+      description: {
+      type: String,
+      default: ""
     }
   },
   {

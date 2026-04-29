@@ -32,7 +32,7 @@ const [totalMasterStores,setTotalMasterStores]=useState(0);
 
 const stats = [
   {
-    title: "Active Sites",
+    title: "Active Projects",
     value: totalSitesRegister,
     icon: Building2,
   },
@@ -89,10 +89,10 @@ const stats = [
     }
   };
 
-    const fetchTotalSitesRegister = async () => {
+    const fetchTotalProjectRegister = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/sites",
+        "http://localhost:5000/project-master/all",
         {
           method: "GET",
           headers: {
@@ -129,7 +129,7 @@ const stats = [
  useEffect(() => {
 
   fetchTotalTaxRegister();
-  fetchTotalSitesRegister();
+  fetchTotalProjectRegister();
   fetchmasterStores();
   
 }, []);
@@ -138,7 +138,7 @@ const stats = [
     // console.log(actionName)
   if(actionName=="Add Tax Invoice")  navigate("/add-tax-invoice")
   else if(actionName=="Total Tax Invoice Register")  navigate("/TaxInvoiceListPage")
-else if(actionName=="Active Sites") navigate('/sites')
+else if(actionName=="Active Projects") navigate('/projects')
   else if(actionName=="Total Challans") navigate('/challan')
 else if(actionName=="Total Stores") navigate('/store');
 }

@@ -10,10 +10,11 @@ import TaxInvoiceRegisterPage from './TaxInvoiceRegisterPage'
 import TaxInvoiceListPage from './TaxInvoicePage/TaxInvoiceListPage'
 import { useParams } from "react-router-dom";
 import EditTaxInvoicePage from './TaxInvoicePage/EditTaxInvoicePage'
-import SiteManagementWithProgress from '../SiteManagement/SiteManagementWithProgress'
 import ChallanManagement from './challan/ChallanManagement'
 import StoreManagementPage from './Store/StoreManagementPage'
 import StoreInventoryPage from './Store/StoreInventoryPage'
+import ProjectMasterManagementWithProgress from '../ProjectMasterManagement/ProjectMasterManagementWithProgress'
+import ProjectBillingProgressPage from '../ProjectMasterManagement/ProjectBillingProgressPage'
 function App() {
 const { taxInvoiceId } = useParams();
 
@@ -35,7 +36,10 @@ const { taxInvoiceId } = useParams();
   
 
   /*  Site Management */
-  <Route path={'/sites'}  element={<SiteManagementWithProgress/>} />
+  <Route path={'/projects'}  element={<ProjectMasterManagementWithProgress/>} />
+  <Route path={'/billing'}  element={<ProjectBillingProgressPage/>} />
+
+
 
 
   

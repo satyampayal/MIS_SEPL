@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { MapPin, Building2, Pencil, Trash2, Plus, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-export default function SiteManagementWithProgress() {
+import axios from "axios";
+export default function ProjectMasterManagementWithProgress() {
   const navigate = useNavigate();
   const [sites, setSites] = useState([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-   const [inProgress,setInprogess]=useState(0);
+  const [inProgress, setInprogess] = useState(0);
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -17,14 +18,15 @@ export default function SiteManagementWithProgress() {
     status: "Active",
     progress: 0,
     poFile: "",
+    description:""
   });
 
   // Fetch all sites from DB
   const fetchSites = async () => {
     try {
-      const response = await fetch("http://localhost:5000/sites");
-      const result = await response.json();
-      setSites(result.data || []);
+      const response = await fetch("http://localhost:5000/project-master/all");
+      const result = await response?.json();
+      setSites(result?.data || []);
     } catch (error) {
       console.log(error);
     }
@@ -46,7 +48,7 @@ export default function SiteManagementWithProgress() {
   // Add new site API
   const handleAddSite = async () => {
     try {
-    setInprogess(()=>1)
+      setInprogess(() => 1)
 
       const formPayload = new FormData();
 
@@ -58,17 +60,18 @@ export default function SiteManagementWithProgress() {
       formPayload.append("startDate", formData.startDate);
       formPayload.append("status", formData.status);
       formPayload.append("progress", formData.progress);
+      formPayload.append("description",formData.description)
 
       if (formData.poFile) {
         console.log("Po FIle hai bahi ")
         formPayload.append("poFile", formData.poFile);
       }
 
-      const response = await fetch("http://localhost:5000/add-site",
-         {
-        method: "POST",
-        body: formPayload,
-      });
+      const response = await fetch("http://localhost:5000/project-master/create",
+        {
+          method: "POST",
+          body: formPayload,
+        });
 
       const result = await response.json();
       console.log(result);
@@ -84,8 +87,8 @@ export default function SiteManagementWithProgress() {
         progress: 0,
         poFile: ""
       });
-    setInprogess(()=>0)
-       
+      setInprogess(() => 0)
+
       fetchSites();
     } catch (error) {
       console.log(error);
@@ -96,17 +99,38 @@ export default function SiteManagementWithProgress() {
     site.name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleDelelte = async (projectId) => {
+    try {
+      if (!projectId) {
+      alert("Not have proper ID");
+        return 
+      }
+      const confirmDelete = window.confirm("Are you sure to delete this item?");
+      if (!confirmDelete) {
+        return;
+      }
+      const response = await axios.delete(`http://localhost:5000/project-master/delete/${projectId}`);
+       if (response?.status === 200) {
+                fetchSites(); // Refresh the item list
+            }
+
+
+    }
+    catch (error) {
+      console.log(error?.message);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
 
         <div className="bg-white rounded-3xl shadow-sm border p-6 mb-6">
           <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-gray-100"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-600 hover:text-black mb-3"
           >
-            <ArrowLeft size={20} />
-            Back
+            <ArrowLeft size={18} /> Back
           </button>
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold">Site Management</h1>
@@ -134,10 +158,11 @@ export default function SiteManagementWithProgress() {
             <h2 className="text-xl font-semibold mb-4">Add New Site</h2>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <input name="name" placeholder="Site Name" value={formData.name} onChange={handleChange} className="border rounded-xl px-4 py-3" />
-              <input name="code" placeholder="Site Code" value={formData.code} onChange={handleChange} className="border rounded-xl px-4 py-3" />
+              <input name="name" placeholder="Project Name" value={formData.name} onChange={handleChange} className="border rounded-xl px-4 py-3" />
+              <input name="code" placeholder="Project Code" value={formData.code} onChange={handleChange} className="border rounded-xl px-4 py-3" />
+              <input name="description" placeholder="Project description" value={formData.description} onChange={handleChange} className="border rounded-xl px-4 py-3" />
               <input name="location" placeholder="Location" value={formData.location} onChange={handleChange} className="border rounded-xl px-4 py-3" />
-              <input name="manager" placeholder="Manager Name" value={formData.manager} onChange={handleChange} className="border rounded-xl px-4 py-3" />
+              <input name="manager" placeholder="Project Manager Name" value={formData.manager} onChange={handleChange} className="border rounded-xl px-4 py-3" />
               <input name="phone" placeholder="Phone Number" value={formData.phone} onChange={handleChange} className="border rounded-xl px-4 py-3" />
               <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="border rounded-xl px-4 py-3" />
               <input type="number" name="progress" placeholder="Progress %" value={formData.progress} onChange={handleChange} className="border rounded-xl px-4 py-3" />
@@ -153,8 +178,8 @@ export default function SiteManagementWithProgress() {
               onClick={handleAddSite}
               className="mt-5 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl"
             >{
-            inProgress==1?'Saving ':'save site'
-            }
+                inProgress == 1 ? 'Saving ' : 'save site'
+              }
               {/* Save Site */}
             </button>
           </div>
@@ -165,6 +190,7 @@ export default function SiteManagementWithProgress() {
             <div
               key={site._id}
               className="bg-white rounded-3xl shadow-sm border p-6"
+              onClick={()=>navigate("/billing")}
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex gap-3">
@@ -190,28 +216,28 @@ export default function SiteManagementWithProgress() {
                 <p><span className="font-semibold">Manager:</span> {site.manager}</p>
                 <p><span className="font-semibold">Phone:</span> {site.phone}</p>
                 <p><span className="font-semibold">Start Date:</span> {site.startDate}</p>
-                { site?.poFileUrl!==""?
-                 <div className="flex gap-3 mt-4">
-                  <a
-                    href={site.poFileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-                  >
-                    View PO
-                  </a>
+                {site?.poFileUrl !== "" ?
+                  <div className="flex gap-3 mt-4">
+                    <a
+                      href={site.poFileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-xl"
+                    >
+                      View PO
+                    </a>
 
-                  <a
-                    href={site.poFileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-green-600 text-white px-4 py-2 rounded-xl"
-                  >
-                    Download PO
-                  </a>
-                </div>
-                : <span></span>}
-               
+                    <a
+                      href={site.poFileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-green-600 text-white px-4 py-2 rounded-xl"
+                    >
+                      Download PO
+                    </a>
+                  </div>
+                  : <span></span>}
+
 
               </div>
 
@@ -237,7 +263,7 @@ export default function SiteManagementWithProgress() {
                   Edit
                 </button>
 
-                <button className="px-4 bg-red-50 rounded-xl text-red-500">
+                <button className="px-4 bg-red-50 rounded-xl text-red-500" onClick={()=>handleDelelte(site._id)}>
                   <Trash2 size={18} />
                 </button>
               </div>
