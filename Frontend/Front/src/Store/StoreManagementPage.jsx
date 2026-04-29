@@ -3,7 +3,7 @@ import { Plus, Pencil, Package } from "lucide-react";
 import axios from "axios";
 import { useState } from "react";
 import { useEffect } from "react";
-
+import { useNavigate } from "react-router-dom";
 const stores = [
   {
     id: 1,
@@ -29,6 +29,8 @@ const stores = [
 
 const StoreManagementPage = () => {
   const [showModal, setShowModal] = React.useState(false);
+  const navigate = useNavigate();
+
   const handleAddStore = () => {
     setShowModal(true);
   };
@@ -73,10 +75,14 @@ const StoreManagementPage = () => {
 )
 // Get All Stores 
 const [masterStores,setMasterStores]=useState([]);
+const [getAllStoreItems,setGetAllStoreItems]=useState([]);
   const fetchmasterStores=async()=>{
     try{
       const response=await axios.get('http://localhost:5000/store-master/all');
+      const allItemsResponse=await axios.get('http://localhost:5000/store/getAllItems');
+
       setMasterStores(response.data.data);
+      setGetAllStoreItems(allItemsResponse.data.data);
       console.log("Master Stores:",response.data.data);
       
     }
@@ -121,7 +127,7 @@ const handleStoreChange = (e) => {
           <div className="space-y-6">
             {masterStores?.map((store) => (
               <div
-                key={store.id}
+                key={store._id}
                 className="bg-white border border-purple-100 rounded-3xl shadow-sm overflow-hidden"
               >
                 <div className="p-6">
@@ -142,7 +148,7 @@ const handleStoreChange = (e) => {
                     </div>
 
                     <button
-                      onClick={() => handleEditStore(store.id)}
+                      onClick={() => handleEditStore(store._id)}
                       className="text-purple-500 hover:text-purple-700"
                     >
                       <Pencil size={18} />
@@ -174,9 +180,9 @@ const handleStoreChange = (e) => {
                 </div>
 
                 <div className="border-t px-6 py-5 flex items-center justify-between bg-gray-50">
-                  <div className="flex items-center gap-2 text-gray-700 font-medium">
+                  <div className="flex items-center gap-2 text-gray-700 font-medium" onClick={()=>navigate(`/store/${store._id}`)}>
                     <Package size={18} />
-                    Inventory ({store.inventoryCount} items)
+                    Inventory ({store.inventoryCount} items) {getAllStoreItems?.length}
                   </div>
 
                   <button

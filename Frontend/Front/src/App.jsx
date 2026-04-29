@@ -13,6 +13,7 @@ import EditTaxInvoicePage from './TaxInvoicePage/EditTaxInvoicePage'
 import SiteManagementWithProgress from '../SiteManagement/SiteManagementWithProgress'
 import ChallanManagement from './challan/ChallanManagement'
 import StoreManagementPage from './Store/StoreManagementPage'
+import StoreInventoryPage from './Store/StoreInventoryPage'
 function App() {
 const { taxInvoiceId } = useParams();
 
@@ -44,6 +45,10 @@ const { taxInvoiceId } = useParams();
   {/* Store Management start */}
 
   <Route  path='/store' element={<StoreManagementPage/>} />
+  <Route
+  path="/store/:storeId"
+  element={<StoreInventoryPage/>}
+/>
 
     </Routes>
   )

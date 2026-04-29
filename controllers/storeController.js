@@ -145,7 +145,6 @@ exports.createBulkStoreItem = async (req, res) => {
 };
 
 //  real Bulk Updated Function 
-// controllers/storeController.js
 
 exports.uploadStoreExcel = async (req, res) => {
   try {
@@ -254,3 +253,74 @@ exports.uploadStoreExcel = async (req, res) => {
     });
   }
 };
+
+exports.getAllItems=async (req,res)=>{
+  try{
+
+        const { searchTerm } = req.query;
+
+    let filter = {};
+
+    // If search term exists, search by itemName / itemDescription
+    if (searchTerm && searchTerm.trim() !== "") {
+      filter = {
+        itemName: {
+          $regex: searchTerm,
+          $options: "i" // case insensitive
+        }
+      };
+    }
+    const items=await Store.find(filter).sort({ createdAt: -1 });
+    if(!items || items.length===0){
+      return res.status(404).json({
+        success:false,
+        message:"No items found in store",
+        data:[]
+      })
+    }
+    return res.status(200).json({
+      success:true,
+      message:"Store items retrieved successfully",
+      count:items.length,
+      data:items
+    })
+
+  }catch(error){
+    console.log(error.message);
+    return res.status(500).json({
+      success:false,
+      message:error.message
+    })
+  }
+}
+
+// Delete Item from store
+exports.deleteStoreItem=async (req,res)=>{
+  try{
+    const {id}=req.params;
+    if(!id){
+      return res.status(400).json({
+        success:false,
+        message:"Item id is required"
+      })
+    }
+    const deletedItem=await Store.findByIdAndDelete(id);
+    if(!deletedItem){
+      return res.status(404).json({
+        success:false,
+        message:"Item not found"
+      })
+    }
+    return res.status(200).json({
+      success:true,
+      message:"Item deleted successfully",
+      data:deletedItem
+    })
+  }catch(error){
+    console.log(error.message);
+    return res.status(500).json({
+      success:false,
+      message:error.message
+    })
+  }
+}
