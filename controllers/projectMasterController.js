@@ -1,4 +1,4 @@
-const  Site=require('../model/Site');
+const  Site=require('../model/Project');
 
 exports.addProject=async (req,res)=>{
      try {

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { ArrowLeft, Plus, IndianRupee, TrendingUp, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const dummyBills = [
   {
@@ -32,6 +33,7 @@ const dummyBills = [
 ];
 
 const ProjectBillingProgressPage = () => {
+  const navigate=useNavigate();
   const [project] = useState({
     projectName: "Metro Line Extension Project",
     siteName: "Site A - Delhi",
@@ -56,13 +58,22 @@ const ProjectBillingProgressPage = () => {
   }, [clearedAmount, project.workOrderValue]);
 
   const pendingAmount = project.workOrderValue - clearedAmount;
+const [showBillModal, setShowBillModal] = useState(false);
 
+const [billData, setBillData] = useState({
+  billType: "",
+  billAmount: "",
+  billDate: "",
+  remarks: "",
+});
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <button className="flex items-center gap-2 text-gray-600 hover:text-black mb-3">
+            <button className="flex items-center gap-2 text-gray-600 hover:text-black mb-3"
+             onClick={()=> navigate(-1)}
+            >
               <ArrowLeft size={18} /> Back to Projects
             </button>
 
@@ -74,7 +85,10 @@ const ProjectBillingProgressPage = () => {
             </p>
           </div>
 
-          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-medium shadow-sm transition">
+          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white
+           px-6 py-3 rounded-2xl font-medium shadow-sm transition"
+           onClick={() => setShowBillModal(true)}
+           >
             <Plus size={18} /> Upload Bill
           </button>
         </div>
@@ -160,6 +174,87 @@ const ProjectBillingProgressPage = () => {
           </div>
         </div>
       </div>
+      {showBillModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white w-full max-w-2xl rounded-2xl p-6">
+
+      <h2 className="text-xl font-bold mb-4">Upload Bill</h2>
+
+      <select
+        className="w-full border p-2 mb-3"
+        onChange={(e) =>
+          setBillData({ ...billData, billType: e.target.value })
+        }
+      >
+        <option value="">Select Bill Type</option>
+        <option>RA-01</option>
+        <option>RA-02</option>
+        <option>RA-03</option>
+        <option>FINAL</option>
+        <option>CREDIT</option>
+      </select>
+
+      <input
+        type="number"
+        placeholder="Bill Amount"
+        className="w-full border p-2 mb-3"
+        onChange={(e) =>
+          setBillData({ ...billData, billAmount: e.target.value })
+        }
+      />
+
+      <input
+        type="date"
+        className="w-full border p-2 mb-3"
+        onChange={(e) =>
+          setBillData({ ...billData, billDate: e.target.value })
+        }
+      />
+
+      <input
+        type="file"
+        className="w-full border p-2 mb-3"
+        onChange={(e) =>
+          setBillData({ ...billData, billFile: e.target.files[0] })
+        }
+      />
+
+      <textarea
+        placeholder="Remarks"
+        className="w-full border p-2 mb-3"
+        onChange={(e) =>
+          setBillData({ ...billData, remarks: e.target.value })
+        }
+      />
+
+      <div className="flex justify-end gap-2">
+        <button onClick={() => setShowBillModal(false)}>
+          Cancel
+        </button>
+
+        <button
+          className="bg-blue-600 text-white px-4 py-2"
+          onClick={async () => {
+            const formData = new FormData();
+
+            Object.keys(billData).forEach((key) => {
+              formData.append(key, billData[key]);
+            });
+
+            await axios.post(
+              "http://localhost:5000/project-bill/create",
+              formData
+            );
+
+            setShowBillModal(false);
+          }}
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

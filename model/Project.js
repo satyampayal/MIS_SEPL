@@ -2,7 +2,7 @@
 
 const mongoose = require("mongoose");
 
-const siteSchema = new mongoose.Schema(
+const projectSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -68,4 +68,4 @@ const siteSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Site", siteSchema);
+module.exports = mongoose.model("Project", projectSchema);

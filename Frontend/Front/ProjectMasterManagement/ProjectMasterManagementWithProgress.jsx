@@ -190,9 +190,9 @@ export default function ProjectMasterManagementWithProgress() {
             <div
               key={site._id}
               className="bg-white rounded-3xl shadow-sm border p-6"
-              onClick={()=>navigate("/billing")}
+             
             >
-              <div className="flex justify-between items-start mb-4">
+              <div className="flex justify-between items-start mb-4  cursor-pointer"  onClick={()=>navigate("/billing")} >
                 <div className="flex gap-3">
                   <div className="bg-blue-100 p-3 rounded-xl">
                     <Building2 className="text-blue-600" size={24} />

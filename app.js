@@ -7,7 +7,7 @@ const PORT = 5000;
 const connectDB = require('./config/db');
 const TaxInvoiceRegister = require('./model/taxInvoiceRegisterSchema');
 const dotenv = require('dotenv').config();
-const Site = require('./model/Site');
+const Site = require('./model/Project');
 const upload = require('./config/multer')
 const checkCloudinaryConnection =require('./config/cloudinaryCheck');
 const challanRouter = require("./routes/challanRoutes");
@@ -715,32 +715,32 @@ DELETE /delete-site/:siteId
 ========================================
 */
 
-app.delete("/delete-site/:projectId", async (req, res) => {
-  try {
-    const { siteId } = req.params;
+// app.delete("/delete-site/:projectId", async (req, res) => {
+//   try {
+//     const { siteId } = req.params;
 
-    const deletedSite = await Site.findByIdAndDelete(projectId);
+//     const deletedSite = await Site.findByIdAndDelete(projectId);
 
-    if (!deletedSite) {
-      return res.status(404).json({
-        message: "Site not found"
-      });
-    }
+//     if (!deletedSite) {
+//       return res.status(404).json({
+//         message: "Site not found"
+//       });
+//     }
 
-    res.status(200).json({
-      message: "Site deleted successfully",
-      data: deletedSite
-    });
+//     res.status(200).json({
+//       message: "Site deleted successfully",
+//       data: deletedSite
+//     });
 
-  } catch (error) {
-    console.log(error);
+//   } catch (error) {
+//     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message
-    });
-  }
-});
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message
+//     });
+//   }
+// });
 
 /*
 ========================================
