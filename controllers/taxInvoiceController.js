@@ -60,3 +60,97 @@ exports.getById = async (req, res) => {
         });
     }
 }
+
+// Create Tax Invoice 
+exports.register = async (req, res) => {
+    try {
+        const {
+            invoiceDate,
+            invoiceNumber,
+            invoiceAmount,
+            vendorName,
+            projectSite,
+            challanCreated,
+            challanNumber,
+            challanDate,
+            deliveryStatus,
+            quantitySent,
+            quantityReceived,
+            itemDetailsRequired,
+        } = req.body;
+
+        // 📂 Files
+        const invoiceFileObj = req.files.find(f => f.fieldname === "invoiceFile");
+        const challanFileObj = req.files.find(f => f.fieldname === "challanFile");
+
+        const invoiceFile = invoiceFileObj ? invoiceFileObj.path : null;
+        const challanFile = challanFileObj ? challanFileObj.path : null;
+
+        // 🧪 Debug once
+        console.log("invoiceFile:", invoiceFile);
+
+        // 📦 Material Difference
+        let materialDifference = "No Difference";
+
+        if (
+            quantitySent &&
+            quantityReceived &&
+            Number(quantitySent) !== Number(quantityReceived)
+        ) {
+            materialDifference = "Difference Found";
+        }
+
+        // 🔍 Check existing
+        const existingInvoice = await TaxInvoice.findOne({
+            invoiceNumber: invoiceNumber.trim(),
+            projectSite: projectSite?.trim(),
+            vendorName: vendorName?.trim()
+        });
+
+        if (existingInvoice) {
+            return res.status(200).json({
+                success: true,
+                message: "Invoice already exists ⚠️",
+                data: existingInvoice
+            });
+        }
+
+        // 🆕 Create new (IMPORTANT FIX HERE)
+        const newInvoice = new TaxInvoice({
+            invoiceDate,
+            invoiceNumber,
+            invoiceAmount,
+            vendorName,
+            projectSite,
+            challanCreated,
+            challanNumber,
+            challanDate,
+            deliveryStatus,
+            quantitySent,
+            quantityReceived,
+            itemDetailsRequired,
+            materialDifference,
+
+            // ✅ SAVE FILES
+            invoiceFile,
+            challanFile
+        });
+
+        await newInvoice.save();
+
+        return res.status(201).json({
+            success: true,
+            message: "New invoice created successfully 🚀",
+            data: newInvoice
+        });
+
+    } catch (error) {
+        console.log(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Server Error",
+            error: error.message,
+        });
+    }
+};

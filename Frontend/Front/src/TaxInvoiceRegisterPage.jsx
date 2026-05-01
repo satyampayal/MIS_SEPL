@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { vendorList, projectSiteList } from "./Constant";
+import { useNavigate } from "react-router-dom";
 export default function TaxInvoiceRegisterPage() {
+  const navigate=useNavigate();
   const [formData, setFormData] = useState({
     itemDetailsRequired: "no",
     invoiceDate: "",
@@ -15,14 +17,18 @@ export default function TaxInvoiceRegisterPage() {
     deliveryStatus: "",
     quantitySent: "",
     quantityReceived: "",
+    invoiceFile: null,
+    challanFile: null,
   });
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, files } = e.target;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: files ? files[0] : value,
     }));
+
   };
 
   const isDifference =
@@ -32,30 +38,44 @@ export default function TaxInvoiceRegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
+    console.log(formData)
 
-      // const [year, month, day] = formData.invoiceDate.split("-");
-      // const formattedDate = `${day}-${month}-${year}`;
-      
-      const payload = {
-        ...formData
-      };
-      const response = await fetch("http://localhost:5000/tax-invoice-register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+    try {
+      const form = new FormData();
+
+      // 🔹 Append all normal fields
+      Object.keys(formData).forEach((key) => {
+        form.append(key, formData[key]);
       });
+
+      // 🔹 Append files (VERY IMPORTANT)
+      if (formData.invoiceFile) {
+        form.append("invoiceFile", formData.invoiceFile);
+      }
+
+      if (formData.challanFile) {
+        form.append("challanFile", formData.challanFile);
+      }
+      console.log("Invoice File is :::",form.get('invoiceFile'))
+
+      const response = await fetch(
+        "http://localhost:5000/tax-invoice/register",
+        {
+          method: "POST",
+          body: form, // ❗ no JSON.stringify
+        }
+      );
 
       const result = await response.json();
 
       if (response.ok) {
-        alert("Data saved successfully 🚀");
-        console.log("Saved Successfully");
+        alert(result.message || "Data saved successfully 🚀");
+        navigate(-1)
+        
       } else {
         alert(result.message || "Something went wrong");
       }
+
     } catch (error) {
       console.log(error);
       alert("Server connection failed");
@@ -67,7 +87,7 @@ export default function TaxInvoiceRegisterPage() {
       <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-md p-8">
         <button
           onClick={() => window.history.back()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-gray-100"
+          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100"
         >
           <ArrowLeft size={20} />
           Back
@@ -114,6 +134,17 @@ export default function TaxInvoiceRegisterPage() {
                   onChange={handleChange}
                   placeholder="Enter invoice amount"
                   className="w-full border rounded-lg px-4 py-2"
+                />
+              </div>
+              {/* Invoice File */}
+              <div>
+                <label className="block mb-1 font-medium">Upload Invoice</label>
+                <input
+                  type="file"
+                  name="invoiceFile"
+                  accept=".pdf,.jpg,.png"
+                  onChange={handleChange}
+                  className="border rounded-xl px-3 py-2 w-full"
                 />
               </div>
 
@@ -225,6 +256,17 @@ export default function TaxInvoiceRegisterPage() {
                     <option value="pending">Pending</option>
                     <option value="partial">Partial Delivery</option>
                   </select>
+                </div>
+                {/* Challan File */}
+                <div>
+                  <label className="block mb-1 font-medium">Upload Challan</label>
+                  <input
+                    type="file"
+                    name="challanFile"
+                    accept=".pdf,.jpg,.png"
+                    onChange={handleChange}
+                    className="border rounded-xl px-3 py-2 w-full"
+                  />
                 </div>
               </div>
             )}

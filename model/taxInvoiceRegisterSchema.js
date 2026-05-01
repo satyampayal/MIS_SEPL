@@ -4,7 +4,7 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
   {
     invoiceDate: {
       type: String,
-      required: true,
+      required:true,
       trim: true,
     },
 
@@ -77,6 +77,15 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
       enum: ["yes", "no"],
       default: "no",
     },
+    invoiceFile: {
+  type: String, // cloudinary URL
+  default: "",
+},
+
+challanFile: {
+  type: String, // cloudinary URL
+  default: "",
+},
 
     itemDetails: [
       {

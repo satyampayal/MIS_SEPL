@@ -146,168 +146,85 @@ app.post("/add-items", async (req, res) => {
   }
 });
 //  Register Tax Invoice 
-app.post("/tax-invoice-register", async (req, res) => {
-  try {
-    const formData = req.body;
+// app.post("/tax-invoice-register", async (req, res) => {
+//   try {
+//     const formData = req.body;
 
-    const {
-      invoiceDate,
-      invoiceNumber,
-      invoiceAmount,
-      vendorName,
-      projectSite,
-      challanCreated,
-      challanNumber,
-      challanDate,
-      deliveryStatus,
-      quantitySent,
-      quantityReceived,
-      itemDetailsRequired,
-    } = formData;
+//     const {
+//       invoiceDate,
+//       invoiceNumber,
+//       invoiceAmount,
+//       vendorName,
+//       projectSite,
+//       challanCreated,
+//       challanNumber,
+//       challanDate,
+//       deliveryStatus,
+//       quantitySent,
+//       quantityReceived,
+//       itemDetailsRequired,
+//       challanFile,
+//       invoiceFile
+//     } = formData;
 
-    if (!invoiceNumber) {
-      return res.status(400).json({
-        message: "Invoice Number is required",
-      });
-    }
+//     if (!invoiceNumber) {
+//       return res.status(400).json({
+//         message: "Invoice Number is required",
+//       });
+//     }
 
-    const filePath = "Tax_Invoice_Register.xlsx";
-    const workbook = new ExcelJS.Workbook();
+//        // Material Difference Logic
+//     let materialDifference = "No Difference";
 
-    // Read existing file or create new
-    if (fs.existsSync(filePath)) {
-      await workbook.xlsx.readFile(filePath);
-    } else {
-      workbook.addWorksheet("Invoice Register");
-    }
+//     if (
+//       quantitySent &&
+//       quantityReceived &&
+//       Number(quantitySent) !== Number(quantityReceived)
+//     ) {
+//       materialDifference = "Difference Found";
+//     }
 
-    const sheet =
-      workbook.getWorksheet("Invoice Register") ||
-      workbook.getWorksheet(1);
+//     // Find existing invoice
+//   const existingInvoice = await TaxInvoiceRegister.findOne({
+//   invoiceNumber: invoiceNumber.trim(),
+//   projectSite: projectSite.trim(),
+//   vendorName: vendorName.trim()
+// });
 
-    // Header Row
-    if (sheet.rowCount === 0) {
-      sheet.addRow([
-        "Invoice Date",
-        "Invoice Number",
-        "Invoice Amount",
-        "Vendor Name",
-        "Project Site",
-        "Challan Created",
-        "Challan Number",
-        "Challan Date",
-        "Delivery Status",
-        "Quantity Sent",
-        "Quantity Received",
-        "Material Difference",
-        "Item Details Required",
-      ]);
-    }
+//     if (existingInvoice) {
+//       // UPDATE existing record
+//       await TaxInvoiceRegister.findOneAndUpdate(
+//         { invoiceNumber: invoiceNumber.trim() },
+//         formData,
+//         { new: true }
+//       );
+//     } else {
+//       // CREATE new record
+//       const newInvoice = new TaxInvoiceRegister(formData);
+//       await newInvoice.save();
 
-    // Material Difference Logic
-    let materialDifference = "No Difference";
-
-    if (
-      quantitySent &&
-      quantityReceived &&
-      Number(quantitySent) !== Number(quantityReceived)
-    ) {
-      materialDifference = "Difference Found";
-    }
-
-    let targetRow = null;
-
-    // Find row by Invoice Number (Column 2)
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return; // skip header
-
-      const existingInvoiceNumber = row.getCell(2).value;
-
-      if (
-        String(existingInvoiceNumber).trim().toLowerCase() ===
-        String(invoiceNumber).trim().toLowerCase()
-      ) {
-        targetRow = row;
-      }
-    });
-
-    if (targetRow) {
-      // UPDATE existing row
-      targetRow.getCell(1).value = invoiceDate || "";
-      targetRow.getCell(2).value = invoiceNumber || "";
-      targetRow.getCell(3).value = invoiceAmount || "";
-      targetRow.getCell(4).value = vendorName || "";
-      targetRow.getCell(5).value = projectSite || "";
-      targetRow.getCell(6).value = challanCreated || "";
-      targetRow.getCell(7).value = challanNumber || "";
-      targetRow.getCell(8).value = challanDate || "";
-      targetRow.getCell(9).value = deliveryStatus || "";
-      targetRow.getCell(10).value = quantitySent || "";
-      targetRow.getCell(11).value = quantityReceived || "";
-      targetRow.getCell(12).value = materialDifference;
-      targetRow.getCell(13).value = itemDetailsRequired || "";
-    } else {
-      // ADD new row
-      sheet.addRow([
-        invoiceDate || "",
-        invoiceNumber || "",
-        invoiceAmount || "",
-        vendorName || "",
-        projectSite || "",
-        challanCreated || "",
-        challanNumber || "",
-        challanDate || "",
-        deliveryStatus || "",
-        quantitySent || "",
-        quantityReceived || "",
-        materialDifference,
-        itemDetailsRequired || "",
-      ]);
-    }
-
-    // Save file
-    await workbook.xlsx.writeFile(filePath);
-
-    // FOr the save in MongoDB
-    // Find existing invoice
-    const existingInvoice = await TaxInvoiceRegister.findOne({
-      invoiceNumber: invoiceNumber.trim(),
-    });
-
-    if (existingInvoice) {
-      // UPDATE existing record
-      await TaxInvoiceRegister.findOneAndUpdate(
-        { invoiceNumber: invoiceNumber.trim() },
-        formData,
-        { new: true }
-      );
-    } else {
-      // CREATE new record
-      const newInvoice = new TaxInvoiceRegister(formData);
-      await newInvoice.save();
-
-      return res.status(201).json({
-        message: "New invoice created successfully 🚀",
-      });
-    }
+//       return res.status(201).json({
+//         message: "New invoice created successfully 🚀",
+//       });
+//     }
 
 
-    res.status(200).json({
-      message: targetRow
-        ? "Existing invoice updated successfully 🚀"
-        : "New invoice added successfully 🚀",
-    });
+//     res.status(200).json({
+//       message: targetRow
+//         ? "Existing invoice updated successfully 🚀"
+//         : "New invoice added successfully 🚀",
+//     });
 
-  } catch (error) {
-    console.log(error);
+//   } catch (error) {
+//     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message,
+//     });
+//   }
 
-})
+// })
 // Edit Tax Invoice -->
 app.put("/update-tax-invoice/:taxInvoiceId", async (req, res) => {
   try {
@@ -364,39 +281,39 @@ app.put("/update-tax-invoice/:taxInvoiceId", async (req, res) => {
   }
 });
 // Get Particular  tax Invoice  data
-app.get("/tax-invoice-register/:taxInvoiceId", async (req, res) => {
-  try {
-    const { taxInvoiceId } = req.params;
+// app.get("/tax-invoice-register/:taxInvoiceId", async (req, res) => {
+//   try {
+//     const { taxInvoiceId } = req.params;
 
-    if (!taxInvoiceId) {
-      return res.status(400).json({
-        message: "Tax Invoice ID is required",
-      });
-    }
+//     if (!taxInvoiceId) {
+//       return res.status(400).json({
+//         message: "Tax Invoice ID is required",
+//       });
+//     }
 
-    // Find single invoice by MongoDB _id
-    const invoice = await TaxInvoiceRegister.findById(taxInvoiceId);
+//     // Find single invoice by MongoDB _id
+//     const invoice = await TaxInvoiceRegister.findById(taxInvoiceId);
 
-    if (!invoice) {
-      return res.status(404).json({
-        message: "Tax Invoice not found",
-      });
-    }
+//     if (!invoice) {
+//       return res.status(404).json({
+//         message: "Tax Invoice not found",
+//       });
+//     }
 
-    res.status(200).json({
-      message: "Tax Invoice fetched successfully 🚀",
-      data: invoice,
-    });
+//     res.status(200).json({
+//       message: "Tax Invoice fetched successfully 🚀",
+//       data: invoice,
+//     });
 
-  } catch (error) {
-    console.log(error);
+//   } catch (error) {
+//     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-});
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message,
+//     });
+//   }
+// });
 // Get Total  Tax Invoice Register Data
 // app.get("/total-tax-invoice-register", async (req, res) => {
 //   try {

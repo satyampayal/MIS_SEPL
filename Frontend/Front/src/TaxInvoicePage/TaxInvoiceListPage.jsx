@@ -139,15 +139,16 @@ export default function TaxInvoiceListPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-gray-100"
-        >
-          <ArrowLeft size={20} />
-          Back
-        </button>
+
 
         <div className="bg-white rounded-3xl shadow-lg p-6 mb-6 border border-gray-100">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100"
+          >
+            <ArrowLeft size={20} />
+            Back
+          </button>
           <div className="flex justify-between items-start">
 
             {/* Left Side */}
@@ -165,12 +166,21 @@ export default function TaxInvoiceListPage() {
             </div>
 
             {/* Right Side Button */}
-            <button
-              onClick={handleExportExcel}
-              className="bg-green-600 text-white px-5 py-3 rounded-xl hover:bg-green-700 transition"
-            >
-              Export Excel
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate('/add-tax-invoice')}
+                className="bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition"
+              >
+                + Add
+              </button>
+              <button
+                onClick={handleExportExcel}
+                className="bg-green-600 text-white px-5 py-3 rounded-xl hover:bg-green-700 transition"
+              >
+                Export Excel
+              </button>
+            </div>
+
 
           </div>
         </div>
@@ -388,31 +398,96 @@ export default function TaxInvoiceListPage() {
         </div>
       </div>
       {showViewModal && selectedInvoice && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-2xl rounded-2xl p-6">
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 overflow-auto p-4">
+  <div className="bg-white w-full max-w-3xl rounded-xl shadow-lg p-8">
 
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Invoice Details</h2>
-              <button onClick={() => setShowViewModal(false)}>✕</button>
-            </div>
+    {/* Header */}
+    <div className="flex justify-between items-center border-b pb-4 mb-6">
+      <h2 className="text-2xl font-bold">Tax Invoice</h2>
+      <button
+        onClick={() => setShowViewModal(false)}
+        className="text-gray-500 text-xl"
+      >
+        ✕
+      </button>
+    </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
+    {/* Table Style Layout */}
+    <table className="w-full border text-sm">
+      <tbody>
 
-              <p><strong>Invoice No:</strong> {selectedInvoice.invoiceNumber}</p>
-              <p><strong>Date:</strong> {selectedInvoice.invoiceDate}</p>
+        <tr className="border">
+          <td className="p-3 font-semibold w-1/3">Invoice Number</td>
+          <td className="p-3">{selectedInvoice.invoiceNumber}</td>
+        </tr>
 
-              <p><strong>Vendor:</strong> {selectedInvoice.vendorName}</p>
-              <p><strong>Amount:</strong> ₹ {selectedInvoice.invoiceAmount}</p>
+        <tr className="border bg-gray-50">
+          <td className="p-3 font-semibold">Invoice Date</td>
+          <td className="p-3">{selectedInvoice.invoiceDate}</td>
+        </tr>
 
-              <p><strong>Project Site:</strong> {selectedInvoice.projectSite}</p>
-              <p><strong>Status:</strong> {selectedInvoice.deliveryStatus}</p>
+        <tr className="border">
+          <td className="p-3 font-semibold">Vendor</td>
+          <td className="p-3">{selectedInvoice.vendorName}</td>
+        </tr>
 
-              <p><strong>Challan No:</strong> {selectedInvoice.challanNumber || "-"}</p>
+        <tr className="border bg-gray-50">
+          <td className="p-3 font-semibold">Project Site</td>
+          <td className="p-3">{selectedInvoice.projectSite}</td>
+        </tr>
 
-            </div>
+        <tr className="border">
+          <td className="p-3 font-semibold">Amount</td>
+          <td className="p-3">₹ {selectedInvoice.invoiceAmount}</td>
+        </tr>
 
-          </div>
-        </div>
+        <tr className="border bg-gray-50">
+          <td className="p-3 font-semibold">Delivery Status</td>
+          <td className="p-3">{selectedInvoice.deliveryStatus || "-"}</td>
+        </tr>
+
+        <tr className="border">
+          <td className="p-3 font-semibold">Challan Number</td>
+          <td className="p-3">{selectedInvoice.challanNumber || "-"}</td>
+        </tr>
+
+      </tbody>
+    </table>
+    {/* Files Section */}
+<div className="mt-6 border-t pt-4">
+
+  <h3 className="font-semibold mb-3 text-lg">Documents</h3>
+
+  <div className="flex gap-4 flex-wrap">
+
+    {/* Invoice File */}
+    {selectedInvoice.invoiceFile ? (
+      <button
+        onClick={() => window.open(selectedInvoice.invoiceFile, "_blank")}
+        className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+      >
+        View Tax Invoice
+      </button>
+    ) : (
+      <p className="text-gray-500">No Invoice File</p>
+    )}
+
+    {/* Challan File */}
+    {selectedInvoice.challanFile ? (
+      <button
+        onClick={() => window.open(selectedInvoice.challanFile, "_blank")}
+        className="px-4 py-2 bg-green-600 text-white rounded-lg"
+      >
+        View Challan
+      </button>
+    ) : (
+      <p className="text-gray-500">No Challan File</p>
+    )}
+
+  </div>
+</div>
+</div>
+</div>
       )}
     </div>
   );
