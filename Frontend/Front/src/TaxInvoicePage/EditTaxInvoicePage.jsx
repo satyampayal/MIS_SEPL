@@ -39,7 +39,7 @@ export default function EditTaxInvoicePage() {
     const fetchSingleInvoice = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/tax-invoice-register/${taxInvoiceId}`
+          `http://localhost:5000/tax-invoice/get/${taxInvoiceId}`
         );
 
         const result = await response.json();

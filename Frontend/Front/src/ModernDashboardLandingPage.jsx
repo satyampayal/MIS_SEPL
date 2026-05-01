@@ -68,7 +68,7 @@ const stats = [
   const fetchTotalTaxRegister = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/total-tax-invoice-register",
+        "http://localhost:5000/tax-invoice/all",
         {
           method: "GET",
           headers: {

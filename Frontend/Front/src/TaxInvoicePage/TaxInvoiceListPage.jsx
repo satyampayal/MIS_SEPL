@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Pencil, Trash2, Receipt,ArrowLeft } from "lucide-react";
+import { Pencil, Trash2, Receipt, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { projectSiteList, vendorList } from "../Constant";
 
@@ -7,10 +7,23 @@ export default function TaxInvoiceListPage() {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const totalPages = Math.ceil(invoices.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const paginatedInvoices = invoices.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const fetchInvoices = async () => {
     try {
-      const response = await fetch("http://localhost:5000/total-tax-invoice-register");
+      const response = await fetch("http://localhost:5000/tax-invoice/all");
       const result = await response.json();
       //   console.log(result)
       setInvoices(result.taxInvoiceList || []);
@@ -103,6 +116,7 @@ export default function TaxInvoiceListPage() {
       const result = await response.json();
 
       setInvoices(result.data);
+      setCurrentPage(1)
 
     } catch (error) {
       console.log(error);
@@ -283,7 +297,7 @@ export default function TaxInvoiceListPage() {
                 </thead>
 
                 <tbody>
-                  {invoices.map((invoice) => (
+                  {paginatedInvoices.map((invoice) => (
                     <tr
                       key={invoice._id}
                       className="border-b hover:bg-gray-50 transition"
@@ -299,6 +313,15 @@ export default function TaxInvoiceListPage() {
 
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-3">
+                          <button
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setShowViewModal(true);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-green-200 bg-green-50 hover:shadow-md transition"
+                          >
+                            View
+                          </button>
                           <button
                             onClick={() => handleEdit(invoice._id)}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 hover:shadow-md transition"
@@ -320,10 +343,77 @@ export default function TaxInvoiceListPage() {
                   ))}
                 </tbody>
               </table>
+              <div className="flex items-center justify-between p-4 border-t">
+
+                <div>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="border px-3 py-2 rounded-lg"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-3">
+
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    className="px-4 py-2 border rounded disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    className="px-4 py-2 border rounded disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+
+                </div>
+              </div>
             </div>
           )}
         </div>
       </div>
+      {showViewModal && selectedInvoice && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-2xl rounded-2xl p-6">
+
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Invoice Details</h2>
+              <button onClick={() => setShowViewModal(false)}>✕</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+
+              <p><strong>Invoice No:</strong> {selectedInvoice.invoiceNumber}</p>
+              <p><strong>Date:</strong> {selectedInvoice.invoiceDate}</p>
+
+              <p><strong>Vendor:</strong> {selectedInvoice.vendorName}</p>
+              <p><strong>Amount:</strong> ₹ {selectedInvoice.invoiceAmount}</p>
+
+              <p><strong>Project Site:</strong> {selectedInvoice.projectSite}</p>
+              <p><strong>Status:</strong> {selectedInvoice.deliveryStatus}</p>
+
+              <p><strong>Challan No:</strong> {selectedInvoice.challanNumber || "-"}</p>
+
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

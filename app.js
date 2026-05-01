@@ -14,6 +14,7 @@ const challanRouter = require("./routes/challanRoutes");
 const storeRouter = require("./routes/sroreRoutes");
 const storeMasterRouter = require("./routes/storeMasterRoutes");
 const projectMasterRouter = require("./Routes/projectMasterRoutes");
+const taxInvoiceRouter = require("./Routes/taxInvoiceRoute");
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -23,6 +24,9 @@ app.use(
   })
 );
 app.use(express.json());
+
+// Tax Invoice Routes
+app.use('/tax-invoice',taxInvoiceRouter);
 
 // Add multiple item of site for Opening stock
 app.post("/add-items", async (req, res) => {
@@ -394,27 +398,27 @@ app.get("/tax-invoice-register/:taxInvoiceId", async (req, res) => {
   }
 });
 // Get Total  Tax Invoice Register Data
-app.get("/total-tax-invoice-register", async (req, res) => {
-  try {
-    const total = await TaxInvoiceRegister.countDocuments();
-    const taxInvoiceList = await TaxInvoiceRegister.find();
+// app.get("/total-tax-invoice-register", async (req, res) => {
+//   try {
+//     const total = await TaxInvoiceRegister.countDocuments();
+//     const taxInvoiceList = await TaxInvoiceRegister.find();
 
-    console.log(taxInvoiceList);
-    res.status(200).json({
-      message: "Total Tax Invoice Register in DB",
-      total: total,
-      taxInvoiceList: taxInvoiceList
-    });
+//     console.log(taxInvoiceList);
+//     res.status(200).json({
+//       message: "Total Tax Invoice Register in DB",
+//       total: total,
+//       taxInvoiceList: taxInvoiceList
+//     });
 
-  } catch (error) {
-    console.log(error);
+//   } catch (error) {
+//     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-});
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message,
+//     });
+//   }
+// });
 // Insert Bulk Tax invoice Data
 app.post("/bulk-tax-invoice-register", async (req, res) => {
   try {
