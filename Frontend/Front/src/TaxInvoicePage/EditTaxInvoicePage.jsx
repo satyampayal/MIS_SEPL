@@ -18,18 +18,22 @@ export default function EditTaxInvoicePage() {
     deliveryStatus: "",
     quantitySent: "",
     quantityReceived: "",
+    invoiceFile: null,
+    challanFile: null,
   });
 
-  
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, files } = e.target;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: files ? files[0] : value,
     }));
+
   };
 
-  
+
   const isDifference =
     formData.quantitySent &&
     formData.quantityReceived &&
@@ -45,10 +49,8 @@ export default function EditTaxInvoicePage() {
         const result = await response.json();
 
         if (result.data) {
-          // convert  Indian date  to calender date 
-        //   const [day,month,year] =result.data.invoiceDate.split("-");
-        // const formattedDate = `${year}-${month}-${day}`;
-          setFormData({...result.data});
+
+          setFormData({ ...result.data });
         }
       } catch (error) {
         console.log(error);
@@ -62,14 +64,26 @@ export default function EditTaxInvoicePage() {
     e.preventDefault();
 
     try {
+      const form = new FormData();
+
+      // 🔹 Append all normal fields
+      Object.keys(formData).forEach((key) => {
+        form.append(key, formData[key]);
+      });
+
+      // 🔹 Append files (VERY IMPORTANT)
+      if (formData.invoiceFile) {
+        form.append("invoiceFile", formData.invoiceFile);
+      }
+
+      if (formData.challanFile) {
+        form.append("challanFile", formData.challanFile);
+      }
       const response = await fetch(
-        `http://localhost:5000/update-tax-invoice/${taxInvoiceId}`,
+        `http://localhost:5000/tax-invoice/update/${taxInvoiceId}`,
         {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
+          method: "POST",
+          body: form, // ❗ no JSON.stringify
         }
       );
 
@@ -83,7 +97,7 @@ export default function EditTaxInvoicePage() {
   };
 
 
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 p-6">
       <div className="max-w-5xl mx-auto">
@@ -142,6 +156,17 @@ export default function EditTaxInvoicePage() {
                   className="w-full border rounded-xl px-4 py-3"
                 />
               </div>
+              {/* Invoice File */}
+              <div>
+                <label className="block mb-1 font-medium">Upload Invoice</label>
+                <input
+                  type="file"
+                  name="invoiceFile"
+                  accept=".pdf,.jpg,.png"
+                  onChange={handleChange}
+                  className="border rounded-xl px-3 py-2 w-full"
+                />
+              </div>
 
               <div>
                 <label className="block mb-2 font-medium">Vendor Name</label>
@@ -178,231 +203,242 @@ export default function EditTaxInvoicePage() {
               </div>
 
               <div>
-            <h2 className="text-xl font-semibold mb-4">Challan Verification</h2>
+                <h2 className="text-xl font-semibold mb-4">Challan Verification</h2>
 
-            <label className="block mb-3 font-medium">
-              Challan Created?
-            </label>
+                <label className="block mb-3 font-medium">
+                  Challan Created?
+                </label>
 
-            <div className="flex gap-6 mb-6">
-              <label>
-                <input
-                  type="radio"
-                  name="challanCreated"
-                  value="yes"
-                  checked={formData.challanCreated === "yes"}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                Yes
-              </label>
+                <div className="flex gap-6 mb-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="challanCreated"
+                      value="yes"
+                      checked={formData.challanCreated === "yes"}
+                      onChange={handleChange}
+                      className="mr-2"
+                    />
+                    Yes
+                  </label>
 
-              <label>
-                <input
-                  type="radio"
-                  name="challanCreated"
-                  value="no"
-                  checked={formData.challanCreated === "no"}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                No
-              </label>
-            </div>
-
-            {formData.challanCreated === "yes" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block mb-2 font-medium">Challan Number</label>
-                  <input
-                    type="text"
-                    name="challanNumber"
-                    value={formData.challanNumber}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
+                  <label>
+                    <input
+                      type="radio"
+                      name="challanCreated"
+                      value="no"
+                      checked={formData.challanCreated === "no"}
+                      onChange={handleChange}
+                      className="mr-2"
+                    />
+                    No
+                  </label>
                 </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Challan Date</label>
-                  <input
-                    type="date"
-                    name="challanDate"
-                    value={formData.challanDate}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                {formData.challanCreated === "yes" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-2 font-medium">Challan Number</label>
+                      <input
+                        type="text"
+                        name="challanNumber"
+                        value={formData.challanNumber}
+                        onChange={handleChange}
+                        className="w-full border rounded-lg px-4 py-2"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Delivery Status</label>
-                  <select
-                    name="deliveryStatus"
-                    value={formData.deliveryStatus}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-4 py-2"
-                  >
-                    <option value="">Select Status</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="pending">Pending</option>
-                    <option value="partial">Partial Delivery</option>
-                  </select>
-                </div>
-              </div>
-            )}
-          </div>
+                    <div>
+                      <label className="block mb-2 font-medium">Challan Date</label>
+                      <input
+                        type="date"
+                        name="challanDate"
+                        value={formData.challanDate}
+                        onChange={handleChange}
+                        className="w-full border rounded-lg px-4 py-2"
+                      />
+                    </div>
 
-          {formData.deliveryStatus === "delivered" && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Material Verification</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block mb-2 font-medium">Quantity Sent</label>
-                  <input
-                    type="number"
-                    name="quantitySent"
-                    value={formData.quantitySent}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-2 font-medium">Quantity Received</label>
-                  <input
-                    type="number"
-                    name="quantityReceived"
-                    value={formData.quantityReceived}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                {isDifference ? (
-                  <p className="text-red-600 font-semibold">
-                    Warning: Quantity mismatch detected. Please verify material difference.
-                  </p>
-                ) : (
-                  formData.quantitySent &&
-                  formData.quantityReceived && (
-                    <p className="text-green-600 font-semibold">
-                      No difference found. Material delivered successfully.
-                    </p>
-                  )
+                    <div>
+                      <label className="block mb-2 font-medium">Delivery Status</label>
+                      <select
+                        name="deliveryStatus"
+                        value={formData.deliveryStatus}
+                        onChange={handleChange}
+                        className="w-full border rounded-lg px-4 py-2"
+                      >
+                        <option value="">Select Status</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="pending">Pending</option>
+                        <option value="partial">Partial Delivery</option>
+                      </select>
+                    </div>
+                    {/* Challan File */}
+                    <div>
+                      <label className="block mb-1 font-medium">Upload Challan</label>
+                      <input
+                        type="file"
+                        name="challanFile"
+                        accept=".pdf,.jpg,.png"
+                        onChange={handleChange}
+                        className="border rounded-xl px-3 py-2 w-full"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          )}
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Invoice Material Details</h2>
-
-            <label className="block mb-3 font-medium">
-              Do you want to enter item details of tax invoice material?
-            </label>
-
-            <div className="flex gap-6 mb-6">
-              <label>
-                <input
-                  type="radio"
-                  name="itemDetailsRequired"
-                  value="yes"
-                  checked={formData.itemDetailsRequired === "yes"}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                Yes
-              </label>
-
-              <label>
-                <input
-                  type="radio"
-                  name="itemDetailsRequired"
-                  value="no"
-                  checked={formData.itemDetailsRequired === "no"}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                No
-              </label>
-            </div>
-
-            {formData.itemDetailsRequired === "yes" && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Material Item Entry
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {formData.deliveryStatus === "delivered" && (
                 <div>
-                  <label className="block mb-2 font-medium">Item Description</label>
-                  <input
-                    type="text"
-                    placeholder="Enter item description"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
+                  <h2 className="text-xl font-semibold mb-4">Material Verification</h2>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-2 font-medium">Quantity Sent</label>
+                      <input
+                        type="number"
+                        name="quantitySent"
+                        value={formData.quantitySent}
+                        onChange={handleChange}
+                        className="w-full border rounded-lg px-4 py-2"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-2 font-medium">Quantity Received</label>
+                      <input
+                        type="number"
+                        name="quantityReceived"
+                        value={formData.quantityReceived}
+                        onChange={handleChange}
+                        className="w-full border rounded-lg px-4 py-2"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    {isDifference ? (
+                      <p className="text-red-600 font-semibold">
+                        Warning: Quantity mismatch detected. Please verify material difference.
+                      </p>
+                    ) : (
+                      formData.quantitySent &&
+                      formData.quantityReceived && (
+                        <p className="text-green-600 font-semibold">
+                          No difference found. Material delivered successfully.
+                        </p>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Invoice Material Details</h2>
+
+                <label className="block mb-3 font-medium">
+                  Do you want to enter item details of tax invoice material?
+                </label>
+
+                <div className="flex gap-6 mb-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="itemDetailsRequired"
+                      value="yes"
+                      checked={formData.itemDetailsRequired === "yes"}
+                      onChange={handleChange}
+                      className="mr-2"
+                    />
+                    Yes
+                  </label>
+
+                  <label>
+                    <input
+                      type="radio"
+                      name="itemDetailsRequired"
+                      value="no"
+                      checked={formData.itemDetailsRequired === "no"}
+                      onChange={handleChange}
+                      className="mr-2"
+                    />
+                    No
+                  </label>
                 </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">HSN Code</label>
-                  <input
-                    type="text"
-                    placeholder="Enter HSN code"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                {formData.itemDetailsRequired === "yes" && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      Material Item Entry
+                    </h3>
 
-                <div>
-                  <label className="block mb-2 font-medium">Quantity</label>
-                  <input
-                    type="number"
-                    placeholder="Enter quantity"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block mb-2 font-medium">Item Description</label>
+                        <input
+                          type="text"
+                          placeholder="Enter item description"
+                          className="w-full border rounded-lg px-4 py-2"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Rate</label>
-                  <input
-                    type="number"
-                    placeholder="Enter rate"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                      <div>
+                        <label className="block mb-2 font-medium">HSN Code</label>
+                        <input
+                          type="text"
+                          placeholder="Enter HSN code"
+                          className="w-full border rounded-lg px-4 py-2"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Per</label>
-                  <input
-                    type="text"
-                    placeholder="Nos / Kg / Mtr"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                      <div>
+                        <label className="block mb-2 font-medium">Quantity</label>
+                        <input
+                          type="number"
+                          placeholder="Enter quantity"
+                          className="w-full border rounded-lg px-4 py-2"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block mb-2 font-medium">Discount</label>
-                  <input
-                    type="number"
-                    placeholder="Enter discount"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                      <div>
+                        <label className="block mb-2 font-medium">Rate</label>
+                        <input
+                          type="number"
+                          placeholder="Enter rate"
+                          className="w-full border rounded-lg px-4 py-2"
+                        />
+                      </div>
 
-                <div className="md:col-span-2">
-                  <label className="block mb-2 font-medium">Taxable Value</label>
-                  <input
-                    type="number"
-                    placeholder="Enter taxable value"
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
+                      <div>
+                        <label className="block mb-2 font-medium">Per</label>
+                        <input
+                          type="text"
+                          placeholder="Nos / Kg / Mtr"
+                          className="w-full border rounded-lg px-4 py-2"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block mb-2 font-medium">Discount</label>
+                        <input
+                          type="number"
+                          placeholder="Enter discount"
+                          className="w-full border rounded-lg px-4 py-2"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block mb-2 font-medium">Taxable Value</label>
+                        <input
+                          type="number"
+                          placeholder="Enter taxable value"
+                          className="w-full border rounded-lg px-4 py-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-            )}
-          </div>
             </div>
 
             <div className="pt-4 flex gap-4">

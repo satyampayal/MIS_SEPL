@@ -28,123 +28,123 @@ app.use(express.json());
 // Tax Invoice Routes
 app.use('/tax-invoice',taxInvoiceRouter);
 
-// Add multiple item of site for Opening stock
-app.post("/add-items", async (req, res) => {
-  try {
-    const { date, items } = req.body;
+// Add multiple item of site for Opening stock----> This route is temperory to doing my opening  stock 
+// app.post("/add-items", async (req, res) => {
+//   try {
+//     const { date, items } = req.body;
 
-    /*
-      Frontend Payload Example:
+//     /*
+//       Frontend Payload Example:
 
-      {
-        "date": "03-04-2026",
-        "items": [
-          {
-            "description": "Item A",
-            "qty": 3
-          },
-          {
-            "description": "Item B",
-            "qty": 5
-          }
-        ]
-      }
-    */
+//       {
+//         "date": "03-04-2026",
+//         "items": [
+//           {
+//             "description": "Item A",
+//             "qty": 3
+//           },
+//           {
+//             "description": "Item B",
+//             "qty": 5
+//           }
+//         ]
+//       }
+//     */
 
-    if (!date || !items || items.length === 0) {
-      return res.status(400).json({
-        message: "Date and items are required",
-      });
-    }
+//     if (!date || !items || items.length === 0) {
+//       return res.status(400).json({
+//         message: "Date and items are required",
+//       });
+//     }
 
-    const filePath = "SPCPL_Ghwhati.xlsx";
-    const workbook = new ExcelJS.Workbook();
+//     const filePath = "SPCPL_Ghwhati.xlsx";
+//     const workbook = new ExcelJS.Workbook();
 
-    // If file exists → read it
-    if (fs.existsSync(filePath)) {
-      await workbook.xlsx.readFile(filePath);
-    } else {
-      // If file does not exist → create new workbook + sheet
-      workbook.addWorksheet("Items");
-    }
+//     // If file exists → read it
+//     if (fs.existsSync(filePath)) {
+//       await workbook.xlsx.readFile(filePath);
+//     } else {
+//       // If file does not exist → create new workbook + sheet
+//       workbook.addWorksheet("Items");
+//     }
 
-    const sheet =
-      workbook.getWorksheet("Items") || workbook.getWorksheet(1);
+//     const sheet =
+//       workbook.getWorksheet("Items") || workbook.getWorksheet(1);
 
-    // -----------------------------
-    // STEP 1: Find Date Column
-    // -----------------------------
-    let targetCol = null;
+//     // -----------------------------
+//     // STEP 1: Find Date Column
+//     // -----------------------------
+//     let targetCol = null;
 
-    sheet.getRow(1).eachCell((cell, colNumber) => {
-      if (String(cell.value).trim() === String(date).trim()) {
-        targetCol = colNumber;
-      }
-    });
+//     sheet.getRow(1).eachCell((cell, colNumber) => {
+//       if (String(cell.value).trim() === String(date).trim()) {
+//         targetCol = colNumber;
+//       }
+//     });
 
-    // If date column not found → create new date column
-    if (!targetCol) {
-      targetCol = sheet.columnCount + 1;
-      sheet.getRow(1).getCell(targetCol).value = date;
-    }
+//     // If date column not found → create new date column
+//     if (!targetCol) {
+//       targetCol = sheet.columnCount + 1;
+//       sheet.getRow(1).getCell(targetCol).value = date;
+//     }
 
-    // Ensure first column header exists
-    if (!sheet.getRow(1).getCell(1).value) {
-      sheet.getRow(1).getCell(1).value = "Description";
-    }
+//     // Ensure first column header exists
+//     if (!sheet.getRow(1).getCell(1).value) {
+//       sheet.getRow(1).getCell(1).value = "Description";
+//     }
 
-    // -----------------------------
-    // STEP 2: Add / Update Rows
-    // -----------------------------
-    for (const item of items) {
-      const { description, qty } = item;
+//     // -----------------------------
+//     // STEP 2: Add / Update Rows
+//     // -----------------------------
+//     for (const item of items) {
+//       const { description, qty } = item;
 
-      if (!description || qty === undefined) continue;
+//       if (!description || qty === undefined) continue;
 
-      let targetRow = null;
+//       let targetRow = null;
 
-      // Find existing row by Description
-      sheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return; // skip header row
+//       // Find existing row by Description
+//       sheet.eachRow((row, rowNumber) => {
+//         if (rowNumber === 1) return; // skip header row
 
-        const firstCell = row.getCell(1).value;
+//         const firstCell = row.getCell(1).value;
 
-        if (
-          String(firstCell).trim().toLowerCase() ===
-          String(description).trim().toLowerCase()
-        ) {
-          targetRow = rowNumber;
-        }
-      });
+//         if (
+//           String(firstCell).trim().toLowerCase() ===
+//           String(description).trim().toLowerCase()
+//         ) {
+//           targetRow = rowNumber;
+//         }
+//       });
 
-      // If item not found → create new row
-      if (!targetRow) {
-        targetRow = sheet.rowCount + 1;
-        sheet.getRow(targetRow).getCell(1).value = description;
-      }
+//       // If item not found → create new row
+//       if (!targetRow) {
+//         targetRow = sheet.rowCount + 1;
+//         sheet.getRow(targetRow).getCell(1).value = description;
+//       }
 
-      // Put qty in respective date column
-      sheet.getRow(targetRow).getCell(targetCol).value = qty;
-    }
+//       // Put qty in respective date column
+//       sheet.getRow(targetRow).getCell(targetCol).value = qty;
+//     }
 
-    // -----------------------------
-    // STEP 3: Save Excel File
-    // -----------------------------
-    await workbook.xlsx.writeFile(filePath);
+//     // -----------------------------
+//     // STEP 3: Save Excel File
+//     // -----------------------------
+//     await workbook.xlsx.writeFile(filePath);
 
-    res.status(200).json({
-      message: "Excel updated successfully 🚀",
-    });
+//     res.status(200).json({
+//       message: "Excel updated successfully 🚀",
+//     });
 
-  } catch (error) {
-    console.log(error);
+//   } catch (error) {
+//     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-});
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message,
+//     });
+//   }
+// });
 //  Register Tax Invoice 
 // app.post("/tax-invoice-register", async (req, res) => {
 //   try {
@@ -226,60 +226,60 @@ app.post("/add-items", async (req, res) => {
 
 // })
 // Edit Tax Invoice -->
-app.put("/update-tax-invoice/:taxInvoiceId", async (req, res) => {
-  try {
-    const { taxInvoiceId } = req.params;
-    const formData = req.body;
+// app.put("/update-tax-invoice/:taxInvoiceId", async (req, res) => {
+//   try {
+//     const { taxInvoiceId } = req.params;
+//     const formData = req.body;
 
-    if (!taxInvoiceId) {
-      return res.status(400).json({
-        message: "Tax Invoice ID is required",
-      });
-    }
+//     if (!taxInvoiceId) {
+//       return res.status(400).json({
+//         message: "Tax Invoice ID is required",
+//       });
+//     }
 
-    // Optional: material difference auto-calculate
-    let materialDifference = "No Difference";
+//     // Optional: material difference auto-calculate
+//     let materialDifference = "No Difference";
 
-    if (
-      formData.quantitySent &&
-      formData.quantityReceived &&
-      Number(formData.quantitySent) !== Number(formData.quantityReceived)
-    ) {
-      materialDifference = "Difference Found";
-    }
+//     if (
+//       formData.quantitySent &&
+//       formData.quantityReceived &&
+//       Number(formData.quantitySent) !== Number(formData.quantityReceived)
+//     ) {
+//       materialDifference = "Difference Found";
+//     }
 
-    formData.materialDifference = materialDifference;
+//     formData.materialDifference = materialDifference;
 
-    // Find and update by MongoDB _id
-    const updatedInvoice = await TaxInvoiceRegister.findByIdAndUpdate(
-      taxInvoiceId,
-      formData,
-      {
-        new: true, // return updated document
-        runValidators: true,
-      }
-    );
+//     // Find and update by MongoDB _id
+//     const updatedInvoice = await TaxInvoiceRegister.findByIdAndUpdate(
+//       taxInvoiceId,
+//       formData,
+//       {
+//         new: true, // return updated document
+//         runValidators: true,
+//       }
+//     );
 
-    if (!updatedInvoice) {
-      return res.status(404).json({
-        message: "Tax Invoice not found",
-      });
-    }
+//     if (!updatedInvoice) {
+//       return res.status(404).json({
+//         message: "Tax Invoice not found",
+//       });
+//     }
 
-    res.status(200).json({
-      message: "Tax Invoice updated successfully 🚀",
-      data: updatedInvoice,
-    });
+//     res.status(200).json({
+//       message: "Tax Invoice updated successfully 🚀",
+//       data: updatedInvoice,
+//     });
 
-  } catch (error) {
-    console.log(error);
+//   } catch (error) {
+//     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-});
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message,
+//     });
+//   }
+// });
 // Get Particular  tax Invoice  data
 // app.get("/tax-invoice-register/:taxInvoiceId", async (req, res) => {
 //   try {
@@ -337,199 +337,200 @@ app.put("/update-tax-invoice/:taxInvoiceId", async (req, res) => {
 //   }
 // });
 // Insert Bulk Tax invoice Data
-app.post("/bulk-tax-invoice-register", async (req, res) => {
-  try {
-    const invoices = req.body;
+// app.post("/bulk-tax-invoice-register", async (req, res) => {
+//   try {
+//     const invoices = req.body;
 
-    if (!Array.isArray(invoices) || invoices.length === 0) {
-      return res.status(400).json({
-        message: "Please send an array of invoice data",
-      });
-    }
+//     if (!Array.isArray(invoices) || invoices.length === 0) {
+//       return res.status(400).json({
+//         message: "Please send an array of invoice data",
+//       });
+//     }
 
-    // Optional: auto calculate materialDifference
-    const formattedInvoices = invoices.map((invoice) => {
-      let materialDifference = "No Difference";
+//     // Optional: auto calculate materialDifference
+//     const formattedInvoices = invoices.map((invoice) => {
+//       let materialDifference = "No Difference";
 
-      if (
-        invoice.quantitySent &&
-        invoice.quantityReceived &&
-        Number(invoice.quantitySent) !== Number(invoice.quantityReceived)
-      ) {
-        materialDifference = "Difference Found";
-      }
+//       if (
+//         invoice.quantitySent &&
+//         invoice.quantityReceived &&
+//         Number(invoice.quantitySent) !== Number(invoice.quantityReceived)
+//       ) {
+//         materialDifference = "Difference Found";
+//       }
 
-      return {
-        ...invoice,
-        materialDifference,
-      };
-    });
+//       return {
+//         ...invoice,
+//         materialDifference,
+//       };
+//     });
 
-    // Insert all records at once
-    const savedData = await TaxInvoiceRegister.insertMany(
-      formattedInvoices
-    );
+//     // Insert all records at once
+//     const savedData = await TaxInvoiceRegister.insertMany(
+//       formattedInvoices
+//     );
 
-    res.status(201).json({
-      message: "Bulk Tax Invoice Register saved successfully 🚀",
-      totalInserted: savedData.length,
-      data: savedData,
-    });
+//     res.status(201).json({
+//       message: "Bulk Tax Invoice Register saved successfully 🚀",
+//       totalInserted: savedData.length,
+//       data: savedData,
+//     });
 
-  } catch (error) {
-    console.log(error);
+//   } catch (error) {
+//     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-});
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message,
+//     });
+//   }
+// });
 // Deleted the  Tax Invoice Record
-app.delete("/delete-tax-invoice/:taxInvoiceId", async (req, res) => {
-  try {
-    const { taxInvoiceId } = req.params;
+// app.delete("/delete-tax-invoice/:taxInvoiceId", async (req, res) => {
+//   try {
+//     const { taxInvoiceId } = req.params;
 
-    if (!taxInvoiceId) {
-      return res.status(400).json({
-        message: "Tax Invoice ID is required",
-      });
-    }
+//     if (!taxInvoiceId) {
+//       return res.status(400).json({
+//         message: "Tax Invoice ID is required",
+//       });
+//     }
 
-    // Find and delete by MongoDB _id
-    const deletedInvoice = await TaxInvoiceRegister.findByIdAndDelete(
-      taxInvoiceId
-    );
+//     // Find and delete by MongoDB _id
+//     const deletedInvoice = await TaxInvoiceRegister.findByIdAndDelete(
+//       taxInvoiceId
+//     );
 
-    if (!deletedInvoice) {
-      return res.status(404).json({
-        message: "Tax Invoice not found",
-      });
-    }
+//     if (!deletedInvoice) {
+//       return res.status(404).json({
+//         message: "Tax Invoice not found",
+//       });
+//     }
 
-    res.status(200).json({
-      message: "Tax Invoice deleted successfully 🚀",
-      data: deletedInvoice,
-    });
+//     res.status(200).json({
+//       message: "Tax Invoice deleted successfully 🚀",
+//       data: deletedInvoice,
+//     });
 
-  } catch (error) {
-    console.log(error);
+//   } catch (error) {
+//     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-});
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message,
+//     });
+//   }
+// });
 // Convert Data into excel  sheet
-app.get("/export-tax-invoice-excel", async (req, res) => {
-  try {
-    const invoices = await TaxInvoiceRegister.find();
+// app.get("/export-tax-invoice-excel", async (req, res) => {
+//   try {
+//     const invoices = await TaxInvoiceRegister.find();
 
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Tax Invoice Register");
+//     const workbook = new ExcelJS.Workbook();
+//     const worksheet = workbook.addWorksheet("Tax Invoice Register");
 
-    // Header Row
-    worksheet.columns = [
-      { header: "Invoice Date", key: "invoiceDate", width: 18 },
-      { header: "Invoice Number", key: "invoiceNumber", width: 25 },
-      { header: "Invoice Amount", key: "invoiceAmount", width: 18 },
-      { header: "Vendor Name", key: "vendorName", width: 35 },
-      { header: "Project Site", key: "projectSite", width: 30 },
-      { header: "Challan Created", key: "challanCreated", width: 18 },
-      { header: "Challan Number", key: "challanNumber", width: 25 },
-      { header: "Challan Date", key: "challanDate", width: 18 },
-      { header: "Delivery Status", key: "deliveryStatus", width: 18 },
-      { header: "Quantity Sent", key: "quantitySent", width: 18 },
-      { header: "Quantity Received", key: "quantityReceived", width: 20 },
-      { header: "Material Difference", key: "materialDifference", width: 20 }
-    ];
+//     // Header Row
+//     worksheet.columns = [
+//       { header: "Invoice Date", key: "invoiceDate", width: 18 },
+//       { header: "Invoice Number", key: "invoiceNumber", width: 25 },
+//       { header: "Invoice Amount", key: "invoiceAmount", width: 18 },
+//       { header: "Vendor Name", key: "vendorName", width: 35 },
+//       { header: "Project Site", key: "projectSite", width: 30 },
+//       { header: "Challan Created", key: "challanCreated", width: 18 },
+//       { header: "Challan Number", key: "challanNumber", width: 25 },
+//       { header: "Challan Date", key: "challanDate", width: 18 },
+//       { header: "Delivery Status", key: "deliveryStatus", width: 18 },
+//       { header: "Quantity Sent", key: "quantitySent", width: 18 },
+//       { header: "Quantity Received", key: "quantityReceived", width: 20 },
+//       { header: "Material Difference", key: "materialDifference", width: 20 }
+//     ];
 
-    // Add Data Rows
-    invoices.forEach((invoice) => {
-      worksheet.addRow({
-        invoiceDate: invoice.invoiceDate,
-        invoiceNumber: invoice.invoiceNumber,
-        invoiceAmount: invoice.invoiceAmount,
-        vendorName: invoice.vendorName,
-        projectSite: invoice.projectSite,
-        challanCreated: invoice.challanCreated,
-        challanNumber: invoice.challanNumber,
-        challanDate: invoice.challanDate,
-        deliveryStatus: invoice.deliveryStatus,
-        quantitySent: invoice.quantitySent,
-        quantityReceived: invoice.quantityReceived,
-        materialDifference: invoice.materialDifference
-      });
-    });
+//     // Add Data Rows
+//     invoices.forEach((invoice) => {
+//       worksheet.addRow({
+//         invoiceDate: invoice.invoiceDate,
+//         invoiceNumber: invoice.invoiceNumber,
+//         invoiceAmount: invoice.invoiceAmount,
+//         vendorName: invoice.vendorName,
+//         projectSite: invoice.projectSite,
+//         challanCreated: invoice.challanCreated,
+//         challanNumber: invoice.challanNumber,
+//         challanDate: invoice.challanDate,
+//         deliveryStatus: invoice.deliveryStatus,
+//         quantitySent: invoice.quantitySent,
+//         quantityReceived: invoice.quantityReceived,
+//         materialDifference: invoice.materialDifference
+//       });
+//     });
 
-    // Response Headers
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
+//     // Response Headers
+//     res.setHeader(
+//       "Content-Type",
+//       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+//     );
 
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=TaxInvoiceRegister.xlsx"
-    );
+//     res.setHeader(
+//       "Content-Disposition",
+//       "attachment; filename=TaxInvoiceRegister.xlsx"
+//     );
 
-    await workbook.xlsx.write(res);
-    res.end();
+//     await workbook.xlsx.write(res);
+//     res.end();
 
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message
-    });
-  }
-});
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message
+//     });
+//   }
+// });
 // Filter  Tax invoice list
-app.get("/tax-invoice-register", async (req, res) => {
-  try {
-    const filters = req.query;
 
-    let query = {};
+// app.get("/tax-invoice-register", async (req, res) => {
+//   try {
+//     const filters = req.query;
 
-    if (filters.invoiceNumber) {
-      query.invoiceNumber = filters.invoiceNumber;
-    }
+//     let query = {};
 
-    if (filters.vendorName) {
-      query.vendorName = filters.vendorName;
-    }
+//     if (filters.invoiceNumber) {
+//       query.invoiceNumber = filters.invoiceNumber;
+//     }
 
-    if (filters.projectSite) {
-      query.projectSite = filters.projectSite;
-    }
+//     if (filters.vendorName) {
+//       query.vendorName = filters.vendorName;
+//     }
 
-    if (filters.deliveryStatus) {
-      query.deliveryStatus = filters.deliveryStatus;
-    }
+//     if (filters.projectSite) {
+//       query.projectSite = filters.projectSite;
+//     }
 
-    if (filters.invoiceDate) {
-      query.invoiceDate = filters.invoiceDate;
-    }
+//     if (filters.deliveryStatus) {
+//       query.deliveryStatus = filters.deliveryStatus;
+//     }
 
-    if (filters.challanNumber) {
-      query.challanNumber = filters.challanNumber;
-    }
+//     if (filters.invoiceDate) {
+//       query.invoiceDate = filters.invoiceDate;
+//     }
 
-    const data = await TaxInvoiceRegister.find(query);
+//     if (filters.challanNumber) {
+//       query.challanNumber = filters.challanNumber;
+//     }
 
-    res.status(200).json({
-      message: "Filtered data fetched successfully",
-      data
-    });
+//     const data = await TaxInvoiceRegister.find(query);
 
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message
-    });
-  }
-});
+//     res.status(200).json({
+//       message: "Filtered data fetched successfully",
+//       data
+//     });
+
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Server Error",
+//       error: error.message
+//     });
+//   }
+// });
 
 /* Start Add Sites */
 

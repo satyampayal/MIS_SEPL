@@ -47,7 +47,7 @@ export default function TaxInvoiceListPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/delete-tax-invoice/${taxInvoiceId}`,
+        `http://localhost:5000/tax-invoice/delete/${taxInvoiceId}`,
         {
           method: "DELETE",
         }
@@ -69,7 +69,7 @@ export default function TaxInvoiceListPage() {
   const handleExportExcel = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/export-tax-invoice-excel"
+        "http://localhost:5000/tax-invoice/export-excel"
       );
 
       const blob = await response.blob();
