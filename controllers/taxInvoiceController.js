@@ -368,6 +368,8 @@ exports.updateInvoice = async (req, res) => {
         }
 
         const formData = req.body;
+        //  let itemDetails=req.body.itemDetails;
+        //  itemDetails=[];
 
         // 📂 Files
         const invoiceFileObj = req.files.find(f => f.fieldname === "invoiceFile");
@@ -410,8 +412,8 @@ exports.updateInvoice = async (req, res) => {
             taxInvoiceId,
             updateData,
             {
-                new: true,
-                runValidators: true,
+               returnDocument: "after",
+                
             }
         );
 

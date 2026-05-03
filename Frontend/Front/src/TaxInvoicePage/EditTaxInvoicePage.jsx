@@ -16,10 +16,12 @@ export default function EditTaxInvoicePage() {
     challanNumber: "",
     challanDate: "",
     deliveryStatus: "",
-    quantitySent: "",
-    quantityReceived: "",
+    quantitySent: 0,
+    quantityReceived: 0,
     invoiceFile: null,
     challanFile: null,
+    // itemDetails: []
+
   });
 
 
@@ -79,10 +81,13 @@ export default function EditTaxInvoicePage() {
       if (formData.challanFile) {
         form.append("challanFile", formData.challanFile);
       }
+      // if (formData.itemDetails && formData.itemDetails.length > 0) {
+      //   form.append("itemDetails", JSON.stringify(formData.itemDetails));
+      // }
       const response = await fetch(
         `http://localhost:5000/tax-invoice/update/${taxInvoiceId}`,
         {
-          method: "POST",
+          method: "PUT",
           body: form, // ❗ no JSON.stringify
         }
       );

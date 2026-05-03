@@ -398,96 +398,108 @@ export default function TaxInvoiceListPage() {
         </div>
       </div>
       {showViewModal && selectedInvoice && (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 overflow-auto p-4">
-  <div className="bg-white w-full max-w-3xl rounded-xl shadow-lg p-8">
+        <div className=" fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-auto p-4">
+          <div className="bg-white w-full max-w-3xl rounded-xl shadow-lg p-8">
 
-    {/* Header */}
-    <div className="flex justify-between items-center border-b pb-4 mb-6">
-      <h2 className="text-2xl font-bold">Tax Invoice</h2>
-      <button
-        onClick={() => setShowViewModal(false)}
-        className="text-gray-500 text-xl"
-      >
-        ✕
-      </button>
-    </div>
+            {/* Header */}
+            <div className="flex justify-between items-center border-b pb-4 mb-6">
+              <h2 className="text-2xl font-bold">Tax Invoice</h2>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-500 text-xl"
+              >
+                ✕
+              </button>
+            </div>
 
-    {/* Table Style Layout */}
-    <table className="w-full border text-sm">
-      <tbody>
+            {/* Table Style Layout */}
+            <table className="w-full border text-sm">
+              <tbody>
 
-        <tr className="border">
-          <td className="p-3 font-semibold w-1/3">Invoice Number</td>
-          <td className="p-3">{selectedInvoice.invoiceNumber}</td>
-        </tr>
+                <tr className="border">
+                  <td className="p-3 font-semibold w-1/3">Invoice Number</td>
+                  <td className="p-3">{selectedInvoice.invoiceNumber}</td>
+                </tr>
 
-        <tr className="border bg-gray-50">
-          <td className="p-3 font-semibold">Invoice Date</td>
-          <td className="p-3">{selectedInvoice.invoiceDate}</td>
-        </tr>
+                <tr className="border bg-gray-50">
+                  <td className="p-3 font-semibold">Invoice Date</td>
+                  <td className="p-3">{selectedInvoice.invoiceDate}</td>
+                </tr>
 
-        <tr className="border">
-          <td className="p-3 font-semibold">Vendor</td>
-          <td className="p-3">{selectedInvoice.vendorName}</td>
-        </tr>
+                <tr className="border">
+                  <td className="p-3 font-semibold">Vendor</td>
+                  <td className="p-3">{selectedInvoice.vendorName}</td>
+                </tr>
 
-        <tr className="border bg-gray-50">
-          <td className="p-3 font-semibold">Project Site</td>
-          <td className="p-3">{selectedInvoice.projectSite}</td>
-        </tr>
+                <tr className="border bg-gray-50">
+                  <td className="p-3 font-semibold">Project Site</td>
+                  <td className="p-3">{selectedInvoice.projectSite}</td>
+                </tr>
 
-        <tr className="border">
-          <td className="p-3 font-semibold">Amount</td>
-          <td className="p-3">₹ {selectedInvoice.invoiceAmount}</td>
-        </tr>
+                <tr className="border">
+                  <td className="p-3 font-semibold">Amount</td>
+                  <td className="p-3">₹ {selectedInvoice.invoiceAmount}</td>
+                </tr>
 
-        <tr className="border bg-gray-50">
-          <td className="p-3 font-semibold">Delivery Status</td>
-          <td className="p-3">{selectedInvoice.deliveryStatus || "-"}</td>
-        </tr>
+                <tr className="border bg-gray-50">
+                  <td className="p-3 font-semibold">Delivery Status</td>
+                  <td className="p-3">{selectedInvoice.deliveryStatus || "-"}</td>
+                </tr>
 
-        <tr className="border">
-          <td className="p-3 font-semibold">Challan Number</td>
-          <td className="p-3">{selectedInvoice.challanNumber || "-"}</td>
-        </tr>
+                <tr className="border">
+                  <td className="p-3 font-semibold">Challan Number</td>
+                  <td className="p-3">{selectedInvoice.challanNumber || "-"}</td>
+                </tr>
+                <tr className="border">
+                  <td className="p-3 font-semibold">Material Differnce </td>
+                  
+                  <td
+                    className={`p-3 ${selectedInvoice?.materialDifference === "Difference Found"
+                        ? "bg-red-100 text-red-600 font-semibold"
+                        : "bg-green-100 text-green-600 font-semibold"
+                      }`}
+                  >
+                    {selectedInvoice?.materialDifference || "-"}
+                  </td>
+                </tr>
 
-      </tbody>
-    </table>
-    {/* Files Section */}
-<div className="mt-6 border-t pt-4">
+              </tbody>
+            </table>
+            {/* Files Section */}
+            <div className="mt-6 border-t pt-4">
 
-  <h3 className="font-semibold mb-3 text-lg">Documents</h3>
+              <h3 className="font-semibold mb-3 text-lg">Documents</h3>
 
-  <div className="flex gap-4 flex-wrap">
+              <div className="flex gap-4 flex-wrap">
 
-    {/* Invoice File */}
-    {selectedInvoice.invoiceFile ? (
-      <button
-        onClick={() => window.open(selectedInvoice.invoiceFile, "_blank")}
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-      >
-        View Tax Invoice
-      </button>
-    ) : (
-      <p className="text-gray-500">No Invoice File</p>
-    )}
+                {/* Invoice File */}
+                {selectedInvoice?.invoiceFile ? (
+                  <button
+                    onClick={() => window.open(selectedInvoice.invoiceFile, "_blank")}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                  >
+                    View Tax Invoice
+                  </button>
+                ) : (
+                  <p className="text-gray-500">No Invoice File</p>
+                )}
 
-    {/* Challan File */}
-    {selectedInvoice.challanFile ? (
-      <button
-        onClick={() => window.open(selectedInvoice.challanFile, "_blank")}
-        className="px-4 py-2 bg-green-600 text-white rounded-lg"
-      >
-        View Challan
-      </button>
-    ) : (
-      <p className="text-gray-500">No Challan File</p>
-    )}
+                {/* Challan File */}
+                {selectedInvoice.challanFile ? (
+                  <button
+                    onClick={() => window.open(selectedInvoice.challanFile, "_blank")}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg"
+                  >
+                    View Challan
+                  </button>
+                ) : (
+                  <p className="text-gray-500">No Challan File</p>
+                )}
 
-  </div>
-</div>
-</div>
-</div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

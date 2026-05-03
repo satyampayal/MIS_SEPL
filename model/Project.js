@@ -16,13 +16,41 @@ const projectSchema = new mongoose.Schema(
       unique: true,
       trim: true
     },
+    description: {
+      type: String,
+      default: ""
+    },
 
     location: {
       type: String,
       required: true,
       trim: true
     },
+    clientName: {
+      type: String,
+      required: true,
 
+    },
+    orderNumber: {
+      type: String,
+      // required: true,
+      trim: true,
+    },
+     orderDate: {
+      type: String,
+      // required: true,
+    },
+    typeOfWork: {
+      type: String,
+      default: "SITC",
+    },
+    dlpPeriod: {
+      type: String,
+      default: "1 Year",
+    },
+    complitionDate:{
+      type:String,
+    },
     manager: {
       type: String,
       required: true,
@@ -35,30 +63,22 @@ const projectSchema = new mongoose.Schema(
       trim: true
     },
 
-    startDate: {
-      type: String,
-      required: true
-    },
 
     status: {
       type: String,
-      default: "Active"
+      default: "Active",
     },
 
     progress: {
       type: Number,
       default: 0
     },
-    poFileUrl: {
+    poFile: {
       type: String,
       default: ""
     },
 
     poFilePublicId: {
-      type: String,
-      default: ""
-    },
-      description: {
       type: String,
       default: ""
     }

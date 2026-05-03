@@ -6,17 +6,20 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
 
-    let folderName = "misc";
+    let folderName = "misc/other";
 
     // 🔥 Perfect control using fieldname
     if (file.fieldname === "invoiceFile") {
-      folderName = "tax-invoices";
+      folderName = "misc/tax-invoices";
     } 
     else if (file.fieldname === "challanFile") {
-      folderName = "delivery-challans";
+      folderName = "misc/delivery-challans";
     } 
     else if (file.fieldname === "projectFile") {
-      folderName = "project-files";
+      folderName = "misc/project-files";
+    }
+     else if (file.fieldname === "poFile") {
+      folderName = "misc/project-file";
     }
 
     return {

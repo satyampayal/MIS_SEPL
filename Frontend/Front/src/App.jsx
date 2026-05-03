@@ -15,6 +15,8 @@ import StoreManagementPage from './Store/StoreManagementPage'
 import StoreInventoryPage from './Store/StoreInventoryPage'
 import ProjectMasterManagementWithProgress from '../ProjectMasterManagement/ProjectMasterManagementWithProgress'
 import ProjectBillingProgressPage from '../ProjectMasterManagement/ProjectBillingProgressPage'
+import ProjectDetailPage from '../ProjectMasterManagement/ProjectDetailPage'
+import EditProjectPage from '../ProjectMasterManagement/EditProjectPage'
 function App() {
 const { taxInvoiceId } = useParams();
 
@@ -37,7 +39,9 @@ const { taxInvoiceId } = useParams();
 
   /*  Site Management */
   <Route path={'/projects'}  element={<ProjectMasterManagementWithProgress/>} />
-  <Route path={'/billing'}  element={<ProjectBillingProgressPage/>} />
+  <Route path={'/project/:projectId'}  element={<ProjectDetailPage/>} />
+  <Route path={'/project/update/:projectId'}  element={<EditProjectPage/>} />
+  
 
 
 

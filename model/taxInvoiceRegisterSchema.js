@@ -4,7 +4,7 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
   {
     invoiceDate: {
       type: String,
-      required:true,
+      required: true,
       trim: true,
     },
 
@@ -78,56 +78,56 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
       default: "no",
     },
     invoiceFile: {
-  type: String, // cloudinary URL
-  default: "",
-},
+      type: String, // cloudinary URL
+      default: "",
+    },
 
-challanFile: {
-  type: String, // cloudinary URL
-  default: "",
-},
+    challanFile: {
+      type: String, // cloudinary URL
+      default: "",
+    },
 
-    itemDetails: [
-      {
-        itemDescription: {
-          type: String,
-          default: "",
-          trim: true,
-        },
+    // itemDetails: [
+    //   {
+    //     itemDescription: {
+    //       type: String,
+    //       default: "",
+    //       trim: true,
+    //     },
 
-        hsnCode: {
-          type: String,
-          default: "",
-          trim: true,
-        },
+    //     hsnCode: {
+    //       type: String,
+    //       default: "",
+    //       trim: true,
+    //     },
 
-        qty: {
-          type: Number,
-          default: 0,
-        },
+    //     qty: {
+    //       type: Number,
+    //       default: 0,
+    //     },
 
-        rate: {
-          type: Number,
-          default: 0,
-        },
+    //     rate: {
+    //       type: Number,
+    //       default: 0,
+    //     },
 
-        per: {
-          type: String,
-          default: "",
-          trim: true,
-        },
+    //     per: {
+    //       type: String,
+    //       default: "",
+    //       trim: true,
+    //     },
 
-        discount: {
-          type: Number,
-          default: 0,
-        },
+    //     discount: {
+    //       type: Number,
+    //       default: 0,
+    //     },
 
-        taxableValue: {
-          type: Number,
-          default: 0,
-        },
-      },
-    ],
+    //     taxableValue: {
+    //       type: Number,
+    //       default: 0,
+    //     },
+    //   },
+    // ],
   },
   {
     timestamps: true,
