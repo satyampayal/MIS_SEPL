@@ -19,7 +19,10 @@ const storage = new CloudinaryStorage({
       folderName = "misc/project-files";
     }
      else if (file.fieldname === "poFile") {
-      folderName = "misc/project-file";
+      folderName = "misc/po-file";
+    }
+    else if (file.fieldname === "billFile") {
+      folderName = "misc/bill-file";
     }
 
     return {

@@ -1,43 +1,42 @@
 const mongoose = require("mongoose");
 
-const projectBillSchema = new mongoose.Schema(
+const billSchema = new mongoose.Schema(
   {
-    projectId: {
+    project: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
-      required: true,
+      required: true
     },
 
     billType: {
       type: String,
-    //   enum: ["RA-01", "RA-02", "RA-03", "FINAL", "CREDIT"],
-      required: true,
+      // enum: ["RA", "Final", "Credit"],
+      required: true
+    },
+    billTypeCount:{
+      type:Number,// RA-01, RA-02
+      required:true
+    },
+
+    billNumber: {
+      type: String, 
+      required: true
     },
 
     billAmount: {
       type: Number,
-      required: true,
+      required: true
     },
 
-    clearedAmount: {
-      type: Number,
-      default: 0,
-    },
-
-    status: {
+    billDate: {
       type: String,
-      enum: ["Pending", "Cleared"],
-      default: "Pending",
+      required: true
     },
 
-    billDate: Date,
-    clearedDate: Date,
-
-    billCopy: String, // Cloudinary URL
-
-    remarks: String,
+    billFile: String,
+    billFilePublicId: String
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("ProjectBill", projectBillSchema);
+module.exports = mongoose.model("Bill", billSchema);

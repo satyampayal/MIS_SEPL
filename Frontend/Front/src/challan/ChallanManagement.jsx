@@ -410,7 +410,7 @@ const ChallanManagement = () => {
                 </button>
 
                 <p className="font-semibold text-lg">
-                  Total Amount: ₹{items.reduce((accu,current)=>accu+current.amount),0}
+                  Total Amount: ₹0
                 </p>
               </div>
             </div>

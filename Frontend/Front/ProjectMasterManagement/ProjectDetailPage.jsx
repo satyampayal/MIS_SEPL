@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, Plus } from "lucide-react";
+import AddBillModal from "./AddBillModal";
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -8,6 +9,8 @@ export default function ProjectDetailPage() {
 
   const [project, setProject] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bills, setBills] = useState([]);
+  const [showModal, setShowModal] = useState(false);
 
   // 🔹 Fetch project
   const fetchProject = async () => {
@@ -22,9 +25,38 @@ export default function ProjectDetailPage() {
       setLoading(false);
     }
   };
+  const fetchBills = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/project-master/get/bill/${projectId}`);
+      const data = await res.json();
+      console.log("Bills for project ", data);
+      setBills(data.data || []);
+    } catch (err) {
+      console.log(err);
+    }
+  }
 
+  const handleDeleteBill = async (billId) => {
+    if (window.confirm("Are you sure you want to delete this bill?")) {
+      try {
+
+        const res = await fetch(`http://localhost:5000/project-master/delete/bill/${billId}/${projectId}`, {
+          method: "DELETE"
+        })
+        const data = await res.json();
+        alert(data.message);
+        fetchProject();
+        fetchBills();
+      }
+      catch (err) {
+        console.log(err);
+        alert("Error deleting bill");
+      }
+    }
+  }
   useEffect(() => {
     fetchProject();
+    fetchBills();
   }, []);
 
   if (loading) return <div className="p-6">Loading...</div>;
@@ -55,7 +87,18 @@ export default function ProjectDetailPage() {
             <p><strong>Manager:</strong> {project.manager}</p>
             <p><strong>Phone:</strong> {project.phone}</p>
             <p><strong>Order No:</strong> {project.orderNumber}</p>
+            <p><strong>Order Date:</strong> {project.orderDate}</p>
+            <p><strong>Order Amount:</strong> {project.orderAmount}</p>
+
+            <p><strong>dlp Period:</strong> {project.dlpPeriod}</p>
+            <p><strong>Type of Work:</strong> {project.typeOfWork}</p>
+
+
+
             <p><strong>Status:</strong> {project.status}</p>
+            <p><strong>Alloted Company:</strong> {project?.allotedCompany}</p>
+
+
           </div>
 
           {/* 📊 Progress */}
@@ -114,20 +157,71 @@ export default function ProjectDetailPage() {
             <h2 className="text-xl font-semibold">Bills / Invoices</h2>
 
             <button
+              onClick={() => setShowModal(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center gap-2"
             >
               <Plus size={18} />
               Add Bill
             </button>
           </div>
+          {/* // Bills Table */}
+          {/* TABLE */}
+          {bills.length > 0 ?
 
-          {/* Placeholder */}
-          <div className="text-gray-500 text-sm">
-            No bills added yet
-          </div>
+            <div className="bg-white rounded-2xl shadow overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="p-3">Type</th>
+                    <th className="p-3">Type Count</th>
+                    <th className="p-3">Bill No</th>
+                    <th className="p-3">Amount</th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3">File</th>
+                    <th className="p-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody> {bills.map((bill) =>
+                (<tr key={bill._id} className="border-b hover:bg-gray-50 ">
+                  <td className="p-3">{bill.billType}</td>
+                  <td className="p-3">{bill.billTypeCount}</td>
+                  <td className="p-3">{bill.billNumber}</td>
+                  <td className="p-3">₹ {bill.billAmount}</td>
+                  <td className="p-3">{bill.billDate}</td>
+                  <td className="p-3"> {bill.billFile ? (<a href={bill.billFile} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline" > View </a>) : ("-")}
+                  </td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => handleDeleteBill(bill._id)}
+                      className="bg-red-600 text-white px-4 py-2 rounded-xl"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>))}
+                </tbody>
+
+              </table>
+            </div>
+            :
+            <div className="text-gray-500 text-sm">
+              No bills added yet
+            </div>
+          }
+
+
+
         </div>
 
       </div>
+      {/* MODAL */}
+      <AddBillModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        projectId={projectId}
+        refreshBills={fetchBills}
+        refreshProject={fetchProject}
+      />
     </div>
   );
 }

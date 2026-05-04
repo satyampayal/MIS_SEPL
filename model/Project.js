@@ -40,6 +40,14 @@ const projectSchema = new mongoose.Schema(
       type: String,
       // required: true,
     },
+    orderAmount: {
+      type: String,
+      // required: true,
+    },
+    allotedCompany:{
+      type:String,
+      enum:["Sachin Electrical Private Limited","Sachin Power Projects Private Limited"],  
+    },
     typeOfWork: {
       type: String,
       default: "SITC",

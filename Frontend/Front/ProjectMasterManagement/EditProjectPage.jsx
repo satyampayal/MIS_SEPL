@@ -16,6 +16,8 @@ export default function EditProjectPage() {
     clientName: "",
     orderNumber: "",
     orderDate: "",
+    orderAmount: "",
+    allotedCompany: "",
     typeOfWork: "SITC",
     dlpPeriod: "1 Year",
     complitionDate: "",
@@ -112,7 +114,7 @@ export default function EditProjectPage() {
         <h1 className="text-2xl font-bold mb-6">Edit Project</h1>
 
         <div className="grid md:grid-cols-2 gap-4">
-
+           
           <input name="name" value={formData.name} onChange={handleChange} placeholder="Project Name" required className="border p-3 rounded-xl" />
           <input name="code" value={formData.code} onChange={handleChange} placeholder="Project Code" required className="border p-3 rounded-xl" />
 
@@ -122,11 +124,20 @@ export default function EditProjectPage() {
           <input name="clientName" value={formData.clientName} onChange={handleChange} placeholder="Client Name" required className="border p-3 rounded-xl" />
           <input name="orderNumber" value={formData.orderNumber} onChange={handleChange} placeholder="Order Number" className="border p-3 rounded-xl" />
 
+
           <input type="date" name="orderDate" value={formData.orderDate} onChange={handleChange} className="border p-3 rounded-xl" />
+          <input name="orderAmount" value={formData.orderAmount} onChange={handleChange} placeholder="Order Amount" className="border p-3 rounded-xl" />
+
+          <select name="allotedCompany" value={formData.allotedCompany} onChange={handleChange} className="border p-3 rounded-xl">
+            <option value='choose Alloted Company'>Alloted Company is...</option>
+            <option value="Sachin Electrical Private Limited">Sachin Electrical Private Limited</option>
+            <option value="Sachin Power Projects Private Limited">Sachin Power Projects Private Limited</option>
+          </select>
           <input name="typeOfWork" value={formData.typeOfWork} onChange={handleChange} placeholder="Type of Work" className="border p-3 rounded-xl" />
 
           <input name="dlpPeriod" value={formData.dlpPeriod} onChange={handleChange} placeholder="DLP Period" className="border p-3 rounded-xl" />
           <input type="date" name="complitionDate" value={formData.complitionDate} onChange={handleChange} className="border p-3 rounded-xl" />
+
 
           <input name="manager" value={formData.manager} onChange={handleChange} placeholder="Manager" required className="border p-3 rounded-xl" />
           <input name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" required className="border p-3 rounded-xl" />

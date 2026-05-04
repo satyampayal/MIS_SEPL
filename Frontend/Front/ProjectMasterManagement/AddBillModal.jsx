@@ -1,0 +1,95 @@
+import React, { useState } from "react";
+
+export default function AddBillModal({ isOpen, onClose, projectId, refreshBills, refreshProject }) {
+  const [formData, setFormData] = useState({
+    billType: "RA",
+    billTypeCount:1,
+    billNumber: "",
+    billAmount: "",
+    billDate: "",
+    billFile: null
+  });
+
+  if (!isOpen) return null;
+
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: files ? files[0] : value
+    }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const form = new FormData();
+
+      form.append("projectId", projectId);
+      form.append("billType", formData.billType);
+      form.append("billNumber", formData.billNumber);
+      form.append("billTypeCount", formData.billTypeCount);
+      form.append("billAmount", formData.billAmount);
+      form.append("billDate", formData.billDate);
+
+      if (formData.billFile) {
+        form.append("billFile", formData.billFile);
+      }
+
+      const res = await fetch(`http://localhost:5000/project-master/add/bill/${projectId}`, {
+        method: "POST",
+        body: form
+      });
+
+      const result = await res.json();
+
+      alert(result.message);
+
+      refreshBills();
+      refreshProject();
+     
+      onClose();
+
+    } catch (err) {
+      console.log(err);
+      alert("Error adding bill");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white w-full max-w-lg rounded-2xl p-6">
+
+        <h2 className="text-xl font-bold mb-4">Add Bill</h2>
+
+        <div className="grid gap-3">
+
+          <select name="billType" onChange={handleChange} className="border p-2 rounded">
+            <option value="RA">RA</option>
+            <option value="Final">Final</option>
+            <option value="Credit">Credit</option>
+          </select>
+
+        <input type='text' name='billTypeCount' placeholder='Bill Type Count (1,2..)' onChange={handleChange} className='border p-2 rounded' />
+
+          <input name="billNumber" placeholder="Bill Number like SEPL247823" onChange={handleChange} className="border p-2 rounded" />
+
+          <input type="number" name="billAmount" placeholder="Amount" onChange={handleChange} className="border p-2 rounded" />
+          
+          
+          <input type="date" name="billDate" onChange={handleChange} className="border p-2 rounded" />
+
+          <input type="file" name="billFile" onChange={handleChange} className="border p-2 rounded" />
+
+        </div>
+
+        <div className="flex justify-end gap-3 mt-5">
+          <button onClick={onClose} className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+          <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
