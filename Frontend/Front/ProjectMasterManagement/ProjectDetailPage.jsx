@@ -205,14 +205,18 @@ export default function ProjectDetailPage() {
                     }
                   </td>
                   <td className="p-3">
-                    <button onClick={() => {
+                    <button 
+                     className="bg-blue-600 text-white px-4 py-2 rounded-xl"
+                    onClick={() => {
                       setSelectedBill(bill);
                       setShowModal(true);
                       setMode("view");
                     }}>
                       View
                     </button>
-                    <button onClick={() => {
+                    <button 
+                     className="bg-green-600 text-white px-4 py-2 rounded-xl"
+                    onClick={() => {
                       setSelectedBill(bill);
                       setShowModal(true);
                       setMode("edit");
@@ -251,6 +255,7 @@ export default function ProjectDetailPage() {
         refreshBills={fetchBills}
         mode={mode}
         refreshProject={fetchProject}
+        bill={selectedBill}
         
 
       />

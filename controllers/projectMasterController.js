@@ -1,28 +1,28 @@
 const Project = require('../model/Project');
 const cloudinary = require("../config/cloudinary");
-const Bill=require('../model/projectBill')
+const Bill = require('../model/projectBill')
 
-const updateProjectProgress=async (projectId)=>{
+const updateProjectProgress = async (projectId) => {
   console.log("Updating project progress for projectId:", projectId);
-  const projectBills=await Bill.find({project:projectId})
-  const totalAmount=projectBills.reduce((acc,bill)=>acc+bill.billAmount,0);
-  const project=await Project.findById(projectId);
-  if(project){
-    project.progress= Math.round((totalAmount / project.orderAmount) * 100,2);
+  const projectBills = await Bill.find({ project: projectId })
+  const totalAmount = projectBills.reduce((acc, bill) => acc + bill.billAmount, 0);
+  const project = await Project.findById(projectId);
+  if (project) {
+    project.progress = Math.round((totalAmount / project.orderAmount) * 100, 2);
     await project.save();
   }
 }
 
-const deleteFileFromCloudinary=async(publicId)=>{
-  try{
-    if(publicId){
-      await cloudinary.uploader.destroy(publicId,{
-        resource_type:"raw"
+const deleteFileFromCloudinary = async (publicId) => {
+  try {
+    if (publicId) {
+      await cloudinary.uploader.destroy(publicId, {
+        resource_type: "raw"
       })
     }
-  }catch(error){
+  } catch (error) {
     console.log("Error deleting file from Cloudinary:", error);
-   }
+  }
 }
 exports.addProject = async (req, res) => {
   try {
@@ -180,7 +180,7 @@ exports.getAllProjects = async (req, res) => {
 exports.deleteProject = async (req, res) => {
   try {
     const { projectId } = req.params;
-     if (!projectId) {
+    if (!projectId) {
       return res.status(400).json({
         success: false,
         message: "Project ID is required",
@@ -196,22 +196,22 @@ exports.deleteProject = async (req, res) => {
         message: "Project not found",
       });
     }
-      // 🧹 Delete file from Cloudinary (if exists)
+    // 🧹 Delete file from Cloudinary (if exists)
     // if (project.poFilePublicId) {
     //   await cloudinary.uploader.destroy(project.poFilePublicId, {
     //     resource_type: "raw", // important for pdf/image
     //   });
-      
+
     // }
-    const poFilePublicId=project.poFilePublicId;
-     await Project.findByIdAndDelete(projectId);
-     await deleteFileFromCloudinary(poFilePublicId);
+    const poFilePublicId = project.poFilePublicId;
+    await Project.findByIdAndDelete(projectId);
+    await deleteFileFromCloudinary(poFilePublicId);
 
 
     res.status(200).json({
-      success:true,
+      success: true,
       message: "Project deleted successfully",
-       
+
     });
 
   } catch (error) {
@@ -235,7 +235,7 @@ exports.getProjectById = async (req, res) => {
       })
     }
     const project = await Project.findById(projectId);
-    
+
     if (!project) {
       return res.status(400).json({
         success: false,
@@ -259,124 +259,188 @@ exports.getProjectById = async (req, res) => {
 
 // Add bill to project
 exports.addBillToProject = async (req, res) => {
-try{
-  const projectId= req.params.projectId;
+  try {
+    const projectId = req.params.projectId;
 
-  if(!projectId){
-    return res.status(400).json({
-      success:false,
-      message:"Project Id is required"
-    })
-  }
-  const {billType, billNumber, billAmount, billDate,billTypeCount}=req.body;
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: "Project Id is required"
+      })
+    }
+    const { billType, billNumber, billAmount, billDate, billTypeCount } = req.body;
 
-  if(!billType || !billNumber || !billAmount || !billDate || !billTypeCount){
-    return res.status(400).json({
-      success:false,
-      message:"Please fill all required fields"
-    })
-  }
-  const createBill=await Bill.create({
-    project:projectId,
-    billType,
-     billTypeCount,
-    billNumber,
-    billAmount,
-    billDate,
-    billFile:req.file ? req.file.path : "",
-    billFilePublicId:req.file ? req.file.filename : "",
-   
-  })
+    if (!billType || !billNumber || !billAmount || !billDate || !billTypeCount) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all required fields"
+      })
+    }
+    const createBill = await Bill.create({
+      project: projectId,
+      billType,
+      billTypeCount,
+      billNumber,
+      billAmount,
+      billDate,
+      billFile: req.file ? req.file.path : "",
+      billFilePublicId: req.file ? req.file.filename : "",
 
-  if(!createBill){
-    return res.status(500).json({
-      success:false,
-      message:"Failed to add bill to project"
     })
-  }
+
+    if (!createBill) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to add bill to project"
+      })
+    }
     await updateProjectProgress(projectId);
 
 
 
 
-  console.log(createBill);
-  return res.status(200).json({
-    success:true,
-    message:"Bill added to project successfully",
-    data:createBill
-  })
+    console.log(createBill);
+    return res.status(200).json({
+      success: true,
+      message: "Bill added to project successfully",
+      data: createBill
+    })
 
 
-}catch(error){
-  return res.status(500).json({
-    message:"server Error",
-    error:error?.message
-  })
-}
-
-}
-
-exports.getProjectBills=async (req,res)=>{
-try{
-
-  const projectId= req.params.projectId;
-
-  if(!projectId){
-    return res.status(400).json({
-      success:false,
-      message:"Project Id is required"
+  } catch (error) {
+    return res.status(500).json({
+      message: "server Error",
+      error: error?.message
     })
   }
-  const bills=await Bill.find({project:projectId});
-  return res.status(200).json({
-    success:true,
-    message:"Bills fetched successfully",
-    data:bills
-  })
-}catch(error){
-  return res.status(500).json({
-    message:"server Error",
-    error:error?.message
-  })
-}
+
 }
 
-exports.deleteProjectBill=async (req,res)=>{
-  try{
-    const {projectId, billId}=req.params;
-    if(!projectId || !billId){
+exports.getProjectBills = async (req, res) => {
+  try {
+
+    const projectId = req.params.projectId;
+
+    if (!projectId) {
       return res.status(400).json({
-        success:false,
-        message:"Project Id and Bill Id are required"
+        success: false,
+        message: "Project Id is required"
       })
     }
-    const projectExists=await Project.findById(projectId);
-    if(!projectExists){
-      return res.status(404).json({
-        success:false,
-        message:"Project not found"
-      })
-    }
-     const billExist=await Bill.findById(billId);
-     if(!billExist){
-      return res.status(404).json({
-        success:false,
-        message:"Bill not found"
-      })
-     }
-     const billFilePublicId=billExist.billFilePublicId;
-     await Bill.findByIdAndDelete(billId);
+    const bills = await Bill.find({ project: projectId });
+    return res.status(200).json({
+      success: true,
+      message: "Bills fetched successfully",
+      data: bills
+    })
+  } catch (error) {
+    return res.status(500).json({
+      message: "server Error",
+      error: error?.message
+    })
+  }
+}
 
-     await deleteFileFromCloudinary(billFilePublicId);
-     await updateProjectProgress(projectId);
-     return res.status(200).json({
-      success:true,
-      message:"Bill deleted successfully"
-     })
+exports.deleteProjectBill = async (req, res) => {
+  try {
+    const { projectId, billId } = req.params;
+    if (!projectId || !billId) {
+      return res.status(400).json({
+        success: false,
+        message: "Project Id and Bill Id are required"
+      })
+    }
+    const projectExists = await Project.findById(projectId);
+    if (!projectExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found"
+      })
+    }
+    const billExist = await Bill.findById(billId);
+    if (!billExist) {
+      return res.status(404).json({
+        success: false,
+        message: "Bill not found"
+      })
+    }
+    const billFilePublicId = billExist.billFilePublicId;
+    await Bill.findByIdAndDelete(billId);
+
+    await deleteFileFromCloudinary(billFilePublicId);
+    await updateProjectProgress(projectId);
+    return res.status(200).json({
+      success: true,
+      message: "Bill deleted successfully"
+    })
+  } catch (error) {
+    return res.status(500).json({
+      message: "server Error",
+      error: error?.message
+    })
+  }
+}
+
+exports.updateBill = async (req, res) => {
+  try {
+    const { billId } = req.params;
+    if (!billId) {
+      return res.status(400).json({
+        success: false,
+        message: "Project Id and Bill Id are required"
+      })
+    }
+    const billExist = await Bill.findById(billId);
+    if (!billExist) {
+      return res.status(404).json({
+        success: false,
+        message: "Bill not found"
+      })
+    }
+
+  
+    const { billType, billNumber, billAmount, billDate, billTypeCount } = req.body;
+
+    if (!billType || !billNumber || !billAmount || !billDate || !billTypeCount) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all required fields"
+      })
+    }
+      const billFilePublicId = billExist.billFilePublicId;
+      if (req.file) {
+      await deleteFileFromCloudinary(billFilePublicId);
+    }
+    const billFileUrl=billExist?.billFile;
+
+   const updatedBill= await Bill.findByIdAndUpdate(
+      billId,
+      {
+      billType,
+      billTypeCount,
+      billNumber,
+      billAmount,
+      billDate,
+      billFile: req.file ? req.file.path : billFileUrl,
+      billFilePublicId: req.file ? req.file.filename : billFilePublicId,
+
+      },
+      {
+         returnDocument: "after",
+        runValidators: true,
+
+      }
+    )
+    return res.status(200).json({
+      success: true,
+      message: "Bill updated successfully 🚀",
+      data: updatedBill,
+    });
   }catch(error){
     return res.status(500).json({
-      message:"server Error",
-      error:error?.message
+      success:false,
+      message:error?.message
     })
   }
+   
 }
