@@ -11,6 +11,8 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [bills, setBills] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [selectedBill, setSelectedBill] = useState(null);
+  const [mode, setMode] = useState("add"); // "add" | "edit" | "view" 
 
   // 🔹 Fetch project
   const fetchProject = async () => {
@@ -54,6 +56,10 @@ export default function ProjectDetailPage() {
       }
     }
   }
+  const handleEditBill = (billId) => {
+
+  }
+
   useEffect(() => {
     fetchProject();
     fetchBills();
@@ -156,11 +162,11 @@ export default function ProjectDetailPage() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Bills / Invoices</h2>
 
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center gap-2"
-            >
-              <Plus size={18} />
+            <button onClick={() => {
+              setSelectedBill(null);
+              setShowModal(true);
+              setMode("add");
+            }}>
               Add Bill
             </button>
           </div>
@@ -183,14 +189,37 @@ export default function ProjectDetailPage() {
                 </thead>
                 <tbody> {bills.map((bill) =>
                 (<tr key={bill._id} className="border-b hover:bg-gray-50 ">
-                  <td className="p-3">{bill.billType}</td>
+                  <td className="p-3 ">{bill.billType}</td>
                   <td className="p-3">{bill.billTypeCount}</td>
                   <td className="p-3">{bill.billNumber}</td>
                   <td className="p-3">₹ {bill.billAmount}</td>
                   <td className="p-3">{bill.billDate}</td>
-                  <td className="p-3"> {bill.billFile ? (<a href={bill.billFile} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline" > View </a>) : ("-")}
+                  <td className="p-3">
+                    {
+                      bill.billFile
+                        ?
+                        (<a href={bill.billFile} target="_blank" rel="noopener noreferrer"
+                          className="text-blue-600 underline" > View </a>)
+                        :
+                        ("-")
+                    }
                   </td>
                   <td className="p-3">
+                    <button onClick={() => {
+                      setSelectedBill(bill);
+                      setShowModal(true);
+                      setMode("view");
+                    }}>
+                      View
+                    </button>
+                    <button onClick={() => {
+                      setSelectedBill(bill);
+                      setShowModal(true);
+                      setMode("edit");
+                    }}>
+                      Edit
+                    </button>
+
                     <button
                       onClick={() => handleDeleteBill(bill._id)}
                       className="bg-red-600 text-white px-4 py-2 rounded-xl"
@@ -220,7 +249,10 @@ export default function ProjectDetailPage() {
         onClose={() => setShowModal(false)}
         projectId={projectId}
         refreshBills={fetchBills}
+        mode={mode}
         refreshProject={fetchProject}
+        
+
       />
     </div>
   );

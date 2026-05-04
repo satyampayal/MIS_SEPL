@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function AddBillModal({ isOpen, onClose, projectId, refreshBills, refreshProject }) {
+export default function AddBillModal({ isOpen, onClose, projectId, refreshBills,mode, refreshProject }) {
   const [formData, setFormData] = useState({
     billType: "RA",
     billTypeCount:1,
@@ -9,6 +9,9 @@ export default function AddBillModal({ isOpen, onClose, projectId, refreshBills,
     billDate: "",
     billFile: null
   });
+  const isView = mode === "view";
+const isEdit = mode === "edit";
+const isAdd = mode === "add";
 
   if (!isOpen) return null;
 
