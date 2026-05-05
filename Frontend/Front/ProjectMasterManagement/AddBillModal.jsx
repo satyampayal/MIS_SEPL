@@ -19,6 +19,8 @@ export default function AddBillModal({
     billAmount: "",
     billDate: "",
     billFile: null,
+    billDescription:"",
+    billGroup: "",
   });
 
   useEffect(() => {
@@ -30,6 +32,8 @@ export default function AddBillModal({
         billAmount: bill.billAmount || "",
         billDate: bill.billDate || "",
         billFile: null,
+        billDescription: bill.billDescription || "",
+        billGroup: bill.billGroup || "",
       });
     } else {
       setFormData({
@@ -39,6 +43,8 @@ export default function AddBillModal({
         billAmount: "",
         billDate: "",
         billFile: null,
+        billDescription: "",
+        billGroup: "",
       });
     }
   }, [bill, isOpen]);
@@ -69,6 +75,8 @@ export default function AddBillModal({
       form.append("billTypeCount", formData.billTypeCount);
       form.append("billAmount", formData.billAmount);
       form.append("billDate", formData.billDate);
+      form.append("billDescription", formData.billDescription);
+      form.append("billGroup", formData.billGroup);
 
       if (formData.billFile) {
         form.append("billFile", formData.billFile);
@@ -154,6 +162,28 @@ export default function AddBillModal({
             onChange={handleChange}
             className="border p-2 rounded"
           />
+
+          <input
+            type="text"
+            name="billDescription"
+            placeholder="Bill Description"
+            value={formData.billDescription}
+            disabled={isView}
+            onChange={handleChange}
+            className="border p-2 rounded"
+          />
+         
+          <select
+            name="billGroup"
+            value={formData.billGroup}
+            disabled={isView}
+            onChange={handleChange}
+            className="border p-2 rounded"
+          >
+            <option value="RA">Select Type Of Work</option>
+            <option value="Erection">Erection</option>
+            <option value="Supply">Supply</option>
+          </select>
 
           {!isView && (
             <input

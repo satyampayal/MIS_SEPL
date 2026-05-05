@@ -5,10 +5,15 @@ const Bill = require('../model/projectBill')
 const updateProjectProgress = async (projectId) => {
   console.log("Updating project progress for projectId:", projectId);
   const projectBills = await Bill.find({ project: projectId })
-  const totalAmount = projectBills.reduce((acc, bill) => acc + bill.billAmount, 0);
   const project = await Project.findById(projectId);
+
+  if(projectBills.length === 0){
+    return project.progress=0;
+    await project.save();
+  }
+  const totalAmount = projectBills?.reduce((acc, bill) => acc + bill.billAmount, 0);
   if (project) {
-    project.progress = Math.round((totalAmount / project.orderAmount) * 100, 2);
+    project.progress = Math.round((totalAmount / Number(project.orderAmount)) * 100, 2);
     await project.save();
   }
 }
@@ -268,7 +273,7 @@ exports.addBillToProject = async (req, res) => {
         message: "Project Id is required"
       })
     }
-    const { billType, billNumber, billAmount, billDate, billTypeCount } = req.body;
+    const { billType, billNumber, billAmount, billDate, billTypeCount, billGroup, billDescription } = req.body;
 
     if (!billType || !billNumber || !billAmount || !billDate || !billTypeCount) {
       return res.status(400).json({
@@ -285,7 +290,8 @@ exports.addBillToProject = async (req, res) => {
       billDate,
       billFile: req.file ? req.file.path : "",
       billFilePublicId: req.file ? req.file.filename : "",
-
+      billGroup,
+      billDescription
     })
 
     if (!createBill) {
@@ -399,7 +405,7 @@ exports.updateBill = async (req, res) => {
     }
 
   
-    const { billType, billNumber, billAmount, billDate, billTypeCount } = req.body;
+    const { billType, billNumber, billAmount, billDate, billTypeCount, billGroup, billDescription } = req.body;
 
     if (!billType || !billNumber || !billAmount || !billDate || !billTypeCount) {
       return res.status(400).json({
@@ -423,6 +429,8 @@ exports.updateBill = async (req, res) => {
       billDate,
       billFile: req.file ? req.file.path : billFileUrl,
       billFilePublicId: req.file ? req.file.filename : billFilePublicId,
+      billGroup,
+      billDescription
 
       },
       {

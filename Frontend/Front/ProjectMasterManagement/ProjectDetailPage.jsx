@@ -13,6 +13,7 @@ export default function ProjectDetailPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
   const [mode, setMode] = useState("add"); // "add" | "edit" | "view" 
+  const [pendingBills, setPendingBills] = useState();
 
   // 🔹 Fetch project
   const fetchProject = async () => {
@@ -33,9 +34,16 @@ export default function ProjectDetailPage() {
       const data = await res.json();
       console.log("Bills for project ", data);
       setBills(data.data || []);
+      setPendingBills(await findPendingBills(data.data || []) )
+      
     } catch (err) {
       console.log(err);
     }
+  }
+  const findPendingBills=async (getBills)=>{
+    console.log("Finding pending bills from ", getBills);
+    const pending = getBills.filter((bill) => bill?.billFile === "");
+    return pending.length;
   }
 
   const handleDeleteBill = async (billId) => {
@@ -63,6 +71,7 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     fetchProject();
     fetchBills();
+    findPendingBills();
   }, []);
 
   if (loading) return <div className="p-6">Loading...</div>;
@@ -161,13 +170,23 @@ export default function ProjectDetailPage() {
         <div className="bg-white rounded-3xl shadow-sm p-6 border">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Bills / Invoices</h2>
+            
+   <div>
+    {pendingBills > 0?
+      <span className="text-red-600 font-semibold"> Pending Bills copy:{pendingBills} </span>
+    
+    : <></>
+    } 
+   </div>
 
-            <button onClick={() => {
+            <button
+             className="bg-blue-600 text-white px-4 py-2 rounded-xl"
+            onClick={() => {
               setSelectedBill(null);
               setShowModal(true);
               setMode("add");
             }}>
-              Add Bill
+              +  Add Bill
             </button>
           </div>
           {/* // Bills Table */}
@@ -175,25 +194,29 @@ export default function ProjectDetailPage() {
           {bills.length > 0 ?
 
             <div className="bg-white rounded-2xl shadow overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-center text-sm">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="p-3">Type</th>
-                    <th className="p-3">Type Count</th>
                     <th className="p-3">Bill No</th>
+                    <th className="p-3">Invoice No.</th>
                     <th className="p-3">Amount</th>
                     <th className="p-3">Date</th>
+                    <th className="p-3">Description</th>
+                    <th className="p-3">Bill Group</th>
                     <th className="p-3">File</th>
                     <th className="p-3">Actions</th>
                   </tr>
                 </thead>
-                <tbody> {bills.map((bill) =>
+                <tbody > {bills.map((bill) =>
                 (<tr key={bill._id} className="border-b hover:bg-gray-50 ">
                   <td className="p-3 ">{bill.billType}</td>
                   <td className="p-3">{bill.billTypeCount}</td>
                   <td className="p-3">{bill.billNumber}</td>
                   <td className="p-3">₹ {bill.billAmount}</td>
                   <td className="p-3">{bill.billDate}</td>
+                  <td className="p-3">{bill.billDescription||"-"}</td>
+                  <td className="p-3">{bill.billGroup||"-"}</td>
                   <td className="p-3">
                     {
                       bill.billFile

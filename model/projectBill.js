@@ -32,7 +32,12 @@ const billSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-
+    billDescription:{
+      type:String,
+    },
+    billGroup:{
+      type:String,// Like Erection or Supply etc. This will help in grouping bills in UI
+    },
     billFile: String,
     billFilePublicId: String
   },
