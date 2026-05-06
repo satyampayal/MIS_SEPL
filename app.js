@@ -16,6 +16,7 @@ const storeMasterRouter = require("./routes/storeMasterRoutes");
 const projectMasterRouter = require("./Routes/projectMasterRoutes");
 const taxInvoiceRouter = require("./Routes/taxInvoiceRoute");
 const dprRouter = require("./Routes/DPRRoutes");
+const userRouter = require("./Routes/userRoutes");
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -26,6 +27,9 @@ app.use(
 );
 app.use(express.json());
 
+
+// User Router
+app.use('/user',userRouter)
 // Tax Invoice Routes
 app.use('/tax-invoice',taxInvoiceRouter);
 

@@ -1,105 +1,156 @@
-import React from "react";
-import { Plus, Pencil, Package,ArrowLeft } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Plus, Pencil, Package, ArrowLeft, Loader2 } from "lucide-react";
 import axios from "axios";
-import { useState } from "react";
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-const stores = [
-  {
-    id: 1,
-    storeName: "Head Office Store",
-    storeCode: "HO-STORE",
-    storeIncharge: "Deepak Singh",
-    phone: "+91 98765 99999",
-    location: "Delhi Head Office",
-    inventoryCount: 25,
-  },
-  {
-    id: 2,
-    storeName: "Site Store - Metro Project",
-    storeCode: "SITE-STORE-01",
-    storeIncharge: "Rahul Verma",
-    phone: "+91 98111 22222",
-    location: "Metro Line 3 Extension",
-    inventoryCount: 14,
-  },
-];
+import toast from "react-hot-toast";
 
-
+const initialStore = {
+  storeName: "",
+  storeType: "Site Store",
+  location: "",
+  storeIncharge: "",
+  contactNumber: "",
+  storeCode: "",
+  associtedSite: "",
+};
 
 const StoreManagementPage = () => {
-  const [showModal, setShowModal] = React.useState(false);
   const navigate = useNavigate();
 
+  const [showModal, setShowModal] = useState(false);
+  const [masterStores, setMasterStores] = useState([]);
+  const [getAllStoreItems, setGetAllStoreItems] = useState([]);
+  const [store, setStore] = useState(initialStore);
+  const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
+
+  const token = localStorage.getItem("token");
+
+  const authHeaders = {
+    Authorization: `Bearer ${token}`,
+  };
+
   const handleAddStore = () => {
+    setStore(initialStore);
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
+    setStore(initialStore);
   };
 
   const handleAddItem = (storeId) => {
-    console.log("Add item for store:", storeId);
+    toast.success("Opening inventory");
+    navigate(`/store/${storeId}`);
   };
 
   const handleEditStore = (storeId) => {
+    toast("Edit store feature coming soon");
     console.log("Edit store:", storeId);
   };
 
+  const validateStore = () => {
+    if (!store.storeName.trim()) {
+      toast.error("Store name is required");
+      return false;
+    }
+
+    if (!store.storeCode.trim()) {
+      toast.error("Store code is required");
+      return false;
+    }
+
+    if (!store.storeIncharge.trim()) {
+      toast.error("Store incharge is required");
+      return false;
+    }
+
+    if (!store.location.trim()) {
+      toast.error("Location is required");
+      return false;
+    }
+
+    if (!store.contactNumber.trim()) {
+      toast.error("Phone number is required");
+      return false;
+    }
+
+    return true;
+  };
+
   const addStore = async () => {
-    console.log(store)
-    // Make API call to add store
+    if (!validateStore()) return;
+
     try {
-      const response = await axios.post('http://localhost:5000/store-master/create', store);
-      console.log("Store added successfully:", response.data);
-      fetchmasterStores(); // Refresh the list of stores after adding a new one
-      closeModal(); // Close the modal after adding the store
+      setLoading(true);
 
+      const loadingToast = toast.loading("Creating store...");
 
+      const response = await axios.post(
+        "http://localhost:5000/store-master/create",
+        store,
+        {
+          headers: authHeaders,
+        }
+      );
+
+      toast.dismiss(loadingToast);
+
+      if (response.data.success || response.status === 201 || response.status === 200) {
+        toast.success("Store added successfully");
+        await fetchmasterStores();
+        closeModal();
+      } else {
+        toast.error(response.data.message || "Store creation failed");
+      }
     } catch (error) {
       console.error("Error adding store:", error);
-    }
 
-  }
-  const [store, setStore] = useState(
-    {
-      storeName: "",
-      storeType: "",
-      location: "",
-      storeIncharge: "",
-      contactNumber: "",
-      storeCode: "",
-      associtedSite: ""
-    },
-  )
-  // Get All Stores 
-  const [masterStores, setMasterStores] = useState([]);
-  const [getAllStoreItems, setGetAllStoreItems] = useState([]);
+      toast.error(
+        error.response?.data?.message || "Error while adding store"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchmasterStores = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/store-master/all');
-      const allItemsResponse = await axios.get('http://localhost:5000/store/getAllItems');
+      setPageLoading(true);
 
-      setMasterStores(response.data.data);
-      setGetAllStoreItems(allItemsResponse.data.data);
-      console.log("Master Stores:", response.data.data);
+      const [storesResponse, itemsResponse] = await Promise.all([
+        axios.get("http://localhost:5000/store-master/all", {
+          headers: authHeaders,
+        }),
+        axios.get("http://localhost:5000/store/getAllItems", {
+          headers: authHeaders,
+        }),
+      ]);
 
-    }
-    catch (error) {
+      setMasterStores(storesResponse.data.data || []);
+      setGetAllStoreItems(itemsResponse.data.data || []);
+    } catch (error) {
       console.log("error fetching master stores:", error);
+
+      toast.error(
+        error.response?.data?.message || "Failed to load stores"
+      );
+    } finally {
+      setPageLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     fetchmasterStores();
-  }, [])
+  }, []);
 
   const handleStoreChange = (e) => {
-    e.preventDefault();
-    setStore({ ...store, [e.target.name]: e.target.value })
-
-  }
+    setStore({
+      ...store,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   return (
     <>
@@ -112,6 +163,7 @@ const StoreManagementPage = () => {
             >
               <ArrowLeft size={18} /> Back
             </button>
+
             <div>
               <h1 className="text-3xl font-bold text-gray-800">
                 Store Management
@@ -130,86 +182,89 @@ const StoreManagementPage = () => {
             </button>
           </div>
 
-          <div className="space-y-6">
-            {masterStores?.map((store) => (
-              <div
-                key={store._id}
-                className="bg-white border border-purple-100 rounded-3xl shadow-sm overflow-hidden"
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-purple-500 flex items-center justify-center text-white">
-                        <Package size={28} />
+          {pageLoading ? (
+            <div className="bg-white rounded-3xl p-10 shadow-sm flex flex-col items-center justify-center">
+              <Loader2 className="animate-spin text-blue-600" size={36} />
+              <p className="text-gray-500 mt-4">Loading stores...</p>
+            </div>
+          ) : masterStores.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 shadow-sm text-center">
+              <Package size={45} className="mx-auto text-gray-400" />
+              <h2 className="text-xl font-semibold mt-4">No stores found</h2>
+              <p className="text-gray-500 mt-2">
+                Create your first store to start inventory tracking.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {masterStores.map((storeItem) => (
+                <div
+                  key={storeItem._id}
+                  className="bg-white border border-purple-100 rounded-3xl shadow-sm overflow-hidden"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-purple-500 flex items-center justify-center text-white">
+                          <Package size={28} />
+                        </div>
+
+                        <div>
+                          <h2 className="text-xl font-semibold text-gray-800">
+                            {storeItem.storeName}
+                          </h2>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {storeItem.location}
+                          </p>
+                        </div>
                       </div>
 
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-800">
-                          {store.storeName}
-                        </h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {store.location}
-                        </p>
-                      </div>
+                      <button
+                        onClick={() => handleEditStore(storeItem._id)}
+                        className="text-purple-500 hover:text-purple-700"
+                      >
+                        <Pencil size={18} />
+                      </button>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                      <Info label="Store Code" value={storeItem.storeCode} />
+                      <Info label="Store Incharge" value={storeItem.storeIncharge} />
+                      <Info label="Phone" value={storeItem.contactNumber} />
+                    </div>
+                  </div>
+
+                  <div className="border-t px-6 py-5 flex items-center justify-between bg-gray-50">
+                    <button
+                      className="flex items-center gap-2 text-gray-700 font-medium hover:text-blue-600"
+                      onClick={() => navigate(`/store/${storeItem._id}`)}
+                    >
+                      <Package size={18} />
+                      Inventory ({storeItem.inventoryCount || 0} items)
+                    </button>
 
                     <button
-                      onClick={() => handleEditStore(store._id)}
-                      className="text-purple-500 hover:text-purple-700"
+                      onClick={() => handleAddItem(storeItem._id)}
+                      className="text-blue-600 hover:text-blue-800 font-medium"
                     >
-                      <Pencil size={18} />
+                      + Add Item
                     </button>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                    <div>
-                      <p className="text-sm text-gray-500">Store Code</p>
-                      <p className="font-medium text-gray-800 mt-1">
-                        {store.storeCode}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500">Store Incharge</p>
-                      <p className="font-medium text-gray-800 mt-1">
-                        {store.storeIncharge}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500">Phone</p>
-                      <p className="font-medium text-gray-800 mt-1">
-                        {store.contactNumber}
-                      </p>
-                    </div>
-                  </div>
                 </div>
-
-                <div className="border-t px-6 py-5 flex items-center justify-between bg-gray-50">
-                  <div className="flex items-center gap-2 text-gray-700 font-medium" onClick={() => navigate(`/store/${store._id}`)}>
-                    <Package size={18} />
-                    Inventory ({store.inventoryCount} items) {getAllStoreItems?.length}
-                  </div>
-
-                  <button
-                    onClick={() => handleAddItem(store.id)}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    + Add Item
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-      );
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b">
-              <h2 className="text-2xl font-bold text-gray-800">Add New Store</h2>
+              <h2 className="text-2xl font-bold text-gray-800">
+                Add New Store
+              </h2>
+
               <button
                 onClick={closeModal}
                 className="text-gray-400 hover:text-black text-2xl"
@@ -221,92 +276,75 @@ const StoreManagementPage = () => {
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block mb-2 font-medium">Store Type *</label>
-                <select className="w-full border rounded-xl px-4 py-3"
+                <select
+                  className="w-full border rounded-xl px-4 py-3"
                   name="storeType"
                   value={store.storeType}
                   onChange={handleStoreChange}
                 >
-                  <option>Site Store</option>
-                  <option>Head Office Store</option>
-                  <option>Project Store</option>
+                  <option value="Site Store">Site Store</option>
+                  <option value="Head Office Store">Head Office Store</option>
+                  <option value="Project Store">Project Store</option>
                 </select>
               </div>
 
+              <Input
+                label="Store Name *"
+                name="storeName"
+                value={store.storeName}
+                onChange={handleStoreChange}
+                placeholder="e.g., Main Store"
+              />
 
+              <Input
+                label="Store Code *"
+                name="storeCode"
+                value={store.storeCode}
+                onChange={handleStoreChange}
+                placeholder="e.g., STORE-001"
+              />
 
-              <div>
-                <label className="block mb-2 font-medium">Store Name *</label>
-                <input
-                  type="text"
-                  name="storeName"
-                  value={store.storeName}
-                  onChange={handleStoreChange}
-                  className="w-full border rounded-xl px-4 py-3"
-                  placeholder="e.g., Main Store"
-                  className="w-full border rounded-xl px-4 py-3"
-                />
-              </div>
+              <Input
+                label="Store Incharge *"
+                name="storeIncharge"
+                value={store.storeIncharge}
+                onChange={handleStoreChange}
+                placeholder="e.g., John Doe"
+              />
 
-              <div>
-                <label className="block mb-2 font-medium">Store Code *</label>
-                <input
-                  type="text"
-                  name="storeCode"
-                  value={store.storeCode}
-                  onChange={handleStoreChange}
-                  placeholder="e.g., STORE-001"
-                  className="w-full border rounded-xl px-4 py-3"
-                />
-              </div>
+              <Input
+                label="Location *"
+                name="location"
+                value={store.location}
+                onChange={handleStoreChange}
+                placeholder="e.g., New York"
+              />
 
-              <div>
-                <label className="block mb-2 font-medium">Store Incharge *</label>
-                <input
-                  type="text"
-                  className="w-full border rounded-xl px-4 py-3"
-                  name="storeIncharge"
-                  value={store.storeIncharge}
-                  onChange={handleStoreChange}
-                  placeholder="e.g., John Doe"
-                />
-              </div>
-              <div>
-                <label className="block mb-2 font-medium">Location  *</label>
-                <input
-                  type="text"
-                  className="w-full border rounded-xl px-4 py-3"
-                  name="location"
-                  value={store.location}
-                  onChange={handleStoreChange}
-                  placeholder="e.g., New York"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-medium">Phone *</label>
-                <input
-                  type="text"
-                  className="w-full border rounded-xl px-4 py-3"
-                  name="contactNumber"
-                  value={store.contactNumber}
-                  onChange={handleStoreChange}
-                  placeholder="e.g., 123-456-7890"
-                />
-              </div>
+              <Input
+                label="Phone *"
+                name="contactNumber"
+                value={store.contactNumber}
+                onChange={handleStoreChange}
+                placeholder="e.g., 1234567890"
+              />
             </div>
 
             <div className="px-6 pb-6 flex justify-end gap-3">
               <button
                 onClick={closeModal}
-                className="px-5 py-3 rounded-xl border"
+                disabled={loading}
+                className="px-5 py-3 rounded-xl border hover:bg-gray-50"
               >
                 Cancel
               </button>
 
-              <button className="px-5 py-3 rounded-xl bg-blue-600 text-white font-medium"
-                onClick={() => addStore()}
+              <button
+                className="px-5 py-3 rounded-xl bg-blue-600 text-white font-medium disabled:bg-gray-400 flex items-center gap-2"
+                onClick={addStore}
+                disabled={loading}
               >
-                Add Store
+                {loading && <Loader2 size={18} className="animate-spin" />}
+                {loading ? "Adding..." : "Add Store"}
               </button>
             </div>
           </div>
@@ -315,5 +353,30 @@ const StoreManagementPage = () => {
     </>
   );
 };
+
+function Info({ label, value }) {
+  return (
+    <div>
+      <p className="text-sm text-gray-500">{label}</p>
+      <p className="font-medium text-gray-800 mt-1">{value || "N/A"}</p>
+    </div>
+  );
+}
+
+function Input({ label, name, value, onChange, placeholder }) {
+  return (
+    <div>
+      <label className="block mb-2 font-medium">{label}</label>
+      <input
+        type="text"
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full border rounded-xl px-4 py-3"
+      />
+    </div>
+  );
+}
 
 export default StoreManagementPage;

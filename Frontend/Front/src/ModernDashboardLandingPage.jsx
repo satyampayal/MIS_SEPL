@@ -1,223 +1,272 @@
-import React from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Building2,
   Warehouse,
   Users,
   FileText,
-  Package,
   TrendingUp,
-  IndianRupee,
+  LogOut,
+  UserCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { useState } from "react";
 import axios from "axios";
-
-
-
-const quickActions = [
-  "Add Tax Invoice",
-  "Create Challan",
-  "Add Vendor",
-  "Register Store",
-];
-
+import toast from "react-hot-toast";
+import { AuthContext } from "./Context/AuthContext";
 
 export default function ModernDashboardLandingPage() {
+  const navigate = useNavigate();
+  const { user, setUser } = useContext(AuthContext);
+
   const [totalTaxRegister, setTotalTaxRegister] = useState(0);
   const [totalSitesRegister, setTotalSitesRegister] = useState(0);
   const [totalMasterStores, setTotalMasterStores] = useState(0);
   const [totalDpr, setTotalDpr] = useState(0);
 
+  const isAdmin = user?.role === "Super Admin" || user?.role === "Admin";
 
-  const stats = [
+  const hasAccess = (roles = []) => {
+    if (isAdmin) return true;
+    return roles.includes(user?.role);
+  };
+
+  const allStats = [
     {
       title: "Active Projects",
       value: totalSitesRegister,
       icon: Building2,
+      path: "/projects",
+      roles: ["MIS User", "Project Manager", "Site Engineer"],
     },
     {
       title: "Total Stores",
       value: totalMasterStores,
       icon: Warehouse,
-    },
-    {
-      title: "Total Vendors",
-      value: "3",
-      icon: Users,
+      path: "/store",
+      roles: ["MIS User", "Store Manager"],
     },
     {
       title: "Total Challans",
       value: "0",
       icon: FileText,
+      path: "/challan",
+      roles: ["MIS User", "Store Manager", "Accountant"],
     },
     {
       title: "Total Tax Invoice Register",
       value: totalTaxRegister,
-      icon: FileText,// package
+      icon: FileText,
+      path: "/TaxInvoiceListPage",
+      roles: ["MIS User", "Accountant"],
     },
     {
       title: "Total Value",
       value: "₹330,000",
       icon: TrendingUp,
+      path: null,
+      roles: ["MIS User", "Accountant", "Project Manager"],
     },
     {
       title: "Daily Progress Report",
       value: totalDpr,
       icon: FileText,
-    }
+      path: "/dpr",
+      roles: ["MIS User", "Site Engineer", "Project Manager"],
+    },
+    {
+      title: "Manage Users",
+      value: "",
+      icon: Users,
+      path: "/user/mang",
+      roles: ["Super Admin", "Admin"],
+    },
   ];
 
-  // Fetch Total Tax Invoice Register to show in STATS
+  const quickActions = [
+    {
+      title: "Add Tax Invoice",
+      path: "/add-tax-invoice",
+      roles: ["MIS User", "Accountant"],
+    },
+    {
+      title: "Create Challan",
+      path: "/challan",
+      roles: ["MIS User", "Store Manager", "Accountant"],
+    },
+    {
+      title: "Add Item At Site",
+      path: "/add-item-at-site",
+      roles: ["MIS User", "Store Manager"],
+    },
+    {
+      title: "Daily Progress Report",
+      path: "/dpr",
+      roles: ["MIS User", "Site Engineer", "Project Manager"],
+    },
+    {
+      title: "Manage Users",
+      path: "/user/mang",
+      roles: ["Super Admin", "Admin"],
+    },
+  ];
 
-  const fetchTotalTaxRegister = async () => {
-    try {
-      const response = await fetch(
-        "http://localhost:5000/tax-invoice/all",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  const visibleStats = allStats.filter((item) => hasAccess(item.roles));
+  const visibleQuickActions = quickActions.filter((item) =>
+    hasAccess(item.roles)
+  );
 
-      const result = await response.json();
-
-      console.log(result);
-
-      setTotalTaxRegister(() => result.total);
-      console.log(totalTaxRegister)
-
-    } catch (error) {
-      console.log(error);
+  const handleClick = (item) => {
+    if (!item.path) {
+      toast("This module is coming soon");
+      return;
     }
+
+    toast.success(`Opening ${item.title}`);
+    navigate(item.path);
   };
 
-  const fetchTotalProjectRegister = async () => {
-    try {
-      const response = await fetch(
-        "http://localhost:5000/project-master/all",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const result = await response.json();
-
-      console.log(result);
-
-      setTotalSitesRegister(() => result.data.length);
-      console.log(totalSitesRegister)
-
-    } catch (error) {
-      console.log(error);
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    toast.success("Logged out successfully");
+    navigate("/login");
   };
 
-  const fetchmasterStores = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/store-master/all');
-      setTotalMasterStores(response.data.data.length);
-      // console.log("Master Stores:",response.data.data);
+      const token = localStorage.getItem("token");
 
-    }
-    catch (error) {
-      console.log("error fetching master stores:", error);
-    }
-  }
+      const headers = {
+        Authorization: `Bearer ${token}`,
+      };
 
-   const fetchDprReports = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/dpr/all");
-      const data = await res.json();
+      const [taxRes, projectRes, storeRes, dprRes] = await Promise.allSettled([
+        axios.get("http://localhost:5000/tax-invoice/all", { headers }),
+        axios.get("http://localhost:5000/project-master/all", { headers }),
+        axios.get("http://localhost:5000/store-master/all", { headers }),
+        axios.get("http://localhost:5000/dpr/all", { headers }),
+      ]);
 
-      if (data.success) {
-        setTotalDpr(data.reports.length);
+      if (taxRes.status === "fulfilled") {
+        setTotalTaxRegister(taxRes.value.data.total || 0);
+      }
+
+      if (projectRes.status === "fulfilled") {
+        setTotalSitesRegister(projectRes.value.data.data?.length || 0);
+      }
+
+      if (storeRes.status === "fulfilled") {
+        setTotalMasterStores(storeRes.value.data.data?.length || 0);
+      }
+
+      if (dprRes.status === "fulfilled") {
+        setTotalDpr(dprRes.value.data.reports?.length || 0);
       }
     } catch (error) {
-      console.log("DPR fetch error:", error);
+      console.log(error);
+      toast.error("Dashboard data loading failed");
     }
   };
 
-
   useEffect(() => {
-
-    fetchTotalTaxRegister();
-    fetchTotalProjectRegister();
-    fetchmasterStores();
-    fetchDprReports();
-
+    fetchDashboardData();
   }, []);
-  const navigate = useNavigate();
-  const handleClick = (actionName) => {
-    // console.log(actionName)
-    if (actionName == "Add Tax Invoice") navigate("/add-tax-invoice")
-    else if (actionName == "Total Tax Invoice Register") navigate("/TaxInvoiceListPage")
-    else if (actionName == "Active Projects") navigate('/projects')
-    else if (actionName == "Total Challans") navigate('/challan')
-    else if (actionName == "Total Stores") navigate('/store');
-    else if (actionName === "Daily Progress Report") navigate('/dpr');
-  }
+
   return (
     <div className="min-h-screen bg-slate-100">
-      {/* Navbar */}
       <header className="bg-white border-b shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-6 items-center">
-          <div className="text-xl font-bold text-blue-600">
-            Material Register
+        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-6 items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div className="text-xl font-bold text-blue-600">
+              Material Register
+            </div>
+
+            <nav className="flex flex-wrap gap-6 text-sm font-medium text-slate-700">
+              <div className="flex items-center gap-2 border-b-2 border-blue-500 pb-1 text-blue-600">
+                <LayoutDashboard size={18} /> Dashboard
+              </div>
+
+              {hasAccess(["MIS User", "Project Manager", "Site Engineer"]) && (
+                <div
+                  onClick={() => navigate("/projects")}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Building2 size={18} /> Sites
+                </div>
+              )}
+
+              {hasAccess(["MIS User", "Store Manager"]) && (
+                <div
+                  onClick={() => navigate("/store")}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Warehouse size={18} /> Stores
+                </div>
+              )}
+
+              {hasAccess(["MIS User", "Store Manager", "Accountant"]) && (
+                <div
+                  onClick={() => navigate("/challan")}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <FileText size={18} /> Challans
+                </div>
+              )}
+            </nav>
           </div>
 
-          <nav className="flex flex-wrap gap-6 text-sm font-medium text-slate-700">
-            <div className="flex items-center gap-2 border-b-2 border-blue-500 pb-1 text-blue-600">
-              <LayoutDashboard size={18} /> Dashboard
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block">
+              <p className="font-semibold text-slate-800">
+                {user?.fullName || "User"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {user?.role} | {user?.department}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Building2 size={18} /> Sites
+
+            <div className="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+              <UserCircle size={28} />
             </div>
-            <div className="flex items-center gap-2">
-              <Warehouse size={18} /> Stores
-            </div>
-            <div className="flex items-center gap-2">
-              <Users size={18} /> Vendors
-            </div>
-            <div className="flex items-center gap-2">
-              <FileText size={18} /> Challans
-            </div>
-          </nav>
+
+            <button
+              onClick={handleLogout}
+              className="bg-red-50 text-red-600 p-2 rounded-xl hover:bg-red-100"
+              title="Logout"
+            >
+              <LogOut size={20} />
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Hero */}
         <section className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 text-white shadow-lg">
           <h1 className="text-3xl font-bold mb-3">
-            Dashboard Overview
+            Welcome, {user?.fullName || "User"}
           </h1>
+
           <p className="text-sm md:text-base opacity-90 max-w-2xl">
-            Track invoices, challans, vendors, stores and material movement in one
-            place. Clean records save more time than meetings ever will.
+            You are logged in as{" "}
+            <span className="font-semibold">{user?.role}</span>. Only your
+            permitted modules are visible here.
           </p>
         </section>
 
-        {/* Stats */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stats.map((item, index) => {
+          {visibleStats.map((item, index) => {
             const Icon = item.icon;
+
             return (
               <div
-                onClick={() => handleClick(item.title)}
+                onClick={() => handleClick(item)}
                 key={index}
-                className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center justify-between"
+                className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center justify-between cursor-pointer hover:shadow-md transition"
               >
                 <div>
                   <p className="text-sm text-slate-500 mb-2">{item.title}</p>
                   <h2 className="text-2xl font-bold text-slate-800">
-
                     {item.value}
                   </h2>
                 </div>
@@ -230,37 +279,53 @@ export default function ModernDashboardLandingPage() {
           })}
         </section>
 
-        {/* Quick Actions + Alerts */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+            <h2 className="text-lg font-semibold mb-4">Your Operations</h2>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {quickActions.map((action, index) => (
+              {visibleQuickActions.map((action, index) => (
                 <button
                   key={index}
                   onClick={() => handleClick(action)}
                   className="rounded-xl border border-slate-200 p-4 text-left hover:shadow-md transition"
                 >
-                  <p className="font-medium">{action}</p>
+                  <p className="font-medium">{action.title}</p>
                   <p className="text-sm text-slate-500 mt-1">
-                    Fast entry for daily operations
+                    Available for {user?.role}
                   </p>
                 </button>
               ))}
             </div>
+
+            {visibleQuickActions.length === 0 && (
+              <p className="text-slate-500 text-sm">
+                No operations assigned to your role.
+              </p>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold mb-4">Alerts</h2>
-            <div className="space-y-4 text-sm">
-              <div className="p-3 rounded-xl bg-yellow-50 border border-yellow-200">
-                3 pending challans need approval
+            <h2 className="text-lg font-semibold mb-4">Me</h2>
+
+            <div className="space-y-3 text-sm">
+              <div className="p-3 rounded-xl bg-slate-50 border">
+                <p className="text-slate-500">Name</p>
+                <p className="font-semibold">{user?.fullName || "N/A"}</p>
               </div>
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 font-medium">
-                Material mismatch found in 1 delivery
+
+              <div className="p-3 rounded-xl bg-slate-50 border">
+                <p className="text-slate-500">Email</p>
+                <p className="font-semibold">{user?.email || "N/A"}</p>
               </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border">
+                <p className="text-slate-500">Role</p>
+                <p className="font-semibold">{user?.role || "N/A"}</p>
+              </div>
+
               <div className="p-3 rounded-xl bg-green-50 border border-green-200">
-                Vendor payment updated successfully
+                Authentication verified successfully
               </div>
             </div>
           </div>

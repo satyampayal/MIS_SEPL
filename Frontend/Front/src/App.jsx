@@ -18,52 +18,242 @@ import ProjectBillingProgressPage from '../ProjectMasterManagement/ProjectBillin
 import ProjectDetailPage from '../ProjectMasterManagement/ProjectDetailPage'
 import EditProjectPage from '../ProjectMasterManagement/EditProjectPage'
 import DailyProgressReportPage from './DPR/DailyProgressReportPage'
+import LoginPage from './User/LoginPage'
+import UserManagementPage from './User/UserManagementPage'
+import ProtectedRoute from './components/ProtectedRoute'
 function App() {
   const { taxInvoiceId } = useParams();
 
   return (
     <Routes>
-      {/* <MultiItemExcelEntryUI/> */}
-      <Route path="/" element={<ModernDashboardLandingPage />} />
 
-  // Register Tax Invoice
-      <Route path="/add-tax-invoice" element={<TaxInvoiceRegisterPage />} />
-  //  Add New Item at site excel Opening Stock
-      <Route path="/add-item-at-site" element={<MultiItemExcelEntryUI />} />
-
-  //Total tax invoice page
-      <Route path='TaxInvoiceListPage' element={<TaxInvoiceListPage />} />
-
-  //Edit Tax Invoice Page
-      <Route path={"/edit-tax-invoice/:taxInvoiceId"} element={<EditTaxInvoicePage />} />
-
-
-  /*  Site Management */
-      <Route path={'/projects'} element={<ProjectMasterManagementWithProgress />} />
-      <Route path={'/project/:projectId'} element={<ProjectDetailPage />} />
-      <Route path={'/project/update/:projectId'} element={<EditProjectPage />} />
+      {/* Public Routes */}
+      <Route path="/login" element={<LoginPage />} />
 
 
 
+      {/* Dashboard */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <ModernDashboardLandingPage />
+          </ProtectedRoute>
+        }
+      />
 
 
 
-      {/* Challan Routes */}
-      <Route path='/challan' element={<ChallanManagement />} />
+      {/* TAX INVOICE */}
 
-      {/* Store Management start */}
+      <Route
+        path="/add-tax-invoice"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Accountant"
+            ]}
+          >
+            <TaxInvoiceRegisterPage />
+          </ProtectedRoute>
+        }
+      />
 
-      <Route path='/store' element={<StoreManagementPage />} />
+
+
+      <Route
+        path="/TaxInvoiceListPage"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Accountant"
+            ]}
+          >
+            <TaxInvoiceListPage />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      <Route
+        path="/edit-tax-invoice/:taxInvoiceId"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Accountant"
+            ]}
+          >
+            <EditTaxInvoicePage />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      {/* STORE */}
+
+      <Route
+        path="/store"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "Store Manager",
+              "MIS User"
+            ]}
+          >
+            <StoreManagementPage />
+          </ProtectedRoute>
+        }
+      />
+
+
+
       <Route
         path="/store/:storeId"
-        element={<StoreInventoryPage />}
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "Store Manager",
+              "MIS User"
+            ]}
+          >
+            <StoreInventoryPage />
+          </ProtectedRoute>
+        }
       />
-      {/* DPR Start */}
 
-      <Route path='/dpr' element={<DailyProgressReportPage/>}  />
+
+
+      {/* DPR */}
+
+      <Route
+        path="/dpr"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Site Engineer",
+              "Project Manager"
+            ]}
+          >
+            <DailyProgressReportPage />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      {/* PROJECTS */}
+
+      <Route
+        path="/projects"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Project Manager",
+              "Site Engineer"
+            ]}
+          >
+            <ProjectMasterManagementWithProgress />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      <Route
+        path="/project/:projectId"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Project Manager",
+              "Site Engineer"
+            ]}
+          >
+            <ProjectDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      <Route
+        path="/project/update/:projectId"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Project Manager"
+            ]}
+          >
+            <EditProjectPage />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      {/* CHALLAN */}
+
+      <Route
+        path="/challan"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Store Manager",
+              "Accountant"
+            ]}
+          >
+            <ChallanManagement />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      {/* ITEM ENTRY */}
+
+      <Route
+        path="/add-item-at-site"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "Store Manager",
+              "MIS User"
+            ]}
+          >
+            <MultiItemExcelEntryUI />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      {/* USER MANAGEMENT */}
+
+      <Route
+        path="/user/mang"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "Super Admin",
+              "Admin"
+            ]}
+          >
+            <UserManagementPage />
+          </ProtectedRoute>
+        }
+      />
 
     </Routes>
-  )
+  );
 }
 
 export default App
