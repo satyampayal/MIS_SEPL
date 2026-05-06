@@ -25,45 +25,51 @@ const quickActions = [
 
 
 export default function ModernDashboardLandingPage() {
-const [totalTaxRegister, setTotalTaxRegister] = useState(0);
-const [totalSitesRegister,setTotalSitesRegister]=useState(0);
-const [totalMasterStores,setTotalMasterStores]=useState(0);
+  const [totalTaxRegister, setTotalTaxRegister] = useState(0);
+  const [totalSitesRegister, setTotalSitesRegister] = useState(0);
+  const [totalMasterStores, setTotalMasterStores] = useState(0);
+  const [totalDpr, setTotalDpr] = useState(0);
 
 
-const stats = [
-  {
-    title: "Active Projects",
-    value: totalSitesRegister,
-    icon: Building2,
-  },
-  {
-    title: "Total Stores",
-    value: totalMasterStores,
-    icon: Warehouse,
-  },
-  {
-    title: "Total Vendors",
-    value: "3",
-    icon: Users,
-  },
-  {
-    title: "Total Challans",
-    value: "0",
-    icon: FileText,
-  },
-  {
-    title: "Total Tax Invoice Register",
-    value: totalTaxRegister,
-    icon: FileText,// package
-  },
-  {
-    title: "Total Value",
-    value: "₹330,000",
-    icon: TrendingUp,
-  },
-];
+  const stats = [
+    {
+      title: "Active Projects",
+      value: totalSitesRegister,
+      icon: Building2,
+    },
+    {
+      title: "Total Stores",
+      value: totalMasterStores,
+      icon: Warehouse,
+    },
+    {
+      title: "Total Vendors",
+      value: "3",
+      icon: Users,
+    },
+    {
+      title: "Total Challans",
+      value: "0",
+      icon: FileText,
+    },
+    {
+      title: "Total Tax Invoice Register",
+      value: totalTaxRegister,
+      icon: FileText,// package
+    },
+    {
+      title: "Total Value",
+      value: "₹330,000",
+      icon: TrendingUp,
+    },
+    {
+      title: "Daily Progress Report",
+      value: totalDpr,
+      icon: FileText,
+    }
+  ];
 
-// Fetch Total Tax Invoice Register to show in STATS
+  // Fetch Total Tax Invoice Register to show in STATS
 
   const fetchTotalTaxRegister = async () => {
     try {
@@ -81,7 +87,7 @@ const stats = [
 
       console.log(result);
 
-      setTotalTaxRegister(()=>result.total);
+      setTotalTaxRegister(() => result.total);
       console.log(totalTaxRegister)
 
     } catch (error) {
@@ -89,7 +95,7 @@ const stats = [
     }
   };
 
-    const fetchTotalProjectRegister = async () => {
+  const fetchTotalProjectRegister = async () => {
     try {
       const response = await fetch(
         "http://localhost:5000/project-master/all",
@@ -105,7 +111,7 @@ const stats = [
 
       console.log(result);
 
-      setTotalSitesRegister(()=>result.data.length);
+      setTotalSitesRegister(() => result.data.length);
       console.log(totalSitesRegister)
 
     } catch (error) {
@@ -113,35 +119,36 @@ const stats = [
     }
   };
 
-    const fetchmasterStores=async()=>{
-    try{
-      const response=await axios.get('http://localhost:5000/store-master/all');
+  const fetchmasterStores = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/store-master/all');
       setTotalMasterStores(response.data.data.length);
       // console.log("Master Stores:",response.data.data);
-      
+
     }
-    catch(error){
-    console.log("error fetching master stores:",error);
+    catch (error) {
+      console.log("error fetching master stores:", error);
+    }
   }
-  } 
 
 
- useEffect(() => {
+  useEffect(() => {
 
-  fetchTotalTaxRegister();
-  fetchTotalProjectRegister();
-  fetchmasterStores();
-  
-}, []);
+    fetchTotalTaxRegister();
+    fetchTotalProjectRegister();
+    fetchmasterStores();
+
+  }, []);
   const navigate = useNavigate();
-  const handleClick=(actionName)=>{
+  const handleClick = (actionName) => {
     // console.log(actionName)
-  if(actionName=="Add Tax Invoice")  navigate("/add-tax-invoice")
-  else if(actionName=="Total Tax Invoice Register")  navigate("/TaxInvoiceListPage")
-else if(actionName=="Active Projects") navigate('/projects')
-  else if(actionName=="Total Challans") navigate('/challan')
-else if(actionName=="Total Stores") navigate('/store');
-}
+    if (actionName == "Add Tax Invoice") navigate("/add-tax-invoice")
+    else if (actionName == "Total Tax Invoice Register") navigate("/TaxInvoiceListPage")
+    else if (actionName == "Active Projects") navigate('/projects')
+    else if (actionName == "Total Challans") navigate('/challan')
+    else if (actionName == "Total Stores") navigate('/store');
+    else if (actionName === "Daily Progress Report") navigate('/dpr');
+  }
   return (
     <div className="min-h-screen bg-slate-100">
       {/* Navbar */}
@@ -189,14 +196,14 @@ else if(actionName=="Total Stores") navigate('/store');
             const Icon = item.icon;
             return (
               <div
-              onClick={()=>handleClick(item.title)}
+                onClick={() => handleClick(item.title)}
                 key={index}
                 className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center justify-between"
               >
                 <div>
                   <p className="text-sm text-slate-500 mb-2">{item.title}</p>
                   <h2 className="text-2xl font-bold text-slate-800">
-                    
+
                     {item.value}
                   </h2>
                 </div>
@@ -217,7 +224,7 @@ else if(actionName=="Total Stores") navigate('/store');
               {quickActions.map((action, index) => (
                 <button
                   key={index}
-                  onClick={()=>handleClick(action)}
+                  onClick={() => handleClick(action)}
                   className="rounded-xl border border-slate-200 p-4 text-left hover:shadow-md transition"
                 >
                   <p className="font-medium">{action}</p>

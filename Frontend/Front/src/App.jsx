@@ -17,46 +17,50 @@ import ProjectMasterManagementWithProgress from '../ProjectMasterManagement/Proj
 import ProjectBillingProgressPage from '../ProjectMasterManagement/ProjectBillingProgressPage'
 import ProjectDetailPage from '../ProjectMasterManagement/ProjectDetailPage'
 import EditProjectPage from '../ProjectMasterManagement/EditProjectPage'
+import DailyProgressReportPage from './DPR/DailyProgressReportPage'
 function App() {
-const { taxInvoiceId } = useParams();
+  const { taxInvoiceId } = useParams();
 
   return (
     <Routes>
-{/* <MultiItemExcelEntryUI/> */}
-  <Route path="/" element={<ModernDashboardLandingPage />} />
+      {/* <MultiItemExcelEntryUI/> */}
+      <Route path="/" element={<ModernDashboardLandingPage />} />
 
-  // Register Tax Invoice 
-  <Route path="/add-tax-invoice" element={<TaxInvoiceRegisterPage />} />
-  //  Add New Item at site excel Opening Stock 
-  <Route path="/add-item-at-site" element={<MultiItemExcelEntryUI />} />
+  // Register Tax Invoice
+      <Route path="/add-tax-invoice" element={<TaxInvoiceRegisterPage />} />
+  //  Add New Item at site excel Opening Stock
+      <Route path="/add-item-at-site" element={<MultiItemExcelEntryUI />} />
 
   //Total tax invoice page
-  <Route path='TaxInvoiceListPage' element={<TaxInvoiceListPage/>} />
+      <Route path='TaxInvoiceListPage' element={<TaxInvoiceListPage />} />
 
-  //Edit Tax Invoice Page 
-  <Route path={"/edit-tax-invoice/:taxInvoiceId"} element={<EditTaxInvoicePage/>}/>
-  
+  //Edit Tax Invoice Page
+      <Route path={"/edit-tax-invoice/:taxInvoiceId"} element={<EditTaxInvoicePage />} />
+
 
   /*  Site Management */
-  <Route path={'/projects'}  element={<ProjectMasterManagementWithProgress/>} />
-  <Route path={'/project/:projectId'}  element={<ProjectDetailPage/>} />
-  <Route path={'/project/update/:projectId'}  element={<EditProjectPage/>} />
-  
+      <Route path={'/projects'} element={<ProjectMasterManagementWithProgress />} />
+      <Route path={'/project/:projectId'} element={<ProjectDetailPage />} />
+      <Route path={'/project/update/:projectId'} element={<EditProjectPage />} />
 
 
 
 
-  
-  {/* Challan Routes */}
-  <Route  path='/challan' element={<ChallanManagement/>}/>
 
-  {/* Store Management start */}
 
-  <Route  path='/store' element={<StoreManagementPage/>} />
-  <Route
-  path="/store/:storeId"
-  element={<StoreInventoryPage/>}
-/>
+      {/* Challan Routes */}
+      <Route path='/challan' element={<ChallanManagement />} />
+
+      {/* Store Management start */}
+
+      <Route path='/store' element={<StoreManagementPage />} />
+      <Route
+        path="/store/:storeId"
+        element={<StoreInventoryPage />}
+      />
+      {/* DPR Start */}
+
+      <Route path='/dpr' element={<DailyProgressReportPage/>}  />
 
     </Routes>
   )
