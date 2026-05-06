@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, UploadCloud } from "lucide-react";
-
+import {projectSiteList} from  '../Constant'
 export default function AddDPRModal({
   isOpen,
   onClose,
@@ -138,13 +138,24 @@ export default function AddDPRModal({
 
         {/* Form */}
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-          <Input
-            label="Project / Site Name"
-            name="projectName"
-            value={formData.projectName}
-            onChange={handleChange}
-            disabled={isView}
-          />
+        
+            <select
+             label="Project / Site Name"
+              name="projectName"
+              value={formData.projectName}  
+              onChange={handleChange}
+              disabled={isView}
+              className="w-full mt-1 border rounded-xl px-3 py-2 outline-none disabled:bg-gray-100" 
+            >
+              <option value="">Select Project</option>
+              {projectSiteList.map((project) => ( 
+                <option key={project} value={project}>
+                  {project}
+                </option>
+              ))}
+            </select>
+
+          
 
           <Input
             label="Report Date"

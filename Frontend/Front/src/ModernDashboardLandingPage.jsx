@@ -131,12 +131,26 @@ export default function ModernDashboardLandingPage() {
     }
   }
 
+   const fetchDprReports = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/dpr/all");
+      const data = await res.json();
+
+      if (data.success) {
+        setTotalDpr(data.reports.length);
+      }
+    } catch (error) {
+      console.log("DPR fetch error:", error);
+    }
+  };
+
 
   useEffect(() => {
 
     fetchTotalTaxRegister();
     fetchTotalProjectRegister();
     fetchmasterStores();
+    fetchDprReports();
 
   }, []);
   const navigate = useNavigate();

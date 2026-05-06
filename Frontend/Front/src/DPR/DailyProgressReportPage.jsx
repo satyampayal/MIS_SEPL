@@ -69,6 +69,25 @@ export default function DailyProgressReportPage() {
       report?.workDoneToday?.toLowerCase().includes(searchText)
     );
   });
+  const handleDelete=async (dprId)=>{
+    if(window.confirm("Are you sure you want to delete this DPR?")){
+      try {
+        const res=await fetch(`http://localhost:5000/dpr/delete/${dprId}`,{
+          method: "DELETE"
+        });
+        const data=await res.json();
+        if(data.success){
+          alert("DPR deleted successfully");
+          fetchReports();
+        }else{
+          alert("Failed to delete DPR");
+        }
+      } catch (error) {
+        console.log("DPR delete error:", error);
+        alert("Server error");
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -76,7 +95,7 @@ export default function DailyProgressReportPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate(-1)}
             className="p-2 bg-white rounded-xl shadow hover:bg-gray-50"
           >
             <ArrowLeft size={22} />
@@ -105,7 +124,7 @@ export default function DailyProgressReportPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
         <div className="bg-white p-5 rounded-2xl shadow">
           <p className="text-gray-500 text-sm">Total DPR</p>
-          <h2 className="text-2xl font-bold">{reports.length}</h2>
+          <h2 className="text-2xl font-bold">{reports?.length}</h2>
         </div>
 
         <div className="bg-white p-5 rounded-2xl shadow">
@@ -232,7 +251,7 @@ export default function DailyProgressReportPage() {
                         <Pencil size={18} />
                       </button>
 
-                      <button className="text-red-600 hover:text-red-800">
+                      <button onClick={()=>handleDelete(report._id)} className="text-red-600 hover:text-red-800">
                         <Trash2 size={18} />
                       </button>
                     </div>
