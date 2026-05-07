@@ -8,11 +8,14 @@ import {
   TrendingUp,
   LogOut,
   UserCircle,
+  ClipboardList
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { AuthContext } from "./Context/AuthContext";
+import TaskListModal from "./TaskListModal";
+import AddTaskModal from "./AddTaskModal";
 
 export default function ModernDashboardLandingPage() {
   const navigate = useNavigate();
@@ -22,6 +25,19 @@ export default function ModernDashboardLandingPage() {
   const [totalSitesRegister, setTotalSitesRegister] = useState(0);
   const [totalMasterStores, setTotalMasterStores] = useState(0);
   const [totalDpr, setTotalDpr] = useState(0);
+  const [totalPendingTasks, setTotalPendingTasks] = useState(0)
+  const [pendingTaskCount, setPendingTaskCount] = useState(0)
+  const [myTasks, setMyTasks] = useState([]);
+  const [allTasks, setAllTasks] = useState([]);
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [addTaskMode, setAddTaskMode] = useState("personal");
+  const [users, setUsers] = useState([]);
+
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  const [selectedTaskType, setSelectedTaskType] = useState("");
+
+  const [filteredTasks, setFilteredTasks] = useState([]);
 
   const isAdmin = user?.role === "Super Admin" || user?.role === "Admin";
 
@@ -80,6 +96,28 @@ export default function ModernDashboardLandingPage() {
       path: "/user/mang",
       roles: ["Super Admin", "Admin"],
     },
+    {
+      title: "My Pending Tasks",
+      value: pendingTaskCount,
+      icon: ClipboardList,
+      path: null,
+      actionType: "myPendingTasks",
+      roles: [
+        "MIS User",
+        "Site Engineer",
+        "Store Manager",
+        "Accountant",
+        "Project Manager"
+      ]
+    },
+    {
+      title: "Task Management",
+      value: totalPendingTasks,
+      icon: ClipboardList,
+      path: null,
+      actionType: "taskManagement",
+      roles: ["Super Admin", "Admin", "Project Manager"]
+    }
   ];
 
   const quickActions = [
@@ -115,7 +153,42 @@ export default function ModernDashboardLandingPage() {
     hasAccess(item.roles)
   );
 
+  const openTaskModal = (type) => {
+    setSelectedTaskType(type);
+
+    let data = [];
+
+    const today = new Date().toDateString();
+
+    if (type === "myPending") {
+      data = myTasks.filter((task) => task.status === "pending");
+    }
+
+    if (type === "taskManagement") {
+      data = allTasks.filter((task) => task.status !== "completed");
+    }
+
+    if (type === "today") {
+      data = myTasks.filter(
+        (task) => new Date(task.dueDate).toDateString() === today
+      );
+    }
+
+    setFilteredTasks(data);
+    setIsTaskModalOpen(true);
+  };
+
   const handleClick = (item) => {
+    if (item.actionType === "myPendingTasks") {
+      openTaskModal("myPending");
+      return;
+    }
+
+    if (item.actionType === "taskManagement") {
+      openTaskModal("taskManagement");
+      return;
+    }
+
     if (!item.path) {
       toast("This module is coming soon");
       return;
@@ -141,12 +214,15 @@ export default function ModernDashboardLandingPage() {
         Authorization: `Bearer ${token}`,
       };
 
-      const [taxRes, projectRes, storeRes, dprRes] = await Promise.allSettled([
-        axios.get("http://localhost:5000/tax-invoice/all", { headers }),
-        axios.get("http://localhost:5000/project-master/all", { headers }),
-        axios.get("http://localhost:5000/store-master/all", { headers }),
-        axios.get("http://localhost:5000/dpr/all", { headers }),
-      ]);
+      const [taxRes, projectRes, storeRes, dprRes, myTaskRes, allTaskRes] =
+        await Promise.allSettled([
+          axios.get("http://localhost:5000/tax-invoice/all", { headers }),
+          axios.get("http://localhost:5000/project-master/all", { headers }),
+          axios.get("http://localhost:5000/store-master/all", { headers }),
+          axios.get("http://localhost:5000/dpr/all", { headers }),
+          axios.get("http://localhost:5000/api/tasks/my-tasks", { headers }),
+          axios.get("http://localhost:5000/api/tasks/all", { headers }),
+        ]);
 
       if (taxRes.status === "fulfilled") {
         setTotalTaxRegister(taxRes.value.data.total || 0);
@@ -163,10 +239,36 @@ export default function ModernDashboardLandingPage() {
       if (dprRes.status === "fulfilled") {
         setTotalDpr(dprRes.value.data.reports?.length || 0);
       }
+      if (myTaskRes.status === "fulfilled") {
+        const tasks = myTaskRes.value.data.tasks || [];
+        setMyTasks(tasks);
+
+        const pending = tasks.filter((task) => task.status === "pending");
+        setPendingTaskCount(pending.length);
+      }
+
+      if (allTaskRes.status === "fulfilled") {
+        const tasks = allTaskRes.value.data.tasks || [];
+        setAllTasks(tasks);
+
+        const pending = tasks.filter((task) => task.status !== "completed");
+        setTotalPendingTasks(pending.length);
+      }
     } catch (error) {
       console.log(error);
       toast.error("Dashboard data loading failed");
     }
+  };
+
+  //Task 
+    const handleAddTaskClick = () => {
+    if (isAdmin) {
+      setAddTaskMode("assign");
+    } else {
+      setAddTaskMode("personal");
+    }
+
+    setIsAddTaskModalOpen(true);
   };
 
   useEffect(() => {
@@ -331,6 +433,23 @@ export default function ModernDashboardLandingPage() {
           </div>
         </section>
       </main>
+      <TaskListModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        tasks={filteredTasks}
+        type={selectedTaskType}
+        onAddTask={handleAddTaskClick}
+      />
+
+         <AddTaskModal
+  isOpen={isAddTaskModalOpen}
+  onClose={() => {
+    setIsAddTaskModalOpen(false);
+    fetchDashboardData();
+  }}
+  mode={addTaskMode}
+  users={users}
+/>
     </div>
   );
 }

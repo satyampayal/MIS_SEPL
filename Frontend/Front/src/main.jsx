@@ -5,9 +5,12 @@ import App from './App.jsx'
 import {BrowserRouter} from "react-router-dom"
 import {Toaster}  from 'react-hot-toast'
 import AuthProvider from './Context/AuthContext.jsx'
+import { TaskProvider } from './Context/TaskContext.jsx'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
+      <TaskProvider>
     <BrowserRouter>
       <Toaster
       position="top-right"
@@ -25,6 +28,7 @@ createRoot(document.getElementById('root')).render(
     />
     <App />
     </BrowserRouter>
+    </TaskProvider>
     </AuthProvider>
     
   </StrictMode>,

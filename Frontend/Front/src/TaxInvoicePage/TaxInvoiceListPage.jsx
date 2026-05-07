@@ -1,92 +1,34 @@
-import React, { useEffect, useState } from "react";
-import { Pencil, Trash2, Receipt, ArrowLeft } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Pencil,
+  Trash2,
+  Receipt,
+  ArrowLeft,
+  Eye,
+  Plus,
+  Download,
+  Loader2,
+  RotateCcw,
+  Search
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { projectSiteList, vendorList } from "../Constant";
+import TaxInvoiceModal from "./TaxInvoiceModal";
 
 export default function TaxInvoiceListPage() {
   const navigate = useNavigate();
+
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteLoadingId, setDeleteLoadingId] = useState(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const totalPages = Math.ceil(invoices.length / itemsPerPage);
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
-
-  const paginatedInvoices = invoices.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
-
-  const fetchInvoices = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/tax-invoice/all");
-      const result = await response.json();
-      //   console.log(result)
-      setInvoices(result.taxInvoiceList || []);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
-
-  const handleDelete = async (taxInvoiceId) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this Tax Invoice?"
-    );
-
-    if (!confirmDelete) return;
-
-    try {
-      const response = await fetch(
-        `http://localhost:5000/tax-invoice/delete/${taxInvoiceId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      const result = await response.json();
-      alert(result.message);
-      fetchInvoices();
-    } catch (error) {
-      console.log(error);
-      alert("Delete failed");
-    }
-  };
-
-  const handleEdit = (id) => {
-    //  console.log(id)
-    navigate(`/edit-tax-invoice/${id}`);
-  };
-  const handleExportExcel = async () => {
-    try {
-      const response = await fetch(
-        "http://localhost:5000/tax-invoice/export-excel"
-      );
-
-      const blob = await response.blob();
-
-      const url = window.URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "TaxInvoiceRegister.xlsx";
-      link.click();
-
-      window.URL.revokeObjectURL(url);
-
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  const [showModal, setShowModal] = useState(false);
+  const [mode, setMode] = useState("add");
 
   const [filters, setFilters] = useState({
     invoiceNumber: "",
@@ -96,6 +38,132 @@ export default function TaxInvoiceListPage() {
     invoiceDate: "",
     challanNumber: ""
   });
+
+  const token = localStorage.getItem("token");
+
+  const authHeaders = {
+    Authorization: `Bearer ${token}`
+  };
+
+  const totalPages = Math.max(1, Math.ceil(invoices.length / itemsPerPage));
+
+  const paginatedInvoices = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return invoices.slice(startIndex, startIndex + itemsPerPage);
+  }, [invoices, currentPage, itemsPerPage]);
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch("http://localhost:5000/tax-invoice/all", {
+        headers: authHeaders
+      });
+
+      const result = await response.json();
+
+      if (result.success || result.taxInvoiceList) {
+        setInvoices(result.taxInvoiceList || result.data || []);
+      } else {
+        toast.error(result.message || "Failed to load tax invoices");
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Server error while loading invoices");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  const openAddModal = () => {
+    setSelectedInvoice(null);
+    setMode("add");
+    setShowModal(true);
+  };
+
+  const openViewModal = (invoice) => {
+    setSelectedInvoice(invoice);
+    setMode("view");
+    setShowModal(true);
+  };
+
+  const openEditModal = (invoice) => {
+    setSelectedInvoice(invoice);
+    setMode("edit");
+    setShowModal(true);
+  };
+
+  const handleDelete = async (taxInvoiceId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this Tax Invoice?"
+    );
+
+    if (!confirmDelete) {
+      toast("Delete cancelled");
+      return;
+    }
+
+    try {
+      setDeleteLoadingId(taxInvoiceId);
+      const loadingToast = toast.loading("Deleting tax invoice...");
+
+      const response = await fetch(
+        `http://localhost:5000/tax-invoice/delete/${taxInvoiceId}`,
+        {
+          method: "DELETE",
+          headers: authHeaders
+        }
+      );
+
+      const result = await response.json();
+      toast.dismiss(loadingToast);
+
+      if (result.success) {
+        toast.success(result.message || "Tax invoice deleted successfully");
+        fetchInvoices();
+      } else {
+        toast.error(result.message || "Delete failed");
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Server error while deleting invoice");
+    } finally {
+      setDeleteLoadingId(null);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const loadingToast = toast.loading("Exporting Excel...");
+
+      const response = await fetch(
+        "http://localhost:5000/tax-invoice/export-excel",
+        {
+          headers: authHeaders
+        }
+      );
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "TaxInvoiceRegister.xlsx";
+      link.click();
+
+      window.URL.revokeObjectURL(url);
+      toast.dismiss(loadingToast);
+      toast.success("Excel exported successfully");
+    } catch (error) {
+      console.log(error);
+      toast.error("Excel export failed");
+    }
+  };
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
 
@@ -107,19 +175,27 @@ export default function TaxInvoiceListPage() {
 
   const applyFilters = async () => {
     try {
+      const loadingToast = toast.loading("Applying filters...");
+
       const query = new URLSearchParams(filters).toString();
 
       const response = await fetch(
-        `http://localhost:5000/tax-invoice-register?${query}`
+        `http://localhost:5000/tax-invoice-register?${query}`,
+        {
+          headers: authHeaders
+        }
       );
 
       const result = await response.json();
 
-      setInvoices(result.data);
-      setCurrentPage(1)
+      setInvoices(result.data || []);
+      setCurrentPage(1);
 
+      toast.dismiss(loadingToast);
+      toast.success("Filters applied");
     } catch (error) {
       console.log(error);
+      toast.error("Filter failed");
     }
   };
 
@@ -133,25 +209,24 @@ export default function TaxInvoiceListPage() {
       challanNumber: ""
     });
 
+    setCurrentPage(1);
     fetchInvoices();
+    toast.success("Filters reset");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 p-6">
       <div className="max-w-7xl mx-auto">
-
-
         <div className="bg-white rounded-3xl shadow-lg p-6 mb-6 border border-gray-100">
           <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100"
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 rounded-xl mb-4"
           >
             <ArrowLeft size={20} />
             Back
           </button>
-          <div className="flex justify-between items-start">
 
-            {/* Left Side */}
+          <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <Receipt size={30} />
@@ -165,35 +240,32 @@ export default function TaxInvoiceListPage() {
               </p>
             </div>
 
-            {/* Right Side Button */}
             <div className="flex gap-2">
               <button
-                onClick={() => navigate('/add-tax-invoice')}
-                className="bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition"
+                onClick={openAddModal}
+                className="flex items-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition"
               >
-                + Add
+                <Plus size={18} />
+                Add
               </button>
+
               <button
                 onClick={handleExportExcel}
-                className="bg-green-600 text-white px-5 py-3 rounded-xl hover:bg-green-700 transition"
+                className="flex items-center gap-2 bg-green-600 text-white px-5 py-3 rounded-xl hover:bg-green-700 transition"
               >
+                <Download size={18} />
                 Export Excel
               </button>
             </div>
-
-
           </div>
         </div>
 
-        {/* Filter Section */}
         <div className="bg-white rounded-3xl shadow-lg p-6 mb-6 border border-gray-100">
           <h2 className="text-xl font-semibold mb-4">
             Filter Tax Invoice Records
           </h2>
 
           <div className="grid md:grid-cols-4 gap-4">
-
-            {/* Invoice Number */}
             <input
               type="text"
               name="invoiceNumber"
@@ -203,7 +275,6 @@ export default function TaxInvoiceListPage() {
               className="border rounded-xl px-4 py-3"
             />
 
-            {/* Vendor Name */}
             <select
               name="vendorName"
               value={filters.vendorName}
@@ -218,7 +289,6 @@ export default function TaxInvoiceListPage() {
               ))}
             </select>
 
-            {/* Project Site */}
             <select
               name="projectSite"
               value={filters.projectSite}
@@ -233,7 +303,6 @@ export default function TaxInvoiceListPage() {
               ))}
             </select>
 
-            {/* Delivery Status */}
             <select
               name="deliveryStatus"
               value={filters.deliveryStatus}
@@ -246,7 +315,6 @@ export default function TaxInvoiceListPage() {
               <option value="partial">Partial</option>
             </select>
 
-            {/* Invoice Date */}
             <input
               type="date"
               name="invoiceDate"
@@ -255,7 +323,6 @@ export default function TaxInvoiceListPage() {
               className="border rounded-xl px-4 py-3"
             />
 
-            {/* Challan Number */}
             <input
               type="text"
               name="challanNumber"
@@ -265,27 +332,29 @@ export default function TaxInvoiceListPage() {
               className="border rounded-xl px-4 py-3"
             />
 
-            {/* Buttons */}
             <button
               onClick={applyFilters}
-              className="bg-blue-600 text-white rounded-xl px-4 py-3"
+              className="flex items-center justify-center gap-2 bg-blue-600 text-white rounded-xl px-4 py-3"
             >
+              <Search size={18} />
               Apply Filter
             </button>
 
             <button
               onClick={resetFilters}
-              className="bg-gray-500 text-white rounded-xl px-4 py-3"
+              className="flex items-center justify-center gap-2 bg-gray-500 text-white rounded-xl px-4 py-3"
             >
+              <RotateCcw size={18} />
               Reset
             </button>
-
           </div>
         </div>
+
         <div className="bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
           {loading ? (
-            <div className="p-8 text-center text-lg font-medium">
-              Loading invoices...
+            <div className="p-10 flex flex-col items-center justify-center">
+              <Loader2 className="animate-spin text-blue-600" size={36} />
+              <p className="text-gray-500 mt-3">Loading invoices...</p>
             </div>
           ) : invoices.length === 0 ? (
             <div className="p-8 text-center text-lg font-medium">
@@ -315,7 +384,15 @@ export default function TaxInvoiceListPage() {
                       <td className="p-4 font-medium">
                         {invoice.invoiceNumber}
                       </td>
-                      <td className="p-4">{invoice.invoiceDate}</td>
+
+                      <td className="p-4">
+                        {invoice.invoiceDate
+                          ? new Date(invoice.invoiceDate).toLocaleDateString(
+                              "en-IN"
+                            )
+                          : "-"}
+                      </td>
+
                       <td className="p-4">{invoice.vendorName}</td>
                       <td className="p-4">₹ {invoice.invoiceAmount}</td>
                       <td className="p-4">{invoice.projectSite}</td>
@@ -324,16 +401,15 @@ export default function TaxInvoiceListPage() {
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-3">
                           <button
-                            onClick={() => {
-                              setSelectedInvoice(invoice);
-                              setShowViewModal(true);
-                            }}
+                            onClick={() => openViewModal(invoice)}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-green-200 bg-green-50 hover:shadow-md transition"
                           >
+                            <Eye size={18} />
                             View
                           </button>
+
                           <button
-                            onClick={() => handleEdit(invoice._id)}
+                            onClick={() => openEditModal(invoice)}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 hover:shadow-md transition"
                           >
                             <Pencil size={18} />
@@ -342,9 +418,14 @@ export default function TaxInvoiceListPage() {
 
                           <button
                             onClick={() => handleDelete(invoice._id)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-red-50 hover:shadow-md transition"
+                            disabled={deleteLoadingId === invoice._id}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-red-50 hover:shadow-md transition disabled:opacity-50"
                           >
-                            <Trash2 size={18} />
+                            {deleteLoadingId === invoice._id ? (
+                              <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={18} />
+                            )}
                             Delete
                           </button>
                         </div>
@@ -353,24 +434,22 @@ export default function TaxInvoiceListPage() {
                   ))}
                 </tbody>
               </table>
-              <div className="flex items-center justify-between p-4 border-t">
 
-                <div>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="border px-3 py-2 rounded-lg"
-                  >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                  </select>
-                </div>
+              <div className="flex items-center justify-between p-4 border-t">
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border px-3 py-2 rounded-lg"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
 
                 <div className="flex items-center gap-3">
-
                   <button
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage((prev) => prev - 1)}
@@ -390,117 +469,20 @@ export default function TaxInvoiceListPage() {
                   >
                     Next
                   </button>
-
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
-      {showViewModal && selectedInvoice && (
-        <div className=" fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-auto p-4">
-          <div className="bg-white w-full max-w-3xl rounded-xl shadow-lg p-8">
 
-            {/* Header */}
-            <div className="flex justify-between items-center border-b pb-4 mb-6">
-              <h2 className="text-2xl font-bold">Tax Invoice</h2>
-              <button
-                onClick={() => setShowViewModal(false)}
-                className="text-gray-500 text-xl"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Table Style Layout */}
-            <table className="w-full border text-sm">
-              <tbody>
-
-                <tr className="border">
-                  <td className="p-3 font-semibold w-1/3">Invoice Number</td>
-                  <td className="p-3">{selectedInvoice.invoiceNumber}</td>
-                </tr>
-
-                <tr className="border bg-gray-50">
-                  <td className="p-3 font-semibold">Invoice Date</td>
-                  <td className="p-3">{selectedInvoice.invoiceDate}</td>
-                </tr>
-
-                <tr className="border">
-                  <td className="p-3 font-semibold">Vendor</td>
-                  <td className="p-3">{selectedInvoice.vendorName}</td>
-                </tr>
-
-                <tr className="border bg-gray-50">
-                  <td className="p-3 font-semibold">Project Site</td>
-                  <td className="p-3">{selectedInvoice.projectSite}</td>
-                </tr>
-
-                <tr className="border">
-                  <td className="p-3 font-semibold">Amount</td>
-                  <td className="p-3">₹ {selectedInvoice.invoiceAmount}</td>
-                </tr>
-
-                <tr className="border bg-gray-50">
-                  <td className="p-3 font-semibold">Delivery Status</td>
-                  <td className="p-3">{selectedInvoice.deliveryStatus || "-"}</td>
-                </tr>
-
-                <tr className="border">
-                  <td className="p-3 font-semibold">Challan Number</td>
-                  <td className="p-3">{selectedInvoice.challanNumber || "-"}</td>
-                </tr>
-                <tr className="border">
-                  <td className="p-3 font-semibold">Material Differnce </td>
-                  
-                  <td
-                    className={`p-3 ${selectedInvoice?.materialDifference === "Difference Found"
-                        ? "bg-red-100 text-red-600 font-semibold"
-                        : "bg-green-100 text-green-600 font-semibold"
-                      }`}
-                  >
-                    {selectedInvoice?.materialDifference || "-"}
-                  </td>
-                </tr>
-
-              </tbody>
-            </table>
-            {/* Files Section */}
-            <div className="mt-6 border-t pt-4">
-
-              <h3 className="font-semibold mb-3 text-lg">Documents</h3>
-
-              <div className="flex gap-4 flex-wrap">
-
-                {/* Invoice File */}
-                {selectedInvoice?.invoiceFile ? (
-                  <button
-                    onClick={() => window.open(selectedInvoice.invoiceFile, "_blank")}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-                  >
-                    View Tax Invoice
-                  </button>
-                ) : (
-                  <p className="text-gray-500">No Invoice File</p>
-                )}
-
-                {/* Challan File */}
-                {selectedInvoice.challanFile ? (
-                  <button
-                    onClick={() => window.open(selectedInvoice.challanFile, "_blank")}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg"
-                  >
-                    View Challan
-                  </button>
-                ) : (
-                  <p className="text-gray-500">No Challan File</p>
-                )}
-
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <TaxInvoiceModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        mode={mode}
+        invoice={selectedInvoice}
+        refreshInvoices={fetchInvoices}
+      />
     </div>
   );
 }

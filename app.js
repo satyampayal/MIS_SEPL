@@ -17,6 +17,7 @@ const projectMasterRouter = require("./Routes/projectMasterRoutes");
 const taxInvoiceRouter = require("./Routes/taxInvoiceRoute");
 const dprRouter = require("./Routes/DPRRoutes");
 const userRouter = require("./Routes/userRoutes");
+const taskRouter = require("./Routes/taskRoutes");
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -32,6 +33,8 @@ app.use(express.json());
 app.use('/user',userRouter)
 // Tax Invoice Routes
 app.use('/tax-invoice',taxInvoiceRouter);
+// task assign or  My task
+app.use('/api/tasks',taskRouter)
 
 // Add multiple item of site for Opening stock----> This route is temperory to doing my opening  stock 
 // app.post("/add-items", async (req, res) => {

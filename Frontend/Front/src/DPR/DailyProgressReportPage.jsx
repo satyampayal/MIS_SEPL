@@ -38,20 +38,78 @@ export default function DailyProgressReportPage() {
 
   const token = localStorage.getItem("token");
 
+  const authHeaders = token
+    ? {
+        Authorization: `Bearer ${token}`
+      }
+    : {};
+
+  const normalizeText = (text = "") => {
+    return text.toString().trim().toLowerCase().replace(/\s+/g, " ");
+  };
+
+  const getProjectName = (project) => {
+    return (
+      project?.projectName ||
+      project?.siteName ||
+      project?.projectSite ||
+      project?.site ||
+      project?.name ||
+      project?.title ||
+      project?.workName ||
+      ""
+    );
+  };
+
+  const getDprProjectName = (report) => {
+    return (
+      report?.projectName ||
+      report?.siteName ||
+      report?.projectSite ||
+      report?.site ||
+      report?.name ||
+      ""
+    );
+  };
+
+  const getDprProjectId = (report) => {
+    if (!report?.projectId) return "";
+
+    if (typeof report.projectId === "object") {
+      return String(report.projectId?._id || "");
+    }
+
+    return String(report.projectId || "");
+  };
+
+  const isTodayDate = (dateValue) => {
+    if (!dateValue) return false;
+
+    const date = new Date(dateValue);
+    const today = new Date();
+
+    return (
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate()
+    );
+  };
+
   const fetchReports = async () => {
     try {
       setPageLoading(true);
 
       const res = await fetch("http://localhost:5000/dpr/all", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: authHeaders
       });
 
       const data = await res.json();
-   console.log("All Reports",data)
-      if (data.success) {
-        setReports(data.reports || []);
+      console.log("All Reports:", data);
+
+      const reportList = data.reports || data.data || data.dprs || [];
+
+      if (data.success || Array.isArray(reportList)) {
+        setReports(reportList);
       } else {
         toast.error(data.message || "Failed to load DPR reports");
       }
@@ -66,16 +124,20 @@ export default function DailyProgressReportPage() {
   const fetchProjects = async () => {
     try {
       const res = await fetch("http://localhost:5000/project-master/all", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: authHeaders
       });
 
       const data = await res.json();
-      console.log("All Projects",data)
-      if (data.success) {
-        setProjects(data.data || []);
-      }
+      console.log("All Projects:", data);
+
+      const projectList =
+        data.data ||
+        data.projects ||
+        data.projectList ||
+        data.result ||
+        [];
+
+      setProjects(Array.isArray(projectList) ? projectList : []);
     } catch (error) {
       console.log("Project fetch error:", error);
       toast.error("Failed to load projects");
@@ -87,11 +149,74 @@ export default function DailyProgressReportPage() {
     fetchProjects();
   }, []);
 
+  const pendingDprSites = useMemo(() => {
+  if (!projects.length) return [];
+
+  const todayReportsOnly = reports.filter((report) =>
+    isTodayDate(report.reportDate)
+  );
+
+  const submittedProjectNames = todayReportsOnly
+    .map((report) => normalizeText(getDprProjectName(report)))
+    .filter(Boolean);
+
+  const uniqueProjectsByName = [];
+
+  const seenNames = new Set();
+
+  projects.forEach((project) => {
+    const projectName = normalizeText(getProjectName(project));
+
+    if (!projectName) return;
+
+    if (!seenNames.has(projectName)) {
+      seenNames.add(projectName);
+
+      uniqueProjectsByName.push(project);
+    }
+  });
+
+  const pendingSites = uniqueProjectsByName.filter((project) => {
+    const projectName = normalizeText(getProjectName(project));
+
+    return !submittedProjectNames.includes(projectName);
+  });
+
+  return pendingSites;
+}, [projects, reports]);
+
+  const filteredReports = useMemo(() => {
+    return reports.filter((report) => {
+      const searchText = normalizeText(filters.search);
+
+      const matchesSearch =
+        !searchText ||
+        normalizeText(report?.projectName).includes(searchText) ||
+        normalizeText(report?.siteInchargeName).includes(searchText) ||
+        normalizeText(report?.workDoneToday).includes(searchText) ||
+        normalizeText(report?.issuesFaced).includes(searchText);
+
+      const reportDate = report?.reportDate ? new Date(report.reportDate) : null;
+
+      const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
+      const toDate = filters.toDate ? new Date(filters.toDate) : null;
+
+      if (fromDate) fromDate.setHours(0, 0, 0, 0);
+      if (toDate) toDate.setHours(23, 59, 59, 999);
+
+      const matchesFromDate =
+        !fromDate || (reportDate && reportDate >= fromDate);
+
+      const matchesToDate = !toDate || (reportDate && reportDate <= toDate);
+
+      return matchesSearch && matchesFromDate && matchesToDate;
+    });
+  }, [reports, filters]);
+
   const openAddModal = () => {
     setSelectedReport(null);
     setMode("add");
     setIsModalOpen(true);
-    toast("Opening DPR form");
   };
 
   const openViewModal = (report) => {
@@ -106,6 +231,16 @@ export default function DailyProgressReportPage() {
     setIsModalOpen(true);
   };
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedReport(null);
+  };
+
+  const refreshAfterModal = async () => {
+    await fetchReports();
+    await fetchProjects();
+  };
+
   const clearFilters = () => {
     setFilters({
       search: "",
@@ -116,41 +251,6 @@ export default function DailyProgressReportPage() {
     toast.success("Filters cleared");
   };
 
-  const filteredReports = useMemo(() => {
-    return reports.filter((report) => {
-      const searchText = filters.search.toLowerCase().trim();
-
-      const matchesSearch =
-        !searchText ||
-        report?.projectName?.toLowerCase().includes(searchText) ||
-        report?.siteInchargeName?.toLowerCase().includes(searchText) ||
-        report?.workDoneToday?.toLowerCase().includes(searchText) ||
-        report?.issuesFaced?.toLowerCase().includes(searchText);
-
-      const reportDate = report?.reportDate
-        ? new Date(report.reportDate)
-        : null;
-
-      const fromDate = filters.fromDate
-        ? new Date(filters.fromDate)
-        : null;
-
-      const toDate = filters.toDate ? new Date(filters.toDate) : null;
-
-      if (toDate) {
-        toDate.setHours(23, 59, 59, 999);
-      }
-
-      const matchesFromDate =
-        !fromDate || (reportDate && reportDate >= fromDate);
-
-      const matchesToDate =
-        !toDate || (reportDate && reportDate <= toDate);
-
-      return matchesSearch && matchesFromDate && matchesToDate;
-    });
-  }, [reports, filters]);
-
   const exportDPRToExcel = () => {
     if (filteredReports.length === 0) {
       toast.error("No DPR data available to export");
@@ -159,8 +259,10 @@ export default function DailyProgressReportPage() {
 
     const exportData = filteredReports.map((r, index) => ({
       "S.No": index + 1,
-      Date: new Date(r.reportDate).toLocaleDateString("en-IN"),
-      Site: r.projectName || "N/A",
+      Date: r.reportDate
+        ? new Date(r.reportDate).toLocaleDateString("en-IN")
+        : "",
+      Site: getDprProjectName(r) || "N/A",
       "Work Done": r.workDoneToday || "",
       Manpower: r.manpowerCount || 0,
       "Site Incharge": r.siteInchargeName || "",
@@ -173,7 +275,6 @@ export default function DailyProgressReportPage() {
     const workbook = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(workbook, worksheet, "DPR Reports");
-
     XLSX.writeFile(workbook, "Daily_Progress_Report.xlsx");
 
     toast.success("DPR exported successfully");
@@ -196,9 +297,7 @@ export default function DailyProgressReportPage() {
 
       const res = await fetch(`http://localhost:5000/dpr/delete/${dprId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: authHeaders
       });
 
       const data = await res.json();
@@ -207,7 +306,7 @@ export default function DailyProgressReportPage() {
 
       if (data.success) {
         toast.success("DPR deleted successfully");
-        fetchReports();
+        await refreshAfterModal();
       } else {
         toast.error(data.message || "Failed to delete DPR");
       }
@@ -224,32 +323,14 @@ export default function DailyProgressReportPage() {
     0
   );
 
-  const todayReports = reports.filter(
-    (r) =>
-      new Date(r.reportDate).toDateString() === new Date().toDateString()
-  ).length;
+  const todayReports = reports.filter((r) => isTodayDate(r.reportDate)).length;
 
   const issueReports = reports.filter(
     (r) => r.issuesFaced && r.issuesFaced.trim() !== ""
   ).length;
 
-  const today = new Date().toDateString();
-
-  const todaySubmittedProjectNames = reports
-    .filter((r) => new Date(r.reportDate).toDateString() === today)
-    .map((r) => r.projectName?.toLowerCase());
-
-  const pendingDprSites = projects.filter((project) => {
-    const projectName =
-      project.projectName || project.siteName || project.name || "";
-
-      console.log("Pending Dpr Sites"+projectName)
-    return !todaySubmittedProjectNames.includes(projectName.toLowerCase());
-  });
-
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
@@ -288,7 +369,6 @@ export default function DailyProgressReportPage() {
         </div>
       </div>
 
-      {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-5 mb-6">
         <StatsCard title="Total DPR" value={reports.length} />
         <StatsCard title="Today Reports" value={todayReports} />
@@ -297,27 +377,32 @@ export default function DailyProgressReportPage() {
         <StatsCard title="Pending DPR Today" value={pendingDprSites.length} />
       </div>
 
-      {/* Pending DPR Sites */}
       <div className="bg-white rounded-2xl shadow p-5 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertCircle className="text-orange-500" size={22} />
-          <h2 className="text-lg font-semibold text-gray-800">
-            Today Pending DPR Sites
-          </h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="text-orange-500" size={22} />
+            <h2 className="text-lg font-semibold text-gray-800">
+              Today Pending DPR Sites
+            </h2>
+          </div>
+
+          <span className="text-sm text-gray-500">
+            Projects: {projects.length} | Reports: {reports.length}
+          </span>
         </div>
 
-        {pendingDprSites.length >= 0 ? (
+        {projects.length === 0 ? (
+          <p className="text-gray-500 font-medium">
+            No projects found. Please check project-master/all API response.
+          </p>
+        ) : pendingDprSites.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {pendingDprSites.map((project) => {
-              const projectName =
-                project.projectName ||
-                project.siteName ||
-                project.name ||
-                "Unnamed Site";
+              const projectName = getProjectName(project) || "Unnamed Site";
 
               return (
                 <div
-                  key={project._id}
+                  key={project._id || projectName}
                   className="border border-orange-200 bg-orange-50 rounded-xl p-3"
                 >
                   <p className="font-medium text-gray-800">{projectName}</p>
@@ -335,7 +420,6 @@ export default function DailyProgressReportPage() {
         )}
       </div>
 
-      {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
@@ -383,7 +467,6 @@ export default function DailyProgressReportPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl shadow overflow-hidden">
         {pageLoading ? (
           <div className="p-10 flex flex-col items-center justify-center">
@@ -410,14 +493,16 @@ export default function DailyProgressReportPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <CalendarDays size={16} className="text-gray-400" />
-                        {new Date(report.reportDate).toLocaleDateString(
-                          "en-IN"
-                        )}
+                        {report.reportDate
+                          ? new Date(report.reportDate).toLocaleDateString(
+                              "en-IN"
+                            )
+                          : "N/A"}
                       </div>
                     </td>
 
                     <td className="p-4 font-medium">
-                      {report.projectName || "N/A"}
+                      {getDprProjectName(report) || "N/A"}
                     </td>
 
                     <td className="p-4 max-w-xs truncate">
@@ -478,10 +563,10 @@ export default function DailyProgressReportPage() {
 
       <AddDPRModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeModal}
         mode={mode}
         report={selectedReport}
-        refreshReports={fetchReports}
+        refreshReports={refreshAfterModal}
       />
     </div>
   );
