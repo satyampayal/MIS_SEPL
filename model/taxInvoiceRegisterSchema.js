@@ -86,48 +86,12 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
       type: String, // cloudinary URL
       default: "",
     },
+    remarks: {
+      type: String,
+      default: "",
+      trim: true,
+    }
 
-    // itemDetails: [
-    //   {
-    //     itemDescription: {
-    //       type: String,
-    //       default: "",
-    //       trim: true,
-    //     },
-
-    //     hsnCode: {
-    //       type: String,
-    //       default: "",
-    //       trim: true,
-    //     },
-
-    //     qty: {
-    //       type: Number,
-    //       default: 0,
-    //     },
-
-    //     rate: {
-    //       type: Number,
-    //       default: 0,
-    //     },
-
-    //     per: {
-    //       type: String,
-    //       default: "",
-    //       trim: true,
-    //     },
-
-    //     discount: {
-    //       type: Number,
-    //       default: 0,
-    //     },
-
-    //     taxableValue: {
-    //       type: Number,
-    //       default: 0,
-    //     },
-    //   },
-    // ],
   },
   {
     timestamps: true,

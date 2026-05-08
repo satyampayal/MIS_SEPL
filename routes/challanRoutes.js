@@ -1,18 +1,18 @@
 const express = require("express");
-const challanRouter = express.Router();
+const router = express.Router();
 
 const {
-    createChallan,
-    getChallanByNumber,
-    getAllChallans
+  createChallan,
+  getAllChallans,
+  updateChallan,
 } = require("../controllers/challanController");
 
 const upload = require("../config/multer");
 
-challanRouter.post("/create", upload.single("challanFile"), createChallan);
+router.post("/add", createChallan);
 
-challanRouter.get("/track/:challanNumber", getChallanByNumber);
+router.get("/all", getAllChallans);
 
-challanRouter.get("/all", getAllChallans);
+router.put("/update/:id", upload.single("signedChallanFile"), updateChallan);
 
-module.exports = challanRouter;
+module.exports = router;

@@ -93,8 +93,8 @@ exports.createPersonalTask = async (req, res) => {
 exports.getMyTasks = async (req, res) => {
   try {
     const tasks = await Task.find({ assignedTo: req.user._id })
-      .populate("assignedBy", "name email role")
-      .populate("assignedTo", "name email role")
+      .populate("assignedBy", "fullName email role")
+      .populate("assignedTo", "fullName email role")
       .sort({ dueDate: 1, createdAt: -1 });
 
     res.status(200).json({
@@ -121,8 +121,8 @@ exports.getAllTasks = async (req, res) => {
     }
 
     const tasks = await Task.find()
-      .populate("assignedBy", "name email role")
-      .populate("assignedTo", "name email role")
+      .populate("assignedBy", "fullName email role")
+      .populate("assignedTo", "fullName email role")
       .sort({ createdAt: -1 });
 
     res.status(200).json({

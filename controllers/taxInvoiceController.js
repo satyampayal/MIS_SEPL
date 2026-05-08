@@ -77,17 +77,8 @@ exports.register = async (req, res) => {
             quantitySent,
             quantityReceived,
             itemDetailsRequired,
+            remarks
         } = req.body;
-
-        // 📂 Files
-        const invoiceFileObj = req.files.find(f => f.fieldname === "invoiceFile");
-        const challanFileObj = req.files.find(f => f.fieldname === "challanFile");
-
-        const invoiceFile = invoiceFileObj ? invoiceFileObj.path : null;
-        const challanFile = challanFileObj ? challanFileObj.path : null;
-
-        // 🧪 Debug once
-        console.log("invoiceFile:", invoiceFile);
 
         // 📦 Material Difference
         let materialDifference = "No Difference";
@@ -132,8 +123,8 @@ exports.register = async (req, res) => {
             materialDifference,
 
             // ✅ SAVE FILES
-            invoiceFile,
-            challanFile
+            invoiceFile: req.files?.invoiceFile?.[0]?.path,
+            challanFile: req.files?.challanFile?.[0]?.path
         });
 
         await newInvoice.save();
@@ -412,8 +403,8 @@ exports.updateInvoice = async (req, res) => {
             taxInvoiceId,
             updateData,
             {
-               returnDocument: "after",
-                
+                returnDocument: "after",
+
             }
         );
 

@@ -159,7 +159,7 @@ export default function TaskListModal({
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2 text-gray-700">
                             <User size={16} />
-                            {task.assignedBy?.name || "Self"}
+                            {task.assignedBy?.fullName || "Self"}
                           </div>
                         </td>
 
