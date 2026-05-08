@@ -17,7 +17,8 @@ export default function TaskListModal({
   onClose,
   tasks = [],
   type = "tasks",
-  onAddTask
+  onAddTask,
+  onRefreshTasks
 }) {
   const { updateTaskStatus } = useTasks();
 
@@ -76,7 +77,7 @@ export default function TaskListModal({
       status,
       remarks
     });
-
+    onRefreshTasks();
     setSelectedTask(null);
     setRemarks("");
   };

@@ -40,6 +40,7 @@ export default function ModernDashboardLandingPage() {
   const [filteredTasks, setFilteredTasks] = useState([]);
 
   const isAdmin = user?.role === "Super Admin" || user?.role === "Admin";
+  const [refershTasks,SetRefreshTasks] = useState(false);
 
   const hasAccess = (roles = []) => {
     if (isAdmin) return true;
@@ -91,17 +92,17 @@ export default function ModernDashboardLandingPage() {
     },
     {
       title: "Manage Users",
-      value: "",
+      value: users.length,
       icon: Users,
       path: "/user/mang",
       roles: ["Super Admin", "Admin"],
     },
     {
-      title: "My Pending Tasks",
+      title: "My Panding  Tasks",
       value: pendingTaskCount,
       icon: ClipboardList,
       path: null,
-      actionType: "myPendingTasks",
+      actionType: "myTasks",
       roles: [
         "MIS User",
         "Site Engineer",
@@ -111,8 +112,8 @@ export default function ModernDashboardLandingPage() {
       ]
     },
     {
-      title: "Task Management",
-      value: totalPendingTasks,
+      title: "Task  Management",
+      value: allTasks.length || 0,
       icon: ClipboardList,
       path: null,
       actionType: "taskManagement",
@@ -173,14 +174,20 @@ export default function ModernDashboardLandingPage() {
         (task) => new Date(task.dueDate).toDateString() === today
       );
     }
+    if(type==="myTasks"){
+      data = myTasks;
+    }
+    if(type==="taskManagement"){
+      data=allTasks;
+    }
 
     setFilteredTasks(data);
     setIsTaskModalOpen(true);
   };
 
   const handleClick = (item) => {
-    if (item.actionType === "myPendingTasks") {
-      openTaskModal("myPending");
+    if (item.actionType === "myTasks") {
+      openTaskModal("myTasks");
       return;
     }
 
@@ -214,7 +221,7 @@ export default function ModernDashboardLandingPage() {
         Authorization: `Bearer ${token}`,
       };
 
-      const [taxRes, projectRes, storeRes, dprRes, myTaskRes, allTaskRes] =
+      const [taxRes, projectRes, storeRes, dprRes, myTaskRes, allTaskRes, userRes] =
         await Promise.allSettled([
           axios.get("http://localhost:5000/tax-invoice/all", { headers }),
           axios.get("http://localhost:5000/project-master/all", { headers }),
@@ -222,6 +229,7 @@ export default function ModernDashboardLandingPage() {
           axios.get("http://localhost:5000/dpr/all", { headers }),
           axios.get("http://localhost:5000/api/tasks/my-tasks", { headers }),
           axios.get("http://localhost:5000/api/tasks/all", { headers }),
+          axios.get("http://localhost:5000/user/all", { headers }),
         ]);
 
       if (taxRes.status === "fulfilled") {
@@ -254,6 +262,10 @@ export default function ModernDashboardLandingPage() {
         const pending = tasks.filter((task) => task.status !== "completed");
         setTotalPendingTasks(pending.length);
       }
+      if (userRes.status === "fulfilled") {
+        console.log("Users:", userRes.value.data.users);
+        setUsers(userRes.value.data.users || []);
+      }
     } catch (error) {
       console.log(error);
       toast.error("Dashboard data loading failed");
@@ -261,7 +273,7 @@ export default function ModernDashboardLandingPage() {
   };
 
   //Task 
-    const handleAddTaskClick = () => {
+  const handleAddTaskClick = () => {
     if (isAdmin) {
       setAddTaskMode("assign");
     } else {
@@ -271,9 +283,14 @@ export default function ModernDashboardLandingPage() {
     setIsAddTaskModalOpen(true);
   };
 
+  // handle Refersh tasks after add/edit/deletion
+  const handleRefreshTasks = () => {
+    setRefershTasks(!refershTasks);
+  };
+
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [refershTasks]);
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -439,17 +456,19 @@ export default function ModernDashboardLandingPage() {
         tasks={filteredTasks}
         type={selectedTaskType}
         onAddTask={handleAddTaskClick}
+        onRefreshTasks={handleRefreshTasks}
       />
 
-         <AddTaskModal
-  isOpen={isAddTaskModalOpen}
-  onClose={() => {
-    setIsAddTaskModalOpen(false);
-    fetchDashboardData();
-  }}
-  mode={addTaskMode}
-  users={users}
-/>
+      <AddTaskModal
+        isOpen={isAddTaskModalOpen}
+        onClose={() => {
+          setIsAddTaskModalOpen(false);
+          fetchDashboardData();
+        }}
+        mode={addTaskMode}
+        users={users}
+        onRefreshTasks={handleRefreshTasks}
+      />
     </div>
   );
 }

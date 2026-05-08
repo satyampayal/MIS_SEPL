@@ -4,7 +4,7 @@ const User = require("../model/User");
 // const { sendTaskAssignedMail } = require("../services/mailService");
 
 const isAdminRole = (role) => {
-  return ["super_admin", "admin", "manager"].includes(role);
+  return ["Super Admin", "Admin", "Project Manager"].includes(role);
 };
 
 // Super Admin / Admin assign task
@@ -68,8 +68,8 @@ exports.createPersonalTask = async (req, res) => {
     const task = await Task.create({
       title,
       description,
-      assignedTo: req.user._id,
-      assignedBy: req.user._id,
+      assignedTo: req?.user._id,
+      assignedBy: req?.user._id,
       taskType: "personal",
       priority,
       dueDate

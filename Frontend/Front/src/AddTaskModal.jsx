@@ -6,7 +6,8 @@ export default function AddTaskModal({
   isOpen,
   onClose,
   mode = "personal",
-  users = []
+  users = [],
+  onRefreshTasks
 }) {
   const { createPersonalTask, assignTask } = useTasks();
 
@@ -62,6 +63,7 @@ export default function AddTaskModal({
     });
 
     onClose();
+    onRefreshTasks();
   };
 
   return (
