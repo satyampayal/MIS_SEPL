@@ -1,41 +1,70 @@
 const Challan = require("../model/Challan");
+const Project = require("../model/Project");
 
 const generateChallanNumber = async () => {
   const count = await Challan.countDocuments();
-  return `DC-${String(count + 1).padStart(5, "0")}`;
+  return `SEPL/P3/LPN-${count + 1}`;
+};
+
+const parseItems = (items) => {
+  if (!items) return [];
+
+  if (typeof items === "string") {
+    return JSON.parse(items);
+  }
+
+  return items;
 };
 
 exports.createChallan = async (req, res) => {
   try {
     const {
-      projectName,
+      challanType,
       projectId,
+      projectName,
       site,
       dispatchFrom,
       dispatchTo,
       vendorName,
       dispatchDate,
+      transportationMode,
+      transporterName,
+      vehicleNumber,
       deliveryStatus,
       items,
-      vehicleNumber,
-      transporterName,
-      sentBy,
       remarks,
+      sentBy,
     } = req.body;
 
-    if (!projectName) {
+    if (!projectId) {
       return res.status(400).json({
         success: false,
-        message: "Project name is required",
+        message: "Project is required",
       });
     }
 
-    const parsedItems = typeof items === "string" ? JSON.parse(items) : items;
+    if (!dispatchDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Dispatch date is required",
+      });
+    }
 
-    if (!parsedItems || parsedItems.length === 0) {
+    const parsedItems = parseItems(items);
+
+    if (!parsedItems.length) {
       return res.status(400).json({
         success: false,
         message: "At least one item is required",
+      });
+    }
+
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
       });
     }
 
@@ -43,29 +72,52 @@ exports.createChallan = async (req, res) => {
 
     const challan = await Challan.create({
       challanNumber,
-      projectName,
-      projectId: projectId || null,
-      site,
-      dispatchFrom,
-      dispatchTo,
-      vendorName,
-      dispatchDate,
-      deliveryStatus: deliveryStatus || "Pending",
-      items: parsedItems,
-      vehicleNumber,
-      transporterName,
-      sentBy,
-      remarks,
-        });
 
-    res.status(201).json({
+      challanType: challanType || "Delivery Challan",
+
+      projectId,
+      projectName: projectName || project.name,
+
+      site: site || project.location || "",
+
+      consigneeDetails: {
+        consigneeName: project.consigneeName || "",
+        consigneeAddress: project.consigneeAddress || "",
+        gstNumber: project.gstNumber || "",
+        placeOfDelivery: project.placeOfDelivery || "",
+      },
+
+      dispatchFrom: dispatchFrom || "Office",
+      dispatchTo: dispatchTo || "Project Site",
+
+      vendorName: vendorName || "",
+
+      dispatchDate,
+
+      transportationMode: transportationMode || "",
+      transporterName: transporterName || "",
+      vehicleNumber: vehicleNumber || "",
+
+      deliveryStatus: deliveryStatus || "Pending",
+
+      items: parsedItems,
+
+      remarks: remarks || "",
+      sentBy: sentBy || "",
+
+      signedChallanFile: req.file ? req.file.path : "",
+      createdBy: req.user?._id || null,
+    });
+
+    return res.status(201).json({
       success: true,
       message: "Challan created successfully",
       data: challan,
     });
   } catch (error) {
     console.error("Create Challan Error:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: "Failed to create challan",
       error: error.message,
@@ -75,16 +127,51 @@ exports.createChallan = async (req, res) => {
 
 exports.getAllChallans = async (req, res) => {
   try {
-    const challans = await Challan.find().sort({ createdAt: -1 });
+    const challans = await Challan.find()
+      .populate("projectId", "name code location clientName")
+      .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: challans,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get Challans Error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch challans",
+      error: error.message,
+    });
+  }
+};
+
+exports.getSingleChallan = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const challan = await Challan.findById(id).populate(
+      "projectId",
+      "name code location clientName consigneeName consigneeAddress gstNumber placeOfDelivery"
+    );
+
+    if (!challan) {
+      return res.status(404).json({
+        success: false,
+        message: "Challan not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: challan,
+    });
+  } catch (error) {
+    console.error("Get Single Challan Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch challan",
       error: error.message,
     });
   }
@@ -93,16 +180,6 @@ exports.getAllChallans = async (req, res) => {
 exports.updateChallan = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const updateData = { ...req.body };
-
-    if (updateData.items && typeof updateData.items === "string") {
-      updateData.items = JSON.parse(updateData.items);
-    }
-
-    if (req.file?.path) {
-      updateData.signedChallanFile = req.file.path;
-    }
 
     const challan = await Challan.findById(id);
 
@@ -113,19 +190,107 @@ exports.updateChallan = async (req, res) => {
       });
     }
 
+    const updateData = { ...req.body };
+
+    if (updateData.items) {
+      updateData.items = parseItems(updateData.items);
+    }
+
+    if (req.file) {
+      updateData.signedChallanFile = req.file.path;
+    }
+
+    delete updateData.challanNumber;
+    delete updateData.totalAmount;
+    delete updateData.totalQuantity;
+    delete updateData.createdBy;
+
     Object.assign(challan, updateData);
+
     await challan.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Challan updated successfully",
       data: challan,
     });
   } catch (error) {
     console.error("Update Challan Error:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: "Failed to update challan",
+      error: error.message,
+    });
+  }
+};
+
+exports.uploadSignedChallan = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Signed challan file is required",
+      });
+    }
+
+    const challan = await Challan.findByIdAndUpdate(
+      id,
+      {
+        signedChallanFile: req.file.path,
+        deliveryStatus: "Delivered",
+      },
+      { new: true }
+    );
+
+    if (!challan) {
+      return res.status(404).json({
+        success: false,
+        message: "Challan not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Signed challan uploaded successfully",
+      data: challan,
+    });
+  } catch (error) {
+    console.error("Upload Signed Challan Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload signed challan",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteChallan = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const challan = await Challan.findByIdAndDelete(id);
+
+    if (!challan) {
+      return res.status(404).json({
+        success: false,
+        message: "Challan not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Challan deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Challan Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete challan",
       error: error.message,
     });
   }

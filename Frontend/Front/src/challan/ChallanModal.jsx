@@ -3,6 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { Plus, Trash2, X, Loader2 } from "lucide-react";
 import ChallanPreview from "./ChallanPreview";
+import {projectSiteList} from '../Constant';
 
 const API_URL = "http://localhost:5000/challan";
 
@@ -43,6 +44,8 @@ export default function ChallanModal({
 
   const [itemMaster, setItemMaster] = useState([]);
   const [itemLoading, setItemLoading] = useState(false);
+  const [projects, setProjects] = useState(projectSiteList);
+  console.log(projects)
 
   const isView = mode === "view";
   const isEdit = mode === "edit";
@@ -274,14 +277,28 @@ export default function ChallanModal({
           </div>
 
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Input
+            {/* <Input
               label="Project Name *"
               name="projectName"
               value={formData.projectName}
               onChange={handleFormChange}
               disabled={isView}
               placeholder="Enter project name"
-            />
+            /> */}
+            <select
+              name="projectName"
+              value={formData.projectName}
+              onChange={handleFormChange}
+              disabled={isView}
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 disabled:bg-slate-100"
+            >
+              <option value="">Select Project</option>
+              {projects.map((project,idx) => (
+                <option key={idx} value={project}>
+                  {project}
+                </option>
+              ))}
+            </select>
 
             <Input
               label="Site / Location"

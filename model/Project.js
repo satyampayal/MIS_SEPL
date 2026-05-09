@@ -89,6 +89,22 @@ const projectSchema = new mongoose.Schema(
     poFilePublicId: {
       type: String,
       default: ""
+    },
+    consigneeName:{
+      type:String,
+      default:""
+    },
+    consigneeAddress:{
+      type:String,
+      default:""
+    },
+    placeOfDelivery:{
+      type:String,
+      default:""
+    },
+    gstNumber:{
+      type:String,
+      default:""
     }
   },
   {

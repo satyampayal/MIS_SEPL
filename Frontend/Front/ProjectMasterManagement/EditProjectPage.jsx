@@ -23,9 +23,15 @@ export default function EditProjectPage() {
     complitionDate: "",
     manager: "",
     phone: "",
+    consigneeName: "",
+    consigneeAddress: "",
+    placeOfDelivery: "",
+    gstNumber: "",
     status: "Active",
     progress: 0,
     poFile: null,
+
+
   });
 
   // 🔹 Fetch project
@@ -114,7 +120,7 @@ export default function EditProjectPage() {
         <h1 className="text-2xl font-bold mb-6">Edit Project</h1>
 
         <div className="grid md:grid-cols-2 gap-4">
-           
+
           <input name="name" value={formData.name} onChange={handleChange} placeholder="Project Name" required className="border p-3 rounded-xl" />
           <input name="code" value={formData.code} onChange={handleChange} placeholder="Project Code" required className="border p-3 rounded-xl" />
 
@@ -141,6 +147,37 @@ export default function EditProjectPage() {
 
           <input name="manager" value={formData.manager} onChange={handleChange} placeholder="Manager" required className="border p-3 rounded-xl" />
           <input name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" required className="border p-3 rounded-xl" />
+          <input
+            name="consigneeName"
+            value={formData.consigneeName}
+            onChange={handleChange}
+            placeholder="Consignee Name"
+            className="border p-3 rounded-xl"
+          />
+
+          <input
+            name="gstNumber"
+            value={formData.gstNumber}
+            onChange={handleChange}
+            placeholder="GST Number"
+            className="border p-3 rounded-xl"
+          />
+
+          <input
+            name="placeOfDelivery"
+            value={formData.placeOfDelivery}
+            onChange={handleChange}
+            placeholder="Place Of Delivery"
+            className="border p-3 rounded-xl"
+          />
+
+          <textarea
+            name="consigneeAddress"
+            value={formData.consigneeAddress}
+            onChange={handleChange}
+            placeholder="Consignee Address"
+            className="border p-3 rounded-xl md:col-span-2 min-h-[100px]"
+          />
 
           <select name="status" value={formData.status} onChange={handleChange} className="border p-3 rounded-xl">
             <option value="Active">Active</option>

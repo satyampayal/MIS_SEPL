@@ -273,7 +273,7 @@ exports.addBillToProject = async (req, res) => {
         message: "Project Id is required"
       })
     }
-    const { billType, billNumber, billAmount, billDate, billTypeCount, billGroup, billDescription } = req.body;
+    const { billType, billNumber, billAmount, billDate, billTypeCount, billGroup, billDescription} = req.body;
 
     if (!billType || !billNumber || !billAmount || !billDate || !billTypeCount) {
       return res.status(400).json({
@@ -291,7 +291,7 @@ exports.addBillToProject = async (req, res) => {
       billFile: req.file ? req.file.path : "",
       billFilePublicId: req.file ? req.file.filename : "",
       billGroup,
-      billDescription
+      billDescription,
     })
 
     if (!createBill) {
@@ -430,7 +430,7 @@ exports.updateBill = async (req, res) => {
       billFile: req.file ? req.file.path : billFileUrl,
       billFilePublicId: req.file ? req.file.filename : billFilePublicId,
       billGroup,
-      billDescription
+      billDescription,
 
       },
       {
