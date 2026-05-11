@@ -1,5 +1,6 @@
 const Challan = require("../model/Challan");
 const Project = require("../model/Project");
+const  StoreItem=require('../model/StoreItem')
 
 const generateChallanNumber = async () => {
   const count = await Challan.countDocuments();
@@ -16,6 +17,34 @@ const parseItems = (items) => {
   return items;
 };
 
+const validateAndReduceStock = async (items) => {
+  for (const item of items) {
+    if (!item.itemRef) continue;
+
+    const storeItem = await StoreItem.findById(item.itemRef);
+
+    if (!storeItem) {
+      throw new Error(`${item.itemName} not found in store`);
+    }
+
+    const availableQty = Number(storeItem.currentStock || 0);
+    const challanQty = Number(item.quantity || 0);
+
+    if (availableQty <= 0) {
+      throw new Error(`${storeItem.itemName} is out of stock`);
+    }
+
+    if (challanQty > availableQty) {
+      throw new Error(
+        `${storeItem.itemName} has only ${availableQty} ${storeItem.unit || ""} available`
+      );
+    }
+
+    storeItem.currentStock = availableQty - challanQty;
+
+    await storeItem.save();
+  }
+};
 exports.createChallan = async (req, res) => {
   try {
     const {
@@ -23,6 +52,7 @@ exports.createChallan = async (req, res) => {
       projectId,
       projectName,
       site,
+      dispatchFromStoreRef,
       dispatchFrom,
       dispatchTo,
       vendorName,
@@ -35,6 +65,12 @@ exports.createChallan = async (req, res) => {
       remarks,
       sentBy,
     } = req.body;
+    if (!dispatchFromStoreRef) {
+  return res.status(400).json({
+    success: false,
+    message: "Dispatch from store is required",
+  });
+}
 
     if (!projectId) {
       return res.status(400).json({
@@ -58,6 +94,8 @@ exports.createChallan = async (req, res) => {
         message: "At least one item is required",
       });
     }
+    // Validate stock and reduce it 
+    await validateAndReduceStock(parsedItems);
 
     const project = await Project.findById(projectId);
 
@@ -79,6 +117,8 @@ exports.createChallan = async (req, res) => {
       projectName: projectName || project.name,
 
       site: site || project.location || "",
+
+       dispatchFromStoreRef, // ✅ add this
 
       consigneeDetails: {
         consigneeName: project.consigneeName || "",
@@ -120,7 +160,7 @@ exports.createChallan = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to create challan",
-      error: error.message,
+      error: error.message || "Failed to create challan",
     });
   }
 };
@@ -129,6 +169,7 @@ exports.getAllChallans = async (req, res) => {
   try {
     const challans = await Challan.find()
       .populate("projectId", "name code location clientName")
+      .populate("dispatchFromStoreRef", "storeName storeCode")
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -153,7 +194,8 @@ exports.getSingleChallan = async (req, res) => {
     const challan = await Challan.findById(id).populate(
       "projectId",
       "name code location clientName consigneeName consigneeAddress gstNumber placeOfDelivery"
-    );
+    ).populate("dispatchFromStoreRef", "storeName storeCode")
+    ;
 
     if (!challan) {
       return res.status(404).json({

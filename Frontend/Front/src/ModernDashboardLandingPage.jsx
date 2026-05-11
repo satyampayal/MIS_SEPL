@@ -32,6 +32,7 @@ export default function ModernDashboardLandingPage() {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [addTaskMode, setAddTaskMode] = useState("personal");
   const [users, setUsers] = useState([]);
+  const [challans, setChallans] = useState([]);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
@@ -64,7 +65,7 @@ export default function ModernDashboardLandingPage() {
     },
     {
       title: "Total Challans",
-      value: "0",
+      value: challans.length,
       icon: FileText,
       path: "/challan",
       roles: ["MIS User", "Store Manager", "Accountant"],
@@ -221,7 +222,7 @@ export default function ModernDashboardLandingPage() {
         Authorization: `Bearer ${token}`,
       };
 
-      const [taxRes, projectRes, storeRes, dprRes, myTaskRes, allTaskRes, userRes] =
+      const [taxRes, projectRes, storeRes, dprRes, myTaskRes, allTaskRes, userRes,challanRes] =
         await Promise.allSettled([
           axios.get("http://localhost:5000/tax-invoice/all", { headers }),
           axios.get("http://localhost:5000/project-master/all", { headers }),
@@ -230,6 +231,7 @@ export default function ModernDashboardLandingPage() {
           axios.get("http://localhost:5000/api/tasks/my-tasks", { headers }),
           axios.get("http://localhost:5000/api/tasks/all", { headers }),
           axios.get("http://localhost:5000/user/all", { headers }),
+          axios.get("http://localhost:5000/challan/all", { headers }),
         ]);
 
       if (taxRes.status === "fulfilled") {
@@ -263,8 +265,12 @@ export default function ModernDashboardLandingPage() {
         setTotalPendingTasks(pending.length);
       }
       if (userRes.status === "fulfilled") {
-        console.log("Users:", userRes.value.data.users);
+        // console.log("Users:", userRes.value.data.users);
         setUsers(userRes.value.data.users || []);
+      }
+      if (challanRes.status === "fulfilled") {
+        // console.log("Challans:", challanRes.value.data.data);
+        setChallans(challanRes.value.data.data || []);
       }
     } catch (error) {
       console.log(error);

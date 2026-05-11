@@ -217,6 +217,11 @@ const challanSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    dispatchFromStoreRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MasterStore",
+      required: true,
+    },
   },
   {
     timestamps: true,

@@ -11,7 +11,7 @@ const Site = require('./model/Project');
 const upload = require('./config/multer')
 const checkCloudinaryConnection =require('./config/cloudinaryCheck');
 const challanRouter = require("./routes/challanRoutes");
-const storeRouter = require("./routes/sroreRoutes");
+const sroreItemRoutes = require("./routes/sroreItemRoutes");
 const storeMasterRouter = require("./routes/storeMasterRoutes");
 const projectMasterRouter = require("./Routes/projectMasterRoutes");
 const taxInvoiceRouter = require("./Routes/taxInvoiceRoute");
@@ -46,7 +46,7 @@ app.use('/project-master',projectMasterRouter);
 app.use('/challan',challanRouter)
 
 /*  Store Routes  */
-app.use('/store',storeRouter)
+app.use('/api/store-items',sroreItemRoutes)
 
 /* store Master Rotes*/
 app.use('/store-master',storeMasterRouter)

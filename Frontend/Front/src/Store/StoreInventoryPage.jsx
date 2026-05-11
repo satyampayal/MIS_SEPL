@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, AlertTriangle, Package, Pencil, Trash2, } from "lucide-react";
 import axios from "axios";
+import AddStoreItemModal from "./AddStoreItemModal";
 
 const StoreInventoryPage = () => {
     const { storeId } = useParams();
@@ -11,6 +12,7 @@ const StoreInventoryPage = () => {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const [showItemModal, setShowItemModal] = useState(false);
     const itemsPerPage = 10;
 
     const fetchStoreItems = async () => {
@@ -19,7 +21,7 @@ const StoreInventoryPage = () => {
 
             // Replace with your actual API
             const response = await axios.get(
-                `http://localhost:5000/store/getAllItems`
+                `http://localhost:5000/api/store-items/all`
                 , {
                     params: {
                         searchTerm: searchTerm
@@ -72,17 +74,17 @@ const StoreInventoryPage = () => {
         // Implement edit functionality
         console.log("Edit item with ID:", itemId);
     }
-    const handleDelete= async (itemId)=>{
-        try{
-            if(!itemId){
+    const handleDelete = async (itemId) => {
+        try {
+            if (!itemId) {
                 alert("Invalid item ID");
                 return;
             }
-            const confirmDelete=window.confirm("Are you sure to delete this item?");
-            if(!confirmDelete){
+            const confirmDelete = window.confirm("Are you sure to delete this item?");
+            if (!confirmDelete) {
                 return;
             }
-            const response = await axios.delete(`http://localhost:5000/store/deleteItem/${itemId}`);
+            const response = await axios.delete(`http://localhost:5000/api/store-items/deleteItem/${itemId}`);
             if (response?.status === 200) {
                 fetchStoreItems(); // Refresh the item list
             }
@@ -111,7 +113,9 @@ const StoreInventoryPage = () => {
                         </p>
                     </div>
 
-                    <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-medium shadow-sm transition">
+                    <button 
+                      onClick={() => setShowItemModal(true)}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-medium shadow-sm transition">
                         <Plus size={18} />
                         Add Item
                     </button>
@@ -202,7 +206,7 @@ const StoreInventoryPage = () => {
                                                                       ${status === "Low Stock" ? "bg-orange-100 text-orange-700" : ""}
                                                                       ${status === "Out of Stock" ? "bg-red-100 text-red-700" : ""}
                                                                       ${status === "Normal" ? "bg-green-100 text-green-700" : ""}
-                                                            `} 
+                                                            `}
                                                     >
                                                         {status}
                                                     </span>
@@ -266,6 +270,12 @@ const StoreInventoryPage = () => {
                     </div>
                 </div>
             </div>
+            <AddStoreItemModal
+                isOpen={showItemModal}
+                onClose={() => setShowItemModal(false)}
+                refreshItems={fetchStoreItems}
+                defaultStoreId={storeId}
+            />
         </div>
     );
 };

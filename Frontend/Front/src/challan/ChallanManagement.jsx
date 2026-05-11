@@ -44,6 +44,7 @@ export default function ChallanManagement() {
   }, []);
 
   const openAddModal = () => {
+    console.log("Opening add modal");
     setSelectedChallan(null);
     setModalMode("add");
     setModalOpen(true);
