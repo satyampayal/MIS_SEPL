@@ -21,6 +21,8 @@ import DailyProgressReportPage from './DPR/DailyProgressReportPage'
 import LoginPage from './User/LoginPage'
 import UserManagementPage from './User/UserManagementPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import BOQManagementPage from './boq/BOQManagementPage'
+import BOQDetailPage from './boq/BOQDetailPage'
 function App() {
   const { taxInvoiceId } = useParams();
 
@@ -248,6 +250,34 @@ function App() {
             ]}
           >
             <UserManagementPage />
+          </ProtectedRoute>
+        }
+      />
+      {/* Boq  */}
+      <Route
+       path="/project/:projectId/boq"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "Super Admin",
+              "Admin"
+            ]}
+          >
+            <BOQManagementPage />
+          </ProtectedRoute>
+        }
+      />
+
+          <Route
+       path="/boq/:boqId"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "Super Admin",
+              "Admin"
+            ]}
+          >
+            <BOQDetailPage />
           </ProtectedRoute>
         }
       />

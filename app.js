@@ -18,6 +18,7 @@ const taxInvoiceRouter = require("./Routes/taxInvoiceRoute");
 const dprRouter = require("./Routes/DPRRoutes");
 const userRouter = require("./Routes/userRoutes");
 const taskRouter = require("./Routes/taskRoutes");
+const boqRouter=require('./Routes/boqRoutes')
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -53,7 +54,8 @@ app.use('/store-master',storeMasterRouter)
 
 // DPR  Router
 app.use('/dpr',dprRouter);
-
+// Boq Routes
+app.use('/boq',boqRouter);
 app.get("/", (req, res) => {
   res.send("Server Running...");
 });

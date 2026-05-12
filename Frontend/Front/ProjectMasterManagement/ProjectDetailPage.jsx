@@ -21,7 +21,7 @@ export default function ProjectDetailPage() {
       const res = await fetch(`http://localhost:5000/project-master/get/${projectId}`);
       const data = await res.json();
       setProject(data.data);
-      console.log(DataTransfer)
+      // console.log(data.data);
     } catch (err) {
       console.log(err);
     } finally {
@@ -32,16 +32,16 @@ export default function ProjectDetailPage() {
     try {
       const res = await fetch(`http://localhost:5000/project-master/get/bill/${projectId}`);
       const data = await res.json();
-      console.log("Bills for project ", data);
+      // console.log("Bills for project ", data);
       setBills(data.data || []);
-      setPendingBills(await findPendingBills(data.data || []) )
-      
+      setPendingBills(await findPendingBills(data.data || []))
+
     } catch (err) {
       console.log(err);
     }
   }
-  const findPendingBills=async (getBills)=>{
-    console.log("Finding pending bills from ", getBills);
+  const findPendingBills = async (getBills) => {
+    // console.log("Finding pending bills from ", getBills);
     const pending = getBills.filter((bill) => bill?.billFile === "");
     return pending.length;
   }
@@ -89,6 +89,14 @@ export default function ProjectDetailPage() {
         >
           <ArrowLeft size={18} />
           Back
+        </button>
+
+        {/*  Boq Management Page */}
+        <button
+          onClick={() => navigate(`/project/${projectId}/boq`)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-xl"
+        >
+          Manage BOQ
         </button>
 
         {/* 🧾 PROJECT SUMMARY */}
@@ -170,22 +178,22 @@ export default function ProjectDetailPage() {
         <div className="bg-white rounded-3xl shadow-sm p-6 border">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Bills / Invoices</h2>
-            
-   <div>
-    {pendingBills > 0?
-      <span className="text-red-600 font-semibold"> Pending Bills copy:{pendingBills} </span>
-    
-    : <></>
-    } 
-   </div>
+
+            <div>
+              {pendingBills > 0 ?
+                <span className="text-red-600 font-semibold"> Pending Bills copy:{pendingBills} </span>
+
+                : <></>
+              }
+            </div>
 
             <button
-             className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-            onClick={() => {
-              setSelectedBill(null);
-              setShowModal(true);
-              setMode("add");
-            }}>
+              className="bg-blue-600 text-white px-4 py-2 rounded-xl"
+              onClick={() => {
+                setSelectedBill(null);
+                setShowModal(true);
+                setMode("add");
+              }}>
               +  Add Bill
             </button>
           </div>
@@ -215,8 +223,8 @@ export default function ProjectDetailPage() {
                   <td className="p-3">{bill.billNumber}</td>
                   <td className="p-3">₹ {bill.billAmount}</td>
                   <td className="p-3">{bill.billDate}</td>
-                  <td className="p-3">{bill.billDescription||"-"}</td>
-                  <td className="p-3">{bill.billGroup||"-"}</td>
+                  <td className="p-3">{bill.billDescription || "-"}</td>
+                  <td className="p-3">{bill.billGroup || "-"}</td>
                   <td className="p-3">
                     {
                       bill.billFile
@@ -228,22 +236,22 @@ export default function ProjectDetailPage() {
                     }
                   </td>
                   <td className="p-3">
-                    <button 
-                     className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-                    onClick={() => {
-                      setSelectedBill(bill);
-                      setShowModal(true);
-                      setMode("view");
-                    }}>
+                    <button
+                      className="bg-blue-600 text-white px-4 py-2 rounded-xl"
+                      onClick={() => {
+                        setSelectedBill(bill);
+                        setShowModal(true);
+                        setMode("view");
+                      }}>
                       View
                     </button>
-                    <button 
-                     className="bg-green-600 text-white px-4 py-2 rounded-xl"
-                    onClick={() => {
-                      setSelectedBill(bill);
-                      setShowModal(true);
-                      setMode("edit");
-                    }}>
+                    <button
+                      className="bg-green-600 text-white px-4 py-2 rounded-xl"
+                      onClick={() => {
+                        setSelectedBill(bill);
+                        setShowModal(true);
+                        setMode("edit");
+                      }}>
                       Edit
                     </button>
 
@@ -279,7 +287,7 @@ export default function ProjectDetailPage() {
         mode={mode}
         refreshProject={fetchProject}
         bill={selectedBill}
-        
+
 
       />
     </div>
