@@ -1,5 +1,5 @@
 const express = require("express");
-const router = express.Router();
+const chllanRouter = express.Router();
 
 const {
   createChallan,
@@ -9,10 +9,10 @@ const {
 
 const upload = require("../config/multer");
 
-router.post("/add", createChallan);
+chllanRouter.post("/add", createChallan);
 
-router.get("/all", getAllChallans);
+chllanRouter.get("/all", getAllChallans);
 
-router.put("/update/:id", upload.single("signedChallanFile"), updateChallan);
+chllanRouter.put("/update/:id", upload.single("signedChallanFile"), updateChallan);
 
-module.exports = router;
+module.exports = chllanRouter;
