@@ -1,4 +1,4 @@
-const MasterStore = require('../model/MasterStore'); // Assuming you have a MasterStore model
+const MasterStore = require('../model/masterStore'); // Assuming you have a MasterStore model
 
 // Create a new Master Store
 exports.createMasterStore = async (req, res) => {
