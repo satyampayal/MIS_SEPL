@@ -1,5 +1,5 @@
-const BOQMaster = require("../model/BOQMaster");
-const BOQItem = require("../model/BOQItem");
+const BOQMaster = require("../model/boqMaster");
+const BOQItem = require("../model/boqItem");
 const XLSX = require("xlsx");
 // CREATE BOQ MASTER ONLY
 exports.createBOQ = async (req, res) => {
