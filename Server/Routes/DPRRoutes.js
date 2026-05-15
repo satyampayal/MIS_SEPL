@@ -8,7 +8,9 @@ const {
   getDPRByProjectId,
   updateDPR,
   deleteDPR,
-  filterDPR
+  filterDPR,
+  getMonthlyContractorReport,
+  getMonthlyProjectReport,
 } = require("../controllers/DPRController");
 
 const upload = require("../config/multer");
@@ -33,5 +35,17 @@ dprRouter.put("/update/:dprId", upload.array("photos", 10), updateDPR);
 
 // Delete DPR
 dprRouter.delete("/delete/:dprId", deleteDPR);
+
+// Monthly contractor payment report
+dprRouter.get(
+  "/monthly-contractor-report",
+  getMonthlyContractorReport
+);
+
+// Monthly project progress report
+dprRouter.get(
+  "/monthly-project-report",
+  getMonthlyProjectReport
+);
 
 module.exports = dprRouter;

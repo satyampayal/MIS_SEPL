@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, UploadCloud } from "lucide-react";
-import {projectSiteList} from  '../Constant'
+import { projectSiteList } from '../Constant'
 import BASE_URL from "../../config/api";
 
 export default function AddDPRModal({
@@ -15,6 +15,7 @@ export default function AddDPRModal({
   const isAdd = mode === "add";
 
   const [formData, setFormData] = useState({
+    projectId: "",
     projectName: "",
     reportDate: "",
     workDoneToday: "",
@@ -27,8 +28,31 @@ export default function AddDPRModal({
     remarks: "",
     photos: []
   });
+  const [projectBOQs, setProjectBOQs] = useState([]);
+  const [selectedBOQ, setSelectedBOQ] = useState("");
+  const [boqItems, setBoqItems] = useState([]);
+  const [workItems, setWorkItems] = useState([]);
+  const [projects, setProjects] = useState([]);
 
+    const fetchProjects = async () => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/project-master/all`
+      );
+
+      const data = await res.json();
+
+      setProjects(
+        data.data ||
+        data.projects ||
+        []
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
   useEffect(() => {
+    fetchProjects();
     if (report) {
       setFormData({
         projectName: report.projectName || "",
@@ -60,7 +84,9 @@ export default function AddDPRModal({
         photos: []
       });
     }
+    
   }, [report, isOpen]);
+
 
   if (!isOpen) return null;
 
@@ -77,6 +103,10 @@ export default function AddDPRModal({
         ...prev,
         [name]: value
       }));
+
+      if (name === "projectName") {
+        fetchProjectBOQs(value);
+      }
     }
   };
 
@@ -101,7 +131,10 @@ export default function AddDPRModal({
         : `${BASE_URL}/dpr/create`;
 
       const method = isEdit ? "PUT" : "POST";
-
+      form.append(
+        "workItems",
+        JSON.stringify(workItems)
+      );
       const res = await fetch(url, {
         method,
         body: form
@@ -122,6 +155,72 @@ export default function AddDPRModal({
     }
   };
 
+  // Fetch Boq Whe i selcted Project
+  const fetchProjectBOQs = async (projectName) => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/boq/project/${projectName}`
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setProjectBOQs(data.boqs || []);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  //Boq -> Boq Items
+  const fetchBOQItems = async (boqId) => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/boq/items/${boqId}`
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setBoqItems(data.items || []);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+
+  const addWorkItem = () => {
+    setWorkItems((prev) => [
+      ...prev,
+      {
+        boqItemRef: "",
+        boqItemCode: "",
+        generalName: "",
+        uom: "",
+        rate: "",
+        todayQty: "",
+        amount: 0
+      }
+    ]);
+  };
+
+  const updateWorkItem = (index, field, value) => {
+    const updated = [...workItems];
+
+    updated[index][field] = value;
+
+    if (field === "todayQty") {
+      const qty = Number(value) || 0;
+      const rate = Number(updated[index].rate) || 0;
+
+      updated[index].amount = qty * rate;
+    }
+
+    setWorkItems(updated);
+  };
+
+
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white w-full max-w-5xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
@@ -140,24 +239,149 @@ export default function AddDPRModal({
 
         {/* Form */}
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-        
+
+          <select
+            name="projectId"
+            value={formData.projectId}
+            onChange={(e) => {
+              handleChange(e);
+
+              fetchProjectBOQs(e.target.value);
+            }}
+            disabled={isView}
+            className="w-full mt-1 border rounded-xl px-3 py-2"
+          >
+            <option value="">Select Project</option>
+
+            {projects.map((project) => (
+              <option
+                key={project._id}
+                value={project._id}
+              >
+                {project.name} -{project.code}
+              </option>
+            ))}
+          </select>
+          {/* Here we scholud be plat the boq */}
+          {/* Select BOQ */}
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium text-gray-700">
+              Select BOQ
+            </label>
             <select
-             label="Project / Site Name"
-              name="projectName"
-              value={formData.projectName}  
-              onChange={handleChange}
-              disabled={isView}
-              className="w-full mt-1 border rounded-xl px-3 py-2 outline-none disabled:bg-gray-100" 
+              value={selectedBOQ}
+              onChange={(e) => {
+                setSelectedBOQ(e.target.value);
+                fetchBOQItems(e.target.value);
+              }}
+              className="w-full mt-1 border rounded-xl px-3 py-2"
             >
-              <option value="">Select Project</option>
-              {projectSiteList.map((project) => ( 
-                <option key={project} value={project}>
-                  {project}
+              <option value="">Select BOQ</option>
+
+              {projectBOQs.map((boq) => (
+                <option key={boq._id} value={boq._id}>
+                  {boq.boqName}
                 </option>
               ))}
             </select>
+          </div>
+          {/* BoqItems */}
+          <div className="md:col-span-2 border rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold">
+                Work Items
+              </h3>
 
-          
+              <button
+                type="button"
+                onClick={addWorkItem}
+                className="bg-blue-600 text-white px-3 py-2 rounded-xl"
+              >
+                Add Item
+              </button>
+            </div>
+
+            {workItems.map((item, index) => (
+              <div
+                key={index}
+                className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-3"
+              >
+                <select
+                  onChange={(e) => {
+                    const selected = boqItems.find(
+                      (b) => b._id === e.target.value
+                    );
+
+                    if (!selected) return;
+
+                    const updated = [...workItems];
+
+                    updated[index] = {
+                      ...updated[index],
+                      boqItemRef: selected._id,
+                      boqItemCode: selected.boqItemCode,
+                      generalName: selected.generalName,
+                      uom: selected.uom,
+                      rate:
+                        selected.contractorInstallationRate || 0
+                    };
+
+                    setWorkItems(updated);
+                  }}
+                  className="border rounded-xl px-3 py-2"
+                >
+                  <option>Select Item</option>
+
+                  {boqItems.map((boqItem) => (
+                    <option
+                      key={boqItem._id}
+                      value={boqItem._id}
+                    >
+                      {/* {boqItem.generalName} */}
+                      {boqItem.description}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  value={item.boqItemCode}
+                  readOnly
+                  placeholder="Item Code"
+                  className="border rounded-xl px-3 py-2 bg-gray-100"
+                />
+
+                <input
+                  value={item.rate}
+                  readOnly
+                  placeholder="Rate"
+                  className="border rounded-xl px-3 py-2 bg-gray-100"
+                />
+
+                <input
+                  type="number"
+                  placeholder="Today Qty"
+                  value={item.todayQty}
+                  onChange={(e) =>
+                    updateWorkItem(
+                      index,
+                      "todayQty",
+                      e.target.value
+                    )
+                  }
+                  className="border rounded-xl px-3 py-2"
+                />
+
+                <input
+                  value={item.amount}
+                  readOnly
+                  placeholder="Amount"
+                  className="border rounded-xl px-3 py-2 bg-gray-100"
+                />
+              </div>
+            ))}
+          </div>
+
+
 
           <Input
             label="Report Date"
@@ -232,6 +456,7 @@ export default function AddDPRModal({
             onChange={handleChange}
             disabled={isView}
           />
+
 
           {!isView && (
             <div className="md:col-span-2">

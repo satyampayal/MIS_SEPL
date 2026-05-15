@@ -42,8 +42,8 @@ export default function DailyProgressReportPage() {
 
   const authHeaders = token
     ? {
-        Authorization: `Bearer ${token}`
-      }
+      Authorization: `Bearer ${token}`
+    }
     : {};
 
   const normalizeText = (text = "") => {
@@ -82,6 +82,27 @@ export default function DailyProgressReportPage() {
     }
 
     return String(report.projectId || "");
+  };
+  const getTotalDprAmount = (report) => {
+    return (report?.workItems || []).reduce(
+      (sum, item) => sum + Number(item.amount || 0),
+      0
+    );
+  };
+
+  const getTotalDprQty = (report) => {
+    return (report?.workItems || []).reduce(
+      (sum, item) => sum + Number(item.todayQty || 0),
+      0
+    );
+  };
+
+  const getContractorName = (report) => {
+    return (
+      report?.contractorRef?.contractorName ||
+      report?.contractorRef?.name ||
+      "-"
+    );
   };
 
   const isTodayDate = (dateValue) => {
@@ -152,40 +173,40 @@ export default function DailyProgressReportPage() {
   }, []);
 
   const pendingDprSites = useMemo(() => {
-  if (!projects.length) return [];
+    if (!projects.length) return [];
 
-  const todayReportsOnly = reports.filter((report) =>
-    isTodayDate(report.reportDate)
-  );
+    const todayReportsOnly = reports.filter((report) =>
+      isTodayDate(report.reportDate)
+    );
 
-  const submittedProjectNames = todayReportsOnly
-    .map((report) => normalizeText(getDprProjectName(report)))
-    .filter(Boolean);
+    const submittedProjectNames = todayReportsOnly
+      .map((report) => normalizeText(getDprProjectName(report)))
+      .filter(Boolean);
 
-  const uniqueProjectsByName = [];
+    const uniqueProjectsByName = [];
 
-  const seenNames = new Set();
+    const seenNames = new Set();
 
-  projects.forEach((project) => {
-    const projectName = normalizeText(getProjectName(project));
+    projects.forEach((project) => {
+      const projectName = normalizeText(getProjectName(project));
 
-    if (!projectName) return;
+      if (!projectName) return;
 
-    if (!seenNames.has(projectName)) {
-      seenNames.add(projectName);
+      if (!seenNames.has(projectName)) {
+        seenNames.add(projectName);
 
-      uniqueProjectsByName.push(project);
-    }
-  });
+        uniqueProjectsByName.push(project);
+      }
+    });
 
-  const pendingSites = uniqueProjectsByName.filter((project) => {
-    const projectName = normalizeText(getProjectName(project));
+    const pendingSites = uniqueProjectsByName.filter((project) => {
+      const projectName = normalizeText(getProjectName(project));
 
-    return !submittedProjectNames.includes(projectName);
-  });
+      return !submittedProjectNames.includes(projectName);
+    });
 
-  return pendingSites;
-}, [projects, reports]);
+    return pendingSites;
+  }, [projects, reports]);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -265,7 +286,10 @@ export default function DailyProgressReportPage() {
         ? new Date(r.reportDate).toLocaleDateString("en-IN")
         : "",
       Site: getDprProjectName(r) || "N/A",
+      Contractor: getContractorName(r),
       "Work Done": r.workDoneToday || "",
+      "Work Items Qty": getTotalDprQty(r),
+      "Work Items Amount": getTotalDprAmount(r),
       Manpower: r.manpowerCount || 0,
       "Site Incharge": r.siteInchargeName || "",
       "Issues Faced": r.issuesFaced || "",
@@ -325,6 +349,16 @@ export default function DailyProgressReportPage() {
     0
   );
 
+  const totalWorkAmount = reports.reduce(
+    (sum, r) => sum + getTotalDprAmount(r),
+    0
+  );
+
+  const totalWorkQty = reports.reduce(
+    (sum, r) => sum + getTotalDprQty(r),
+    0
+  );
+
   const todayReports = reports.filter((r) => isTodayDate(r.reportDate)).length;
 
   const issueReports = reports.filter(
@@ -371,11 +405,12 @@ export default function DailyProgressReportPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-5 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-5 mb-6">
         <StatsCard title="Total DPR" value={reports.length} />
         <StatsCard title="Today Reports" value={todayReports} />
         <StatsCard title="Total Manpower" value={totalManpower} />
-        <StatsCard title="Issues Reported" value={issueReports} />
+        <StatsCard title="Work Qty" value={totalWorkQty} />
+        <StatsCard title="Work Amount" value={`₹${totalWorkAmount.toLocaleString("en-IN")}`} />
         <StatsCard title="Pending DPR Today" value={pendingDprSites.length} />
       </div>
 
@@ -481,9 +516,13 @@ export default function DailyProgressReportPage() {
               <tr>
                 <th className="p-4 text-left">Date</th>
                 <th className="p-4 text-left">Site</th>
+                <th className="p-4 text-left">Contractor</th>
+                <th className="p-4 text-left">Work Qty</th>
+                <th className="p-4 text-left">Amount</th>
                 <th className="p-4 text-left">Work Done</th>
                 <th className="p-4 text-left">Manpower</th>
                 <th className="p-4 text-left">Incharge</th>
+
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
@@ -497,14 +536,24 @@ export default function DailyProgressReportPage() {
                         <CalendarDays size={16} className="text-gray-400" />
                         {report.reportDate
                           ? new Date(report.reportDate).toLocaleDateString(
-                              "en-IN"
-                            )
+                            "en-IN"
+                          )
                           : "N/A"}
                       </div>
                     </td>
 
                     <td className="p-4 font-medium">
                       {getDprProjectName(report) || "N/A"}
+                    </td><td className="p-4">
+                      {getContractorName(report)}
+                    </td>
+
+                    <td className="p-4">
+                      {getTotalDprQty(report)}
+                    </td>
+
+                    <td className="p-4 font-semibold text-green-700">
+                      ₹{getTotalDprAmount(report).toLocaleString("en-IN")}
                     </td>
 
                     <td className="p-4 max-w-xs truncate">
@@ -553,7 +602,7 @@ export default function DailyProgressReportPage() {
                 ))
               ) : (
                 <tr>
-                  <td className="p-6 text-center text-gray-500" colSpan="6">
+                  <td className="p-6 text-center text-gray-500" colSpan="9">
                     No DPR found
                   </td>
                 </tr>

@@ -474,3 +474,51 @@ exports.uploadBOQExcelItems = async (req, res) => {
         });
     }
 };
+
+
+//boq item by boq
+exports.getBOQItemsByBOQ = async (req, res) => {
+  try {
+    const { boqId } = req.params;
+
+    console.log(await BOQItem.find({ boqRef: boqId }));
+    const items = await BOQItem.find({
+      boqRef: boqId,
+    }).sort({ boqItemCode: 1 });
+
+    return res.status(200).json({
+      success: true,
+      items,
+    });
+  } catch (error) {
+    console.log("Get BOQ Items Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch BOQ items",
+      error: error.message,
+    });
+  }
+};
+
+// Get Boq By projectId
+exports.getBOQByProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+const boqs = await BOQMaster.find({
+  projectRef: projectId
+});
+
+    return res.status(200).json({
+      success: true,
+      boqs,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch BOQs",
+    });
+  }
+};
