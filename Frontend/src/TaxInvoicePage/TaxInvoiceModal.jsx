@@ -33,10 +33,25 @@ export default function TaxInvoiceModal({
 
   const [formData, setFormData] = useState(initialForm);
   const [loading, setLoading] = useState(false);
+  const [partys, setPartys] = useState([]);
 
   const token = localStorage.getItem("token");
+  const fetchPartys = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/party/search?type=Vendor&limit=100`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      const data = await res.json();
+      setPartys(data.data || []);
+    } catch (error) {
+      console.error("Error fetching parties:", error);
+    }
+  };
 
   useEffect(() => {
+    fetchPartys();
     if (invoice) {
       setFormData({
         invoiceNumber: invoice.invoiceNumber || "",
@@ -162,16 +177,16 @@ export default function TaxInvoiceModal({
 
   const materialDifference =
     Number(formData.quantitySent || 0) !==
-    Number(formData.quantityReceived || 0)
+      Number(formData.quantityReceived || 0)
       ? "Difference Found"
       : "No Difference";
 
   return (
-<div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
 
-  <div className="relative bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-gray-200 animate-fadeIn max-h-[95vh] overflow-y-auto">
+      <div className="relative bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-gray-200 animate-fadeIn max-h-[95vh] overflow-y-auto">
 
-    {/* Header */}
+        {/* Header */}
         <div className="flex justify-between items-center border-b px-6 py-5">
           <div>
             <h2 className="text-2xl font-bold">
@@ -217,7 +232,7 @@ export default function TaxInvoiceModal({
             value={formData.vendorName}
             onChange={handleChange}
             disabled={isView}
-            options={vendorList}
+            options={partys}
             placeholder="Select Vendor"
           />
 
@@ -291,11 +306,10 @@ export default function TaxInvoiceModal({
             </label>
 
             <div
-              className={`w-full rounded-xl px-4 py-3 font-semibold ${
-                materialDifference === "Difference Found"
+              className={`w-full rounded-xl px-4 py-3 font-semibold ${materialDifference === "Difference Found"
                   ? "bg-red-100 text-red-600"
                   : "bg-green-100 text-green-600"
-              }`}
+                }`}
             >
               {materialDifference}
             </div>
@@ -428,16 +442,15 @@ function Select({
       >
         <option value="">{placeholder}</option>
 
-        {options.map((item, index) => (
-          <option key={index} value={item}>
-            {item}
+        {options.map((item) => (
+          <option key={item._id || item} value={item.partyName || item}>
+            {item.partyName || item}
           </option>
         ))}
       </select>
     </div>
   );
 }
-
 function Textarea({ label, name, value, onChange, disabled = false }) {
   return (
     <div>

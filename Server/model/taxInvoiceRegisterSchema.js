@@ -11,12 +11,12 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
     invoiceNumber: {
       type: String,
       required: true,
-      unique: true,
+      // unique: true,
       trim: true,
     },
 
     invoiceAmount: {
-      type: Number,
+      type: String,
       required: true,
     },
 
@@ -34,8 +34,8 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
 
     challanCreated: {
       type: String,
-      enum: ["yes", "no"],
-      default: "no",
+      enum: ["Yes", "No"],
+      default: "No",
     },
 
     challanNumber: {
@@ -52,7 +52,7 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
 
     deliveryStatus: {
       type: String,
-      enum: ["delivered", "pending", "partial", ""],
+      enum: ["Delivered", "Pending", "Partial", ""],
       default: "",
     },
 

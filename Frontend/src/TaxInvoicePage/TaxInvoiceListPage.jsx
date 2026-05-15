@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import { projectSiteList, vendorList } from "../Constant";
 import TaxInvoiceModal from "./TaxInvoiceModal";
 import BASE_URL from "../../config/api";
+import BulkTaxInvoiceUpload from "./BulkTaxInvoiceUpload";
 
 
 export default function TaxInvoiceListPage() {
@@ -40,6 +41,9 @@ export default function TaxInvoiceListPage() {
     invoiceDate: "",
     challanNumber: ""
   });
+
+  const [partys, setPartys] = useState([]);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -76,9 +80,23 @@ export default function TaxInvoiceListPage() {
       setLoading(false);
     }
   };
+  const fetchPartys = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/party/search?type=Vendor&limit=100`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      const data = await res.json();
+      setPartys(data.data || []);
+    } catch (error) {
+      console.error("Error fetching parties:", error);
+    }
+  };
 
   useEffect(() => {
     fetchInvoices();
+    fetchPartys();
   }, []);
 
   const openAddModal = () => {
@@ -244,6 +262,12 @@ export default function TaxInvoiceListPage() {
 
             <div className="flex gap-2">
               <button
+                onClick={() => setBulkModalOpen(true)}
+                className="px-4 py-3 rounded-xl bg-green-600 text-white font-medium"
+              >
+                Bulk Upload Excel
+              </button>
+              <button
                 onClick={openAddModal}
                 className="flex items-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition"
               >
@@ -284,9 +308,9 @@ export default function TaxInvoiceListPage() {
               className="border rounded-xl px-4 py-3"
             >
               <option value="">Select Vendor</option>
-              {vendorList.map((vendor, index) => (
+              {partys.map((vendor, index) => (
                 <option key={index} value={vendor}>
-                  {vendor}
+                  {vendor?.partyName}
                 </option>
               ))}
             </select>
@@ -390,8 +414,8 @@ export default function TaxInvoiceListPage() {
                       <td className="p-4">
                         {invoice.invoiceDate
                           ? new Date(invoice.invoiceDate).toLocaleDateString(
-                              "en-IN"
-                            )
+                            "en-IN"
+                          )
                           : "-"}
                       </td>
 
@@ -485,6 +509,12 @@ export default function TaxInvoiceListPage() {
         invoice={selectedInvoice}
         refreshInvoices={fetchInvoices}
       />
+      <BulkTaxInvoiceUpload
+        isOpen={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        refreshInvoices={fetchInvoices}
+      />
     </div>
+
   );
 }

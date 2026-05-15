@@ -33,6 +33,7 @@ export default function ModernDashboardLandingPage() {
   const [addTaskMode, setAddTaskMode] = useState("personal");
   const [users, setUsers] = useState([]);
   const [challans, setChallans] = useState([]);
+  const [partys,setPartys] = useState([]);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
@@ -113,6 +114,20 @@ export default function ModernDashboardLandingPage() {
       ]
     },
     {
+      title: "Vendor/Party Master",
+      value: partys?.length||0,
+      icon: Warehouse,
+      path: '/party',
+      actionType: "party",
+      roles: [
+        "MIS User",
+        "Site Engineer",
+        "Store Manager",
+        "Accountant",
+        "Project Manager"
+      ]
+    },
+    {
       title: "Task  Management",
       value: allTasks.length || 0,
       icon: ClipboardList,
@@ -143,6 +158,12 @@ export default function ModernDashboardLandingPage() {
       path: "/dpr",
       roles: ["MIS User", "Site Engineer", "Project Manager"],
     },
+    {
+      title: "Party/vendor Master",
+      path: "/party",
+      roles: ["MIS User", "Site Engineer", "Project Manager"],
+    },
+
     {
       title: "Manage Users",
       path: "/user/mang",
@@ -222,7 +243,7 @@ export default function ModernDashboardLandingPage() {
         Authorization: `Bearer ${token}`,
       };
 
-      const [taxRes, projectRes, storeRes, dprRes, myTaskRes, allTaskRes, userRes,challanRes] =
+      const [taxRes, projectRes, storeRes, dprRes, myTaskRes, allTaskRes, userRes,challanRes,partyRes] =
         await Promise.allSettled([
           axios.get(`${BASE_URL}/tax-invoice/all`, { headers }),
           axios.get(`${BASE_URL}/project-master/all`, { headers }),
@@ -232,6 +253,7 @@ export default function ModernDashboardLandingPage() {
           axios.get(`${BASE_URL}/api/tasks/all`, { headers }),
           axios.get(`${BASE_URL}/user/all`, { headers }),
           axios.get(`${BASE_URL}/challan/all`, { headers }),
+          axios.get(`${BASE_URL}/party/all`, { headers }),
         ]);
 
       if (taxRes.status === "fulfilled") {
@@ -271,6 +293,10 @@ export default function ModernDashboardLandingPage() {
       if (challanRes.status === "fulfilled") {
         // console.log("Challans:", challanRes.value.data.data);
         setChallans(challanRes.value.data.data || []);
+      }
+      if (partyRes.status === "fulfilled") {
+        // console.log("Parties:", partyRes.value.data.data);
+        setPartys(partyRes.value.data.data || []);
       }
     } catch (error) {
       console.log(error);

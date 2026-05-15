@@ -23,6 +23,7 @@ import UserManagementPage from './User/UserManagementPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import BOQManagementPage from './boq/BOQManagementPage'
 import BOQDetailPage from './boq/BOQDetailPage'
+import PartyListPage from './Party/PartyListPage'
 function App() {
   const { taxInvoiceId } = useParams();
 
@@ -217,6 +218,24 @@ function App() {
           </ProtectedRoute>
         }
       />
+      {/* PARTY/VENDOR MASTER */}
+
+      <Route
+        path="/party"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Site Engineer",
+              "Store Manager",
+              "Accountant",
+              "Project Manager"
+            ]}
+          >
+            <PartyListPage />
+          </ProtectedRoute>
+        }
+      />
 
 
 
@@ -255,7 +274,7 @@ function App() {
       />
       {/* Boq  */}
       <Route
-       path="/project/:projectId/boq"
+        path="/project/:projectId/boq"
         element={
           <ProtectedRoute
             allowedRoles={[
@@ -268,8 +287,8 @@ function App() {
         }
       />
 
-          <Route
-       path="/boq/:boqId"
+      <Route
+        path="/boq/:boqId"
         element={
           <ProtectedRoute
             allowedRoles={[

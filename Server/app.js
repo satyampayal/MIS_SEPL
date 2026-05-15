@@ -19,6 +19,7 @@ const dprRouter = require("./Routes/DPRRoutes");
 const userRouter = require("./Routes/userRoutes");
 const taskRouter = require("./Routes/taskRoutes");
 const boqRouter=require('./Routes/boqRoutes')
+const partyRouter=require('./Routes/partyMasterRoutes')
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -39,6 +40,8 @@ app.use('/user',userRouter)
 app.use('/tax-invoice',taxInvoiceRouter);
 // task assign or  My task
 app.use('/api/tasks',taskRouter)
+// Party Master Routes
+app.use('/party',partyRouter);
 
 
 /* Start Add Sites */

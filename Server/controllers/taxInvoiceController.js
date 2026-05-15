@@ -172,6 +172,7 @@ exports.bulkInvoiceRegister = async (req, res) => {
             return {
                 ...invoice,
                 materialDifference,
+                challanCreated: invoice.challanNumber ? "Yes" : "No"
             };
         });
 
