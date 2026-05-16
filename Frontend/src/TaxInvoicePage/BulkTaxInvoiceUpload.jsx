@@ -21,7 +21,10 @@ export default function BulkTaxInvoiceUpload({ isOpen, onClose, refreshInvoices 
 
     reader.onload = (event) => {
       const data = new Uint8Array(event.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
+      const workbook = XLSX.read(data, {
+        type: "array",
+        cellDates: true,
+      });
 
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -30,15 +33,38 @@ export default function BulkTaxInvoiceUpload({ isOpen, onClose, refreshInvoices 
         defval: "",
       });
 
+
+      const formatExcelDate = (value) => {
+        if (!value) return "";
+
+        if (typeof value === "number") {
+          const date = XLSX.SSF.parse_date_code(value);
+
+          if (!date) return "";
+
+          const yyyy = date.y;
+          const mm = String(date.m).padStart(2, "0");
+          const dd = String(date.d).padStart(2, "0");
+
+          return `${dd}-${mm}-${yyyy}`;
+        }
+
+        if (value instanceof Date) {
+          return value.toISOString().substring(0, 10);
+        }
+
+        return String(value).trim();
+      };
+
       const formattedData = jsonData.map((row) => ({
         invoiceNumber: row.invoiceNumber || row["Invoice Number"] || "",
-        invoiceDate: row.invoiceDate || row["Invoice Date"] || "",
+        invoiceDate: formatExcelDate(row.invoiceDate || row["Invoice Date"] || ""),
         vendorName: row.vendorName || row["Vendor Name"] || "",
         invoiceAmount: row.invoiceAmount || row["Invoice Amount"] || "",
         projectSite: row.projectSite || row["Project Site"] || "",
         deliveryStatus: row.deliveryStatus || row["Delivery Status"] || "",
         challanNumber: row.challanNumber || row["Challan Number"] || "",
-        challanDate: row.challanDate || row["Challan Date"] || "",
+        challanDate: formatExcelDate(row.challanDate || row["Challan Date"] || ""),
         quantitySent: row.quantitySent || row["Quantity Sent"] || "",
         quantityReceived: row.quantityReceived || row["Quantity Received"] || "",
         remarks: row.remarks || row["Remarks"] || "",
@@ -90,7 +116,11 @@ export default function BulkTaxInvoiceUpload({ isOpen, onClose, refreshInvoices 
       toast.dismiss(loadingToast);
 
       if (res.ok) {
-        toast.success(data.message || "Bulk invoices saved successfully");
+        toast.success(
+          `${data.totalInserted} inserted, ${data.totalDuplicates} duplicates skipped`
+        );
+
+        console.log("Duplicates:", data.duplicateData);
         refreshInvoices();
         onClose();
         setRows([]);

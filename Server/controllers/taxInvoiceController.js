@@ -153,49 +153,91 @@ exports.bulkInvoiceRegister = async (req, res) => {
 
         if (!Array.isArray(invoices) || invoices.length === 0) {
             return res.status(400).json({
+                success: false,
                 message: "Please send an array of invoice data",
             });
         }
 
-        // Optional: auto calculate materialDifference
-        const formattedInvoices = invoices.map((invoice) => {
-            let materialDifference = "No Difference";
+        const validInvoices = [];
+        const duplicateInvoices = [];
 
-            if (
-                invoice.quantitySent &&
-                invoice.quantityReceived &&
-                Number(invoice.quantitySent) !== Number(invoice.quantityReceived)
-            ) {
-                materialDifference = "Difference Found";
+        for (const invoice of invoices) {
+            const invoiceNumber = String(invoice.invoiceNumber || "").trim();
+            const vendorName = String(invoice.vendorName || "").trim();
+            const projectSite = String(invoice.projectSite || "").trim();
+            const invoiceDate = invoice.invoiceDate ? new Date(invoice.invoiceDate) : null;
+            const challanDate = invoice.challanDate ? new Date(invoice.challanDate) : null;
+
+            if (!invoiceNumber || !vendorName || !projectSite) {
+                duplicateInvoices.push({
+                    ...invoice,
+                    reason: "Missing invoiceNumber, vendorName or projectSite",
+                });
+                continue;
             }
 
-            return {
-                ...invoice,
-                materialDifference,
-                challanCreated: invoice.challanNumber ? "Yes" : "No"
-            };
-        });
+            const alreadyExists = await TaxInvoice.findOne({
+                invoiceNumber,
+                vendorName,
+                projectSite,
+            });
 
-        // Insert all records at once
-        const savedData = await TaxInvoice.insertMany(
-            formattedInvoices
-        );
+            if (alreadyExists) {
+                duplicateInvoices.push({
+                    ...invoice,
+                    reason: "Already exists in database",
+                });
+            } else {
+                let materialDifference = "No Difference";
 
-        res.status(201).json({
-            message: "Bulk Tax Invoice Register saved successfully 🚀",
+                if (
+                    invoice.quantitySent &&
+                    invoice.quantityReceived &&
+                    Number(invoice.quantitySent) !== Number(invoice.quantityReceived)
+                ) {
+                    materialDifference = "Difference Found";
+                }
+
+                validInvoices.push({
+                    ...invoice,
+                    invoiceNumber,
+                    vendorName,
+                    projectSite,
+                    materialDifference,
+                    invoiceDate,
+                    challanDate,
+                    challanCreated: "Yes", // Assuming challan is created for bulk entries, adjust as needed
+                });
+            }
+        }
+
+        let savedData = [];
+
+        if (validInvoices.length > 0) {
+            savedData = await TaxInvoice.insertMany(validInvoices, {
+                ordered: false,
+            });
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: "Bulk tax invoice upload completed",
+            totalReceived: invoices.length,
             totalInserted: savedData.length,
-            data: savedData,
+            totalDuplicates: duplicateInvoices.length,
+            insertedData: savedData,
+            duplicateData: duplicateInvoices,
         });
-
     } catch (error) {
-        console.log(error);
+        console.log("Bulk Invoice Error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
+            success: false,
             message: "Server Error",
             error: error.message,
         });
     }
-}
+};
 
 
 // Delete Tax Invoice 
