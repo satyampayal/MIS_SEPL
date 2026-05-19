@@ -39,10 +39,12 @@ export default function TaxInvoiceListPage() {
     projectSite: "",
     deliveryStatus: "",
     invoiceDate: "",
-    challanNumber: ""
+    challanNumber: "",
+    typeOfChallan: ""
   });
 
   const [partys, setPartys] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -93,10 +95,27 @@ export default function TaxInvoiceListPage() {
       console.error("Error fetching parties:", error);
     }
   };
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/project-master/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      const data = await res.json();
+      const uniqueProjects = Array.from(new Set((data.data || []).map(project => project.name))).map(name => {
+        return data.data.find(project => project.name === name);
+      });
+      setProjects(uniqueProjects);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
 
   useEffect(() => {
     fetchInvoices();
     fetchPartys();
+    fetchProjects();
   }, []);
 
   const openAddModal = () => {
@@ -200,7 +219,7 @@ export default function TaxInvoiceListPage() {
       const query = new URLSearchParams(filters).toString();
 
       const response = await fetch(
-        `${BASE_URL}/tax-invoice-register?${query}`,
+        `${BASE_URL}/tax-invoice/filter?${query}`,
         {
           headers: authHeaders
         }
@@ -226,7 +245,8 @@ export default function TaxInvoiceListPage() {
       projectSite: "",
       deliveryStatus: "",
       invoiceDate: "",
-      challanNumber: ""
+      challanNumber: "",
+      typeOfChallan: ""
     });
 
     setCurrentPage(1);
@@ -322,9 +342,9 @@ export default function TaxInvoiceListPage() {
               className="border rounded-xl px-4 py-3"
             >
               <option value="">Select Project Site</option>
-              {projectSiteList.map((site, index) => (
-                <option key={index} value={site}>
-                  {site}
+              {projects.map((project, index) => (
+                <option key={index} value={project.name}>
+                  {project.name}
                 </option>
               ))}
             </select>
@@ -339,6 +359,19 @@ export default function TaxInvoiceListPage() {
               <option value="delivered">Delivered</option>
               <option value="pending">Pending</option>
               <option value="partial">Partial</option>
+            </select>
+
+            <select
+              name="typeOfChallan"
+              value={filters.typeOfChallan}
+              onChange={handleFilterChange}
+              className="border rounded-xl px-4 py-3"
+            >
+              <option value="">Type of Challan</option>
+              <option value="DDC">DDC</option>
+              <option value="DC">DC</option>
+              <option value="LPN">LPN</option>
+              <option value="MRN">MRN</option>
             </select>
 
             <input
@@ -357,6 +390,7 @@ export default function TaxInvoiceListPage() {
               onChange={handleFilterChange}
               className="border rounded-xl px-4 py-3"
             />
+
 
             <button
               onClick={applyFilters}

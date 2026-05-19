@@ -31,6 +31,11 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    typeOfChallan:{
+      type:String,
+      enum:["DDC","DC","MRN","LPN",""],
+      default:"DDC"
+    },
 
     challanCreated: {
       type: String,

@@ -77,7 +77,8 @@ exports.register = async (req, res) => {
             quantitySent,
             quantityReceived,
             itemDetailsRequired,
-            remarks
+            remarks,
+            typeOfChallan
         } = req.body;
 
         // 📦 Material Difference
@@ -121,6 +122,7 @@ exports.register = async (req, res) => {
             quantityReceived,
             itemDetailsRequired,
             materialDifference,
+            typeOfChallan,
 
             // ✅ SAVE FILES
             invoiceFile: req.files?.invoiceFile?.[0]?.path,
@@ -343,52 +345,64 @@ exports.intoExcel = async (req, res) => {
 }
 
 // Filter Tax Invoice List
+exports.filterTaxInvoices = async (req, res) => {
+  try {
+    const {
+      invoiceNumber,
+      vendorName,
+      projectSite,
+      deliveryStatus,
+      typeOfChallan,
+      invoiceDate,
+      challanNumber,
+    } = req.query;
 
-exports.filterInvoice = async (req, res) => {
-    try {
-        const filters = req.query;
+    const filter = {};
 
-        let query = {};
-
-        if (filters.invoiceNumber) {
-            query.invoiceNumber = filters.invoiceNumber;
-        }
-
-        if (filters.vendorName) {
-            query.vendorName = filters.vendorName;
-        }
-
-        if (filters.projectSite) {
-            query.projectSite = filters.projectSite;
-        }
-
-        if (filters.deliveryStatus) {
-            query.deliveryStatus = filters.deliveryStatus;
-        }
-
-        if (filters.invoiceDate) {
-            query.invoiceDate = filters.invoiceDate;
-        }
-
-        if (filters.challanNumber) {
-            query.challanNumber = filters.challanNumber;
-        }
-
-        const data = await TaxInvoice.find(query);
-
-        res.status(200).json({
-            message: "Filtered data fetched successfully",
-            data
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: "Server Error",
-            error: error.message
-        });
+    if (invoiceNumber) {
+      filter.invoiceNumber = { $regex: invoiceNumber.trim(), $options: "i" };
     }
-}
 
+    if (vendorName) {
+      filter.vendorName = { $regex: vendorName.trim(), $options: "i" };
+    }
+
+    if (projectSite) {
+      filter.projectSite = { $regex: projectSite.trim(), $options: "i" };
+    }
+
+    if (deliveryStatus) {
+      filter.deliveryStatus = deliveryStatus;
+    }
+
+    if (typeOfChallan) {
+      filter.typeOfChallan = typeOfChallan;
+    }
+
+    if (invoiceDate) {
+      filter.invoiceDate = invoiceDate;
+    }
+
+    if (challanNumber) {
+      filter.challanNumber = { $regex: challanNumber.trim(), $options: "i" };
+    }
+
+    const invoices = await TaxInvoice.find(filter).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: invoices.length,
+      data: invoices,
+    });
+  } catch (error) {
+    console.log("Filter Tax Invoice Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to filter tax invoices",
+      error: error.message,
+    });
+  }
+};
 // Edit Particular Tax Invoice
 
 exports.updateInvoice = async (req, res) => {

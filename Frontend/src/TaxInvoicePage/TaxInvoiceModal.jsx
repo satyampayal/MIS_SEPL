@@ -17,7 +17,8 @@ const initialForm = {
   quantityReceived: "",
   remarks: "",
   invoiceFile: null,
-  challanFile: null
+  challanFile: null,
+  typeOfChallan:"DDC"
 };
 
 export default function TaxInvoiceModal({
@@ -34,6 +35,7 @@ export default function TaxInvoiceModal({
   const [formData, setFormData] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [partys, setPartys] = useState([]);
+   const [projects, setProjects] = useState([]);
 
   const token = localStorage.getItem("token");
   const fetchPartys = async () => {
@@ -49,9 +51,27 @@ export default function TaxInvoiceModal({
       console.error("Error fetching parties:", error);
     }
   };
+  const fetchProjects=async ()=>{
+      try{
+        const res=await fetch(`${BASE_URL}/project-master/all`,{
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        });
+        const data = await res.json();
+        const uniqueProjects = Array.from(new Set((data.data || []).map(project => project.name))).map(name => {
+          return data.data.find(project => project.name === name);
+        });
+        setProjects(uniqueProjects);
+      
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      }
+    };
 
   useEffect(() => {
     fetchPartys();
+    fetchProjects();
     if (invoice) {
       setFormData({
         invoiceNumber: invoice.invoiceNumber || "",
@@ -70,7 +90,8 @@ export default function TaxInvoiceModal({
         quantityReceived: invoice.quantityReceived || "",
         remarks: invoice.remarks || "",
         invoiceFile: null,
-        challanFile: null
+        challanFile: null,
+        typeofChallan: invoice.typeOfChallan || ""
       });
     } else {
       setFormData(initialForm);
@@ -251,8 +272,17 @@ export default function TaxInvoiceModal({
             value={formData.projectSite}
             onChange={handleChange}
             disabled={isView}
-            options={projectSiteList}
+            options={projects}
             placeholder="Select Project Site"
+          />
+            <Select
+            label="Type of Challan"
+            name="typeOfChallan"
+            value={formData.typeOfChallan}
+            onChange={handleChange}
+            disabled={isView}
+            options={["DDC", "DC", "MRN", "LPN"]}
+            placeholder={"Select Type Of Challan"}
           />
 
           <Select
@@ -261,7 +291,7 @@ export default function TaxInvoiceModal({
             value={formData.deliveryStatus}
             onChange={handleChange}
             disabled={isView}
-            options={["delivered", "pending", "partial"]}
+            options={["Delivered", "Pending", "Partial"]}
             placeholder="Select Delivery Status"
           />
 
@@ -443,8 +473,8 @@ function Select({
         <option value="">{placeholder}</option>
 
         {options.map((item) => (
-          <option key={item._id || item} value={item.partyName || item}>
-            {item.partyName || item}
+          <option key={item._id || item} value={item.partyName || item.name || item}>
+            {item.partyName || item.name || item}
           </option>
         ))}
       </select>

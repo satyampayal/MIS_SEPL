@@ -1,5 +1,13 @@
 const express = require("express");
-const { getAllTaxInvoie, getById, register, bulkInvoiceRegister, deleteTaxInnvoice, intoExcel, updateInvoice } = require("../controllers/taxInvoiceController");
+const { getAllTaxInvoie,
+   getById, 
+   register,
+    bulkInvoiceRegister, 
+  deleteTaxInnvoice, 
+  intoExcel,
+   updateInvoice,
+  filterTaxInvoices
+  } = require("../controllers/taxInvoiceController");
 const upload = require("../config/multer");
 const taxInvoiceRouter = express.Router();
 
@@ -10,11 +18,12 @@ taxInvoiceRouter.post('/create',  upload.fields([
     { name: "challanFile", maxCount: 1 }
   ]),register)
 
-// taxInvoiceRouter.post('/register',  upload.any(),register)
 taxInvoiceRouter.post('/bulk-entery',bulkInvoiceRegister)
 taxInvoiceRouter.delete('/delete/:taxInvoiceId',deleteTaxInnvoice)
 // convert Data into Excel Sheet
 taxInvoiceRouter.get('/export-excel',intoExcel)
 taxInvoiceRouter.put('/update/:taxInvoiceId',upload.any(),updateInvoice)
+// Filter
+taxInvoiceRouter.get("/filter", filterTaxInvoices);
 
 module.exports=taxInvoiceRouter;
