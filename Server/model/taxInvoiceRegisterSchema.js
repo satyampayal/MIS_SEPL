@@ -40,7 +40,7 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
     challanCreated: {
       type: String,
       enum: ["Yes", "No"],
-      default: "No",
+      default: "Yes",
     },
 
     challanNumber: {

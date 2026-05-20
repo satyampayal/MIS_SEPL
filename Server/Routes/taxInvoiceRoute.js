@@ -6,7 +6,9 @@ const { getAllTaxInvoie,
   deleteTaxInnvoice, 
   intoExcel,
    updateInvoice,
-  filterTaxInvoices
+  filterTaxInvoices,
+  getProjectWiseSpending,
+  getPendingChallans
   } = require("../controllers/taxInvoiceController");
 const upload = require("../config/multer");
 const taxInvoiceRouter = express.Router();
@@ -25,5 +27,9 @@ taxInvoiceRouter.get('/export-excel',intoExcel)
 taxInvoiceRouter.put('/update/:taxInvoiceId',upload.any(),updateInvoice)
 // Filter
 taxInvoiceRouter.get("/filter", filterTaxInvoices);
+
+taxInvoiceRouter.get("/project-spending", getProjectWiseSpending);
+
+taxInvoiceRouter.get("/pending-challans", getPendingChallans);
 
 module.exports=taxInvoiceRouter;

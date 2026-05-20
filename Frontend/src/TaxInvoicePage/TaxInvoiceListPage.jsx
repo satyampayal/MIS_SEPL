@@ -281,12 +281,22 @@ export default function TaxInvoiceListPage() {
             </div>
 
             <div className="flex gap-2">
+
+              <button
+                onClick={() => navigate("/tax-invoice/project-surveillance")}
+                className="flex items-center gap-2 bg-purple-600 text-white px-5 py-3 rounded-xl hover:bg-purple-700 transition"
+              >
+                <Receipt size={18} />
+                Project Surveillance
+              </button>
+
               <button
                 onClick={() => setBulkModalOpen(true)}
                 className="px-4 py-3 rounded-xl bg-green-600 text-white font-medium"
               >
                 Bulk Upload Excel
               </button>
+
               <button
                 onClick={openAddModal}
                 className="flex items-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition"
@@ -302,6 +312,7 @@ export default function TaxInvoiceListPage() {
                 <Download size={18} />
                 Export Excel
               </button>
+
             </div>
           </div>
         </div>
@@ -329,7 +340,7 @@ export default function TaxInvoiceListPage() {
             >
               <option value="">Select Vendor</option>
               {partys.map((vendor, index) => (
-                <option key={index} value={vendor}>
+                <option key={index} value={vendor?.partyName}>
                   {vendor?.partyName}
                 </option>
               ))}

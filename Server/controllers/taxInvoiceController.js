@@ -294,7 +294,7 @@ exports.intoExcel = async (req, res) => {
             { header: "Invoice Amount", key: "invoiceAmount", width: 18 },
             { header: "Vendor Name", key: "vendorName", width: 35 },
             { header: "Project Site", key: "projectSite", width: 30 },
-            { header: "Challan Created", key: "challanCreated", width: 18 },
+            // { header: "Challan Created", key: "challanCreated", width: 18 },
             { header: "Challan Number", key: "challanNumber", width: 25 },
             { header: "Challan Date", key: "challanDate", width: 18 },
             { header: "Delivery Status", key: "deliveryStatus", width: 18 },
@@ -480,4 +480,90 @@ exports.updateInvoice = async (req, res) => {
             error: error.message,
         });
     }
+};
+
+
+// Spending
+exports.getProjectWiseSpending = async (req, res) => {
+  try {
+
+    const data = await TaxInvoice.aggregate([
+      {
+        $group: {
+          _id: "$projectSite",
+          totalAmount: {
+            $sum: {
+              $toDouble: "$invoiceAmount"
+            }
+          },
+          totalInvoices: { $sum: 1 }
+        }
+      },
+      {
+        $sort: {
+          totalAmount: -1
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to calculate project spending"
+    });
+  }
+};
+
+
+exports.getPendingChallans = async (req, res) => {
+  try {
+    const { projectSite, vendorName, challanNumber } = req.query;
+
+    const filter = {
+      challanCreated: "Yes",
+      $or: [
+        { deliveryStatus: "Pending" },
+        { deliveryStatus: "Partial" },
+        { deliveryStatus: "" },
+        {
+          $expr: {
+            $lt: ["$quantityReceived", "$quantitySent"]
+          }
+        }
+      ]
+    };
+
+    if (projectSite) {
+      filter.projectSite = { $regex: projectSite.trim(), $options: "i" };
+    }
+
+    if (vendorName) {
+      filter.vendorName = { $regex: vendorName.trim(), $options: "i" };
+    }
+
+    if (challanNumber) {
+      filter.challanNumber = { $regex: challanNumber.trim(), $options: "i" };
+    }
+
+    const data = await TaxInvoice.find(filter).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    console.log("Pending Challan Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch pending challans",
+    });
+  }
 };

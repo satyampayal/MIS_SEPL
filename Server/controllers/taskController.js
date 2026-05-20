@@ -95,7 +95,11 @@ exports.getMyTasks = async (req, res) => {
     const tasks = await Task.find({ assignedTo: req.user._id })
       .populate("assignedBy", "fullName email role")
       .populate("assignedTo", "fullName email role")
-      .sort({ dueDate: 1, createdAt: -1 });
+      .sort({
+        status: 1,
+        dueDate: 1,
+        createdAt: -1
+      });
 
     res.status(200).json({
       success: true,

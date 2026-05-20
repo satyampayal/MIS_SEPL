@@ -24,6 +24,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import BOQManagementPage from './boq/BOQManagementPage'
 import BOQDetailPage from './boq/BOQDetailPage'
 import PartyListPage from './Party/PartyListPage'
+import ProjectSpendingSurveillancePage from './TaxInvoicePage/ProjectSpendingSurveillancePage'
 function App() {
   const { taxInvoiceId } = useParams();
 
@@ -91,6 +92,20 @@ function App() {
             ]}
           >
             <EditTaxInvoicePage />
+          </ProtectedRoute>
+        }
+      />
+
+  <Route
+         path="/tax-invoice/project-surveillance"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Accountant"
+            ]}
+          >
+            <ProjectSpendingSurveillancePage />
           </ProtectedRoute>
         }
       />
