@@ -26,6 +26,14 @@ export default function ProjectSpendingSurveillancePage() {
     vendorName: "",
     challanNumber: "",
   });
+  // New 
+  const [vendorSpending, setVendorSpending] = useState([]);
+  const [projectStats, setProjectStats] = useState({
+    delivered: 0,
+    partial: 0,
+    pending: 0,
+    totalVendors: 0
+  });
 
   const token = localStorage.getItem("token");
 
@@ -53,9 +61,31 @@ export default function ProjectSpendingSurveillancePage() {
       toast.error("Failed to load project spending");
     }
   };
+  const fetchVendorSpending = async () => {
+    try {
+
+      const res = await fetch(
+        `${BASE_URL}/tax-invoice/vendor-wise-spending`,
+        {
+          headers: authHeaders
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setVendorSpending(data.data || []);
+      }
+
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to load vendor spending");
+    }
+  };
 
   const fetchPendingChallans = async () => {
     try {
+
       setLoading(true);
 
       const query = new URLSearchParams();
@@ -74,10 +104,40 @@ export default function ProjectSpendingSurveillancePage() {
       const data = await res.json();
 
       if (data.success) {
-        setPendingChallans(data.data || []);
+
+        const pendingData = data.data || [];
+
+        setPendingChallans(pendingData);
+
+        const delivered = pendingData.filter(
+          item => item.deliveryStatus === "Delivered"
+        ).length;
+
+        const partial = pendingData.filter(
+          item => item.deliveryStatus === "Partial"
+        ).length;
+
+        const pending = pendingData.filter(
+          item =>
+            item.deliveryStatus === "Pending" ||
+            item.deliveryStatus === ""
+        ).length;
+
+        const uniqueVendors = new Set(
+          pendingData.map(item => item.vendorName)
+        );
+
+        setProjectStats({
+          delivered,
+          partial,
+          pending,
+          totalVendors: uniqueVendors.size
+        });
+
       } else {
         toast.error(data.message || "Failed to load pending challans");
       }
+
     } catch (error) {
       console.log(error);
       toast.error("Server error");
@@ -89,6 +149,7 @@ export default function ProjectSpendingSurveillancePage() {
   useEffect(() => {
     fetchProjectSpending();
     fetchPendingChallans();
+    fetchVendorSpending();
   }, []);
 
   const handleFilterChange = (e) => {
@@ -146,7 +207,7 @@ export default function ProjectSpendingSurveillancePage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-5 mb-6">
+        <div className="grid md:grid-cols-5 gap-5 mb-6">
           <div className="bg-white rounded-3xl p-6 shadow border">
             <div className="flex items-center justify-between">
               <div>
@@ -180,7 +241,84 @@ export default function ProjectSpendingSurveillancePage() {
               <FileWarning className="text-red-600" size={38} />
             </div>
           </div>
+
+          {/* Vnodor wise spending  */}
+          <div className="bg-white rounded-3xl p-6 shadow border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500">Partial Challans</p>
+                <h2 className="text-3xl font-bold mt-2 text-orange-600">
+                  {projectStats.partial}
+                </h2>
+              </div>
+
+              <Receipt className="text-orange-500" size={38} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 shadow border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500">Total Vendors</p>
+                <h2 className="text-3xl font-bold mt-2 text-blue-700">
+                  {projectStats.totalVendors}
+                </h2>
+              </div>
+
+              <Receipt className="text-blue-600" size={38} />
+            </div>
+          </div>
         </div>
+
+        <div className="bg-white rounded-3xl shadow-lg p-6 mb-6 border border-gray-100">
+  <h2 className="text-xl font-semibold mb-4">
+    Vendor Wise Spending
+  </h2>
+
+  <div className="overflow-x-auto">
+    <table className="w-full text-sm">
+      <thead className="bg-gray-100">
+        <tr>
+          <th className="p-4 text-left">Vendor Name</th>
+          <th className="p-4 text-left">Total Spend</th>
+          <th className="p-4 text-left">Invoice Count</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {vendorSpending.length === 0 ? (
+          <tr>
+            <td
+              colSpan="3"
+              className="p-5 text-center text-gray-500"
+            >
+              No vendor spending data found
+            </td>
+          </tr>
+        ) : (
+          vendorSpending.map((item, index) => (
+            <tr
+              key={index}
+              className="border-b hover:bg-gray-50"
+            >
+              <td className="p-4 font-medium">
+                {item._id || "Unknown Vendor"}
+              </td>
+
+              <td className="p-4 font-bold text-blue-700">
+                ₹ {formatAmount(item.totalAmount)}
+              </td>
+
+              <td className="p-4">
+                {item.totalInvoices}
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
 
         <div className="bg-white rounded-3xl shadow-lg p-6 mb-6 border border-gray-100">
           <h2 className="text-xl font-semibold mb-4">

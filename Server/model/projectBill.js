@@ -4,44 +4,87 @@ const billSchema = new mongoose.Schema(
   {
     project: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-      required: true
+      ref: "ProjectMaster",
+      required: true,
     },
 
     billType: {
       type: String,
-      // enum: ["RA", "Final", "Credit"],
-      required: true
+      enum: ["RA", "Final", "Advance", "Credit Note", "Debit Note"],
+      required: true,
     },
-    billTypeCount:{
-      type:Number,// RA-01, RA-02
-      required:true
+
+    billTypeCount: {
+      type: Number,
+      default: 1,
     },
 
     billNumber: {
-      type: String, 
-      required: true
+      type: String,
+      required: true,
+      trim: true,
     },
 
     billAmount: {
       type: Number,
-      required: true
+      required: true,
+      default: 0,
     },
 
     billDate: {
       type: String,
-      required: true
+      required: true,
     },
-    billDescription:{
-      type:String,
+
+    receivedAmount: {
+      type: Number,
+      default: 0,
     },
-    billGroup:{
-      type:String,// Like Erection or Supply etc. This will help in grouping bills in UI
+
+    pendingAmount: {
+      type: Number,
+      default: 0,
     },
-    billFile: String,
-    billFilePublicId: String
+
+    paymentStatus: {
+      type: String,
+      enum: ["Pending", "Partial", "Received"],
+      default: "Pending",
+    },
+
+    billStatus: {
+      type: String,
+      enum: ["Draft", "Submitted", "Approved", "Rejected"],
+      default: "Submitted",
+    },
+
+    billFile: {
+      type: String,
+      default: "",
+    },
+
+    remarks: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   { timestamps: true }
 );
+
+billSchema.pre("save", function (next) {
+  this.pendingAmount = this.billAmount - this.receivedAmount;
+
+  if (this.receivedAmount <= 0) {
+    this.paymentStatus = "Pending";
+  } else if (this.receivedAmount < this.billAmount) {
+    this.paymentStatus = "Partial";
+  } else {
+    this.paymentStatus = "Received";
+    this.pendingAmount = 0;
+  }
+
+  next();
+});
 
 module.exports = mongoose.model("Bill", billSchema);

@@ -22,6 +22,7 @@ export default function EditTaxInvoicePage() {
     quantityReceived: 0,
     invoiceFile: null,
     challanFile: null,
+    typeOfChallan:""
     // itemDetails: []
 
   });

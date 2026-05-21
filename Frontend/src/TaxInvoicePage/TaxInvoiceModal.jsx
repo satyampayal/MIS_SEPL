@@ -91,7 +91,7 @@ export default function TaxInvoiceModal({
         remarks: invoice.remarks || "",
         invoiceFile: null,
         challanFile: null,
-        typeofChallan: invoice.typeOfChallan || ""
+        typeOfChallan: invoice.typeOfChallan || ""
       });
     } else {
       setFormData(initialForm);

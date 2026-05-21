@@ -8,7 +8,8 @@ const { getAllTaxInvoie,
    updateInvoice,
   filterTaxInvoices,
   getProjectWiseSpending,
-  getPendingChallans
+  getPendingChallans,
+  getVendorWiseSpending
   } = require("../controllers/taxInvoiceController");
 const upload = require("../config/multer");
 const taxInvoiceRouter = express.Router();
@@ -31,5 +32,9 @@ taxInvoiceRouter.get("/filter", filterTaxInvoices);
 taxInvoiceRouter.get("/project-spending", getProjectWiseSpending);
 
 taxInvoiceRouter.get("/pending-challans", getPendingChallans);
+taxInvoiceRouter.get(
+  "/vendor-wise-spending",
+  getVendorWiseSpending
+);
 
 module.exports=taxInvoiceRouter;

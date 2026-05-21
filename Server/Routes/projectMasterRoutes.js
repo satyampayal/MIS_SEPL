@@ -1,7 +1,7 @@
 const express=require('express')
 
 const projectMasterRouter=express.Router();
-const {addProject, getAllProjects, deleteProject, getProjectById, updateProject, addBillToProject, getProjectBills, deleteProjectBill, updateBill}=require('../controllers/projectMasterController');
+const {addProject, getAllProjects, deleteProject, getProjectById, updateProject, addBillToProject, getProjectBills, deleteProjectBill, updateBill, getProjectFinancialSummary}=require('../controllers/projectMasterController');
 const upload = require('../config/multer');
 
 projectMasterRouter.post('/create',upload.single("poFile"),addProject)
@@ -13,5 +13,10 @@ projectMasterRouter.post('/add/bill/:projectId',upload.single('billFile'),addBil
 projectMasterRouter.get('/get/bill/:projectId',getProjectBills)
 projectMasterRouter.delete('/delete/bill/:billId/:projectId',deleteProjectBill)
 projectMasterRouter.put('/update/bill/:billId',upload.single('billFile'),updateBill)
+
+projectMasterRouter.get(
+  "/financial-summary/:projectId",
+  getProjectFinancialSummary
+);
 
 module.exports=projectMasterRouter;

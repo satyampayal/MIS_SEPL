@@ -1,14 +1,15 @@
 const Project = require('../model/Project');
 const cloudinary = require("../config/cloudinary");
 const Bill = require('../model/projectBill')
+const TaxInvoice = require("../model/taxInvoiceRegisterSchema");
 
 const updateProjectProgress = async (projectId) => {
   console.log("Updating project progress for projectId:", projectId);
   const projectBills = await Bill.find({ project: projectId })
   const project = await Project.findById(projectId);
 
-  if(projectBills.length === 0){
-    return project.progress=0;
+  if (projectBills.length === 0) {
+    return project.progress = 0;
     await project.save();
   }
   const totalAmount = projectBills?.reduce((acc, bill) => acc + bill.billAmount, 0);
@@ -273,8 +274,17 @@ exports.addBillToProject = async (req, res) => {
         message: "Project Id is required"
       })
     }
-    const { billType, billNumber, billAmount, billDate, billTypeCount, billGroup, billDescription} = req.body;
-
+    const {
+      billType,
+      billNumber,
+      billAmount,
+      billDate,
+      billTypeCount,
+      billGroup,
+      billDescription,
+      receivedAmount,
+      billStatus
+    } = req.body;
     if (!billType || !billNumber || !billAmount || !billDate || !billTypeCount) {
       return res.status(400).json({
         success: false,
@@ -285,14 +295,16 @@ exports.addBillToProject = async (req, res) => {
       project: projectId,
       billType,
       billTypeCount,
-      billNumber,
-      billAmount,
+      billNumber: billNumber.trim(),
+      billAmount: Number(billAmount) || 0,
       billDate,
+      receivedAmount: Number(receivedAmount) || 0,
+      billStatus: billStatus || "Submitted",
       billFile: req.file ? req.file.path : "",
       billFilePublicId: req.file ? req.file.filename : "",
       billGroup,
       billDescription,
-    })
+    });
 
     if (!createBill) {
       return res.status(500).json({
@@ -333,7 +345,10 @@ exports.getProjectBills = async (req, res) => {
         message: "Project Id is required"
       })
     }
-    const bills = await Bill.find({ project: projectId });
+    const bills = await Bill.find({ project: projectId }).sort({
+      billDate: -1,
+      createdAt: -1
+    });
     return res.status(200).json({
       success: true,
       message: "Bills fetched successfully",
@@ -390,65 +405,157 @@ exports.deleteProjectBill = async (req, res) => {
 exports.updateBill = async (req, res) => {
   try {
     const { billId } = req.params;
+
     if (!billId) {
       return res.status(400).json({
         success: false,
-        message: "Project Id and Bill Id are required"
-      })
+        message: "Bill Id is required"
+      });
     }
+
     const billExist = await Bill.findById(billId);
+
     if (!billExist) {
       return res.status(404).json({
         success: false,
         message: "Bill not found"
-      })
+      });
     }
 
-  
-    const { billType, billNumber, billAmount, billDate, billTypeCount, billGroup, billDescription } = req.body;
+    const {
+      billType,
+      billNumber,
+      billAmount,
+      billDate,
+      billTypeCount,
+      billGroup,
+      billDescription,
+      receivedAmount,
+      billStatus
+    } = req.body;
 
     if (!billType || !billNumber || !billAmount || !billDate || !billTypeCount) {
       return res.status(400).json({
         success: false,
         message: "Please fill all required fields"
-      })
+      });
     }
-      const billFilePublicId = billExist.billFilePublicId;
-      if (req.file) {
-      await deleteFileFromCloudinary(billFilePublicId);
+
+    if (req.file && billExist.billFilePublicId) {
+      await deleteFileFromCloudinary(billExist.billFilePublicId);
+      billExist.billFile = req.file.path;
+      billExist.billFilePublicId = req.file.filename;
     }
-    const billFileUrl=billExist?.billFile;
 
-   const updatedBill= await Bill.findByIdAndUpdate(
-      billId,
-      {
-      billType,
-      billTypeCount,
-      billNumber,
-      billAmount,
-      billDate,
-      billFile: req.file ? req.file.path : billFileUrl,
-      billFilePublicId: req.file ? req.file.filename : billFilePublicId,
-      billGroup,
-      billDescription,
+    billExist.billType = billType;
+    billExist.billTypeCount = billTypeCount;
+    billExist.billNumber = billNumber.trim();
+    billExist.billAmount = Number(billAmount) || 0;
+    billExist.billDate = billDate;
+    billExist.receivedAmount = Number(receivedAmount) || 0;
+    billExist.billStatus = billStatus || billExist.billStatus;
+    billExist.billGroup = billGroup;
+    billExist.billDescription = billDescription;
 
-      },
-      {
-         returnDocument: "after",
-        runValidators: true,
+    const updatedBill = await billExist.save();
 
-      }
-    )
+    await updateProjectProgress(billExist.project);
+
     return res.status(200).json({
       success: true,
       message: "Bill updated successfully 🚀",
       data: updatedBill,
     });
-  }catch(error){
+
+  } catch (error) {
     return res.status(500).json({
-      success:false,
-      message:error?.message
-    })
+      success: false,
+      message: error?.message
+    });
   }
-   
-}
+};
+
+
+exports.getProjectFinancialSummary = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const bills = await Bill.find({ project: projectId });
+
+    const totalBillRaised = bills.reduce(
+      (sum, bill) => sum + Number(bill.billAmount || 0),
+      0
+    );
+
+    const totalReceived = bills.reduce(
+      (sum, bill) => sum + Number(bill.receivedAmount || 0),
+      0
+    );
+
+    const pendingPayment = bills.reduce(
+      (sum, bill) => sum + Number(bill.pendingAmount || 0),
+      0
+    );
+
+    const expenses = await TaxInvoice.aggregate([
+      {
+        $match: {
+          projectSite: project.name,
+        },
+      },
+      {
+        $addFields: {
+          cleanInvoiceAmount: {
+            $convert: {
+              input: "$invoiceAmount",
+              to: "double",
+              onError: 0,
+              onNull: 0,
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalExpense: { $sum: "$cleanInvoiceAmount" },
+        },
+      },
+    ]);
+
+    const totalExpense = expenses[0]?.totalExpense || 0;
+
+    const workOrderValue = Number(project.workOrderValue || 0);
+
+    const approxBalance = totalReceived - totalExpense;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        projectName: project.name,
+        workOrderValue,
+        totalBillRaised,
+        totalReceived,
+        pendingPayment,
+        totalExpense,
+        approxBalance,
+        totalBills: bills.length,
+      },
+    });
+  } catch (error) {
+    console.log("Project Financial Summary Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

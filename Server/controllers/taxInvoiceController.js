@@ -567,3 +567,52 @@ exports.getPendingChallans = async (req, res) => {
     });
   }
 };
+
+exports.getVendorWiseSpending = async (req, res) => {
+  try {
+
+    const data = await TaxInvoice.aggregate([
+      {
+        $addFields: {
+          cleanInvoiceAmount: {
+            $convert: {
+              input: "$invoiceAmount",
+              to: "double",
+              onError: 0,
+              onNull: 0
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: "$vendorName",
+          totalAmount: {
+            $sum: "$cleanInvoiceAmount"
+          },
+          totalInvoices: {
+            $sum: 1
+          }
+        }
+      },
+      {
+        $sort: {
+          totalAmount: -1
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Vendor wise spending failed"
+    });
+  }
+};
