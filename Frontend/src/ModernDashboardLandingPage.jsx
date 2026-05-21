@@ -134,6 +134,16 @@ export default function ModernDashboardLandingPage() {
       path: null,
       actionType: "taskManagement",
       roles: ["Super Admin", "Admin", "Project Manager"]
+    },
+     {
+       title: "Material Movement History",
+      value: null,
+      icon: ClipboardList,
+      path: "/material-movement/history",
+      actionType: "materialMovementHistory",
+      roles: ["Store Manager", "MIS User"],
+
+      
     }
   ];
 
@@ -168,6 +178,11 @@ export default function ModernDashboardLandingPage() {
       title: "Manage Users",
       path: "/user/mang",
       roles: ["Super Admin", "Admin"],
+    },
+    {
+      title: "Material Movement History",
+      path: "/material-movement/history",
+      roles: ["Store Manager", "MIS User"],
     },
   ];
 

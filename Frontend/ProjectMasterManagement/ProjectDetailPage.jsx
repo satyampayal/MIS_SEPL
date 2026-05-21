@@ -15,7 +15,14 @@ export default function ProjectDetailPage() {
   const [selectedBill, setSelectedBill] = useState(null);
   const [mode, setMode] = useState("add"); // "add" | "edit" | "view" 
   const [pendingBills, setPendingBills] = useState();
+const [financialSummary, setFinancialSummary] = useState(null);
+const [financialLoading, setFinancialLoading] = useState(false);
 
+const token = localStorage.getItem("token");
+
+const authHeaders = {
+  Authorization: `Bearer ${token}`,
+};
   // 🔹 Fetch project
   const fetchProject = async () => {
     try {
@@ -27,6 +34,7 @@ export default function ProjectDetailPage() {
       console.log(err);
     } finally {
       setLoading(false);
+      
     }
   };
   const fetchBills = async () => {
@@ -35,17 +43,18 @@ export default function ProjectDetailPage() {
       const data = await res.json();
       // console.log("Bills for project ", data);
       setBills(data.data || []);
-      setPendingBills(await findPendingBills(data.data || []))
+      setPendingBills(findPendingBills(data.data || []))
 
     } catch (err) {
       console.log(err);
     }
+     finally{
+        fetchFinancialSummary();
+      }
   }
-  const findPendingBills = async (getBills) => {
-    // console.log("Finding pending bills from ", getBills);
-    const pending = getBills.filter((bill) => bill?.billFile === "");
-    return pending.length;
-  }
+const findPendingBills = (getBills = []) => {
+  return getBills.filter((bill) => !bill?.billFile).length;
+};
 
   const handleDeleteBill = async (billId) => {
     if (window.confirm("Are you sure you want to delete this bill?")) {
@@ -63,17 +72,47 @@ export default function ProjectDetailPage() {
         console.log(err);
         alert("Error deleting bill");
       }
+      finally{
+        fetchFinancialSummary();
+      }
     }
   }
   const handleEditBill = (billId) => {
 
   }
 
-  useEffect(() => {
-    fetchProject();
-    fetchBills();
-    findPendingBills();
-  }, []);
+  const fetchFinancialSummary = async () => {
+  try {
+    setFinancialLoading(true);
+
+    const res = await fetch(
+      `${BASE_URL}/project-master/financial-summary/${projectId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data = await res.json();
+
+    if (data.success) {
+      setFinancialSummary(data.data);
+    }
+  } catch (error) {
+    console.log(error);
+  } finally {
+    setFinancialLoading(false);
+  }
+};
+const formatAmount = (amount) => {
+  return Number(amount || 0).toLocaleString("en-IN");
+};
+useEffect(() => {
+  fetchProject();
+  fetchBills();
+  fetchFinancialSummary();
+}, [projectId]);
 
   if (loading) return <div className="p-6">Loading...</div>;
 
@@ -91,14 +130,17 @@ export default function ProjectDetailPage() {
           <ArrowLeft size={18} />
           Back
         </button>
+        {/*  BOQ IS ADD FURTHER */}
 
-        {/*  Boq Management Page */}
-        <button
+    {/* 
+    
+            <button
           onClick={() => navigate(`/project/${projectId}/boq`)}
           className="px-4 py-2 bg-blue-600 text-white rounded-xl"
         >
           Manage BOQ
         </button>
+    */}
 
         {/* 🧾 PROJECT SUMMARY */}
         <div className="bg-white rounded-3xl shadow-sm p-6 mb-6 border">
@@ -139,6 +181,7 @@ export default function ProjectDetailPage() {
               />
             </div>
           </div>
+          
         </div>
 
         {/* 📂 PO FILE SECTION */}
@@ -147,6 +190,9 @@ export default function ProjectDetailPage() {
             <FileText size={20} />
             PO File
           </h2>
+
+              {/*  Boq Management Page */}
+
 
           {project.poFile ? (
             <div className="flex gap-4">
@@ -174,6 +220,40 @@ export default function ProjectDetailPage() {
 
           {/* Later: Add Upload Modal Button */}
         </div>
+
+        {/* 💰 FINANCIAL SUMMARY */}
+<div className="bg-white rounded-3xl shadow-sm p-6 mb-6 border">
+  <div className="flex items-center justify-between mb-5">
+    <h2 className="text-xl font-semibold">Project Financial Summary</h2>
+
+    {financialLoading && (
+      <span className="text-sm text-gray-500">Updating...</span>
+    )}
+  </div>
+
+  <div className="grid md:grid-cols-4 gap-5">
+    <SummaryCard title="Work Order Value" value={financialSummary?.workOrderValue} />
+    <SummaryCard title="Bill Raised" value={financialSummary?.totalBillRaised} color="text-blue-700" />
+    <SummaryCard title="Amount Received" value={financialSummary?.totalReceived} color="text-green-700" />
+    <SummaryCard title="Pending Payment" value={financialSummary?.pendingPayment} color="text-red-700" />
+    <SummaryCard title="Project Expense" value={financialSummary?.totalExpense} color="text-orange-700" />
+    <SummaryCard title="Approx Balance" value={financialSummary?.approxBalance} color="text-purple-700" />
+
+    <div className="bg-slate-50 rounded-2xl p-5 border">
+      <p className="text-gray-500">Total Bills</p>
+      <h2 className="text-2xl font-bold mt-2">
+        {financialSummary?.totalBills || 0}
+      </h2>
+    </div>
+
+    <div className="bg-red-50 rounded-2xl p-5 border border-red-100">
+      <p className="text-gray-500">Pending Bill Copies</p>
+      <h2 className="text-2xl font-bold mt-2 text-red-700">
+        {pendingBills || 0}
+      </h2>
+    </div>
+  </div>
+</div>
 
         {/* 💰 BILLING SECTION */}
         <div className="bg-white rounded-3xl shadow-sm p-6 border">
@@ -291,6 +371,21 @@ export default function ProjectDetailPage() {
 
 
       />
+    </div>
+  );
+}
+
+function SummaryCard({ title, value, color = "text-gray-900" }) {
+  const formatAmount = (amount) => {
+    return Number(amount || 0).toLocaleString("en-IN");
+  };
+
+  return (
+    <div className="bg-slate-50 rounded-2xl p-5 border hover:shadow-md transition">
+      <p className="text-gray-500">{title}</p>
+      <h2 className={`text-2xl font-bold mt-2 ${color}`}>
+        ₹ {formatAmount(value)}
+      </h2>
     </div>
   );
 }

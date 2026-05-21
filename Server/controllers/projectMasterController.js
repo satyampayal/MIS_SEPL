@@ -534,7 +534,7 @@ exports.getProjectFinancialSummary = async (req, res) => {
 
     const totalExpense = expenses[0]?.totalExpense || 0;
 
-    const workOrderValue = Number(project.workOrderValue || 0);
+    const workOrderValue = Number(project.orderAmount || 0);
 
     const approxBalance = totalReceived - totalExpense;
 

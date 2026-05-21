@@ -25,6 +25,7 @@ import BOQManagementPage from './boq/BOQManagementPage'
 import BOQDetailPage from './boq/BOQDetailPage'
 import PartyListPage from './Party/PartyListPage'
 import ProjectSpendingSurveillancePage from './TaxInvoicePage/ProjectSpendingSurveillancePage'
+import MaterialMovementHistoryPage from './MaterialHistory/MaterialMovementHistoryPag'
 function App() {
   const { taxInvoiceId } = useParams();
 
@@ -143,7 +144,19 @@ function App() {
           </ProtectedRoute>
         }
       />
-
+  <Route
+          path="/material-movement/history"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "Store Manager",
+              "MIS User"
+            ]}
+          >
+            <MaterialMovementHistoryPage/>
+          </ProtectedRoute>
+        }
+      />
 
 
       {/* DPR */}

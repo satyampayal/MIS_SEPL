@@ -20,6 +20,7 @@ const userRouter = require("./Routes/userRoutes");
 const taskRouter = require("./Routes/taskRoutes");
 const boqRouter=require('./Routes/boqRoutes')
 const partyRouter=require('./Routes/partyMasterRoutes')
+const materialMovementRoutes=require('./Routes/materialMovementRoutes')
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -62,6 +63,9 @@ app.use('/store-master',storeMasterRouter)
 app.use('/dpr',dprRouter);
 // Boq Routes
 app.use('/boq',boqRouter);
+
+// Material Movement Routes
+app.use("/material-movement", materialMovementRoutes);
 app.get("/", (req, res) => {
   res.send("Server Running...");
 });
