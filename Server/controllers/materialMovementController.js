@@ -1,5 +1,5 @@
 const XLSX = require("xlsx");
-const MaterialMovement = require("../model/MaterialMovement");
+const MaterialMovement = require("../model/materialMovement");
 
 const cleanString = (value) => {
   if (value === undefined || value === null) return "";
