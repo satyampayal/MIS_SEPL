@@ -345,7 +345,7 @@ export default function ModernDashboardLandingPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-6 items-center justify-between">
           <div className="flex items-center gap-8">
             <div className="text-xl font-bold text-blue-600">
-              Material Register
+              Sachin Electrical Pvt. Ltd.
             </div>
 
             <nav className="flex flex-wrap gap-6 text-sm font-medium text-slate-700">

@@ -8,11 +8,11 @@ const {
   getItemHistory,
 } = require("../controllers/materialMovementController");
 
-const router = express.Router();
+const materialMovementRouter = express.Router();
 
-router.post("/create", createMaterialMovement);
-router.post("/bulk-upload", uploadExcel.single("file"), bulkUploadMaterialMovement);
-router.get("/history", getMaterialHistory);
-router.get("/item-history", getItemHistory);
+materialMovementRouter.post("/create", createMaterialMovement);
+materialMovementRouter.post("/bulk-upload", uploadExcel.single("file"), bulkUploadMaterialMovement);
+materialMovementRouter.get("/history", getMaterialHistory);
+materialMovementRouter.get("/item-history", getItemHistory);
 
-module.exports = router;
+module.exports = materialMovementRouter;
