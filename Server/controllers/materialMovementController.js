@@ -1,6 +1,140 @@
 const XLSX = require("xlsx");
 const MaterialMovement = require("../model/materialMovement");
 
+const normalizeProjectName = (value) => {
+  if (value === undefined || value === null) return "";
+
+  const text = String(value).trim();
+
+  if (!text || text.toUpperCase() === "NA") {
+    return "";
+  }
+
+  const normalized = text.toLowerCase();
+
+  switch (normalized) {
+
+    case "210 tph nirma":
+    case "nirma":
+    case "210 tph nirma project":
+      return "210_TPH_NIRMA";
+
+    case "bdd chawl tpl":
+    case "bdd chawl":
+      return "TATA_BDD_Chawl";
+
+    case "capacity_noida_opus":
+    case "capacity noida opus":
+      return "CAPACITE_NOIDA_OPUS";
+
+    case "dfccil project":
+    case "dfccil":
+      return "DFCCIL_Project";
+
+    case "ele gmbdba project":
+      return "SPCPL_MUMBAI";
+
+    case "electrical work sau_new delhi":
+    case "electrical work sau":
+      return "SAU_DELHI";
+
+    case "jpwipl project":
+    case "jpwipl":
+      return "JPW SHALIMAR";
+
+    case "jucso tmh g+6":
+      return "TS_JUCSO";
+
+    case "jupalco kathua":
+      return "JUPALCO NEW CASTER";
+
+    case "l&t kota":
+      return "LNT_CFCL_KOTA";
+
+    case "lighting pole work hmm bawal":
+      return "BAWL_Project";
+
+    case "m3m sec - 111 project":
+    case "m3m sec - 111":
+      return "M3M_CROWN_111";
+
+    case "m3m sec - 67 project":
+    case "m3m sec - 67":
+      return "M3M_MERLIN_OPUS";
+
+    case "mhs pkg.b5 adani krishnapatnam":
+      return "TKIL_KRISHNAPATNAM";
+
+    case "microsoft tpl":
+      return "Microsoft TPL";
+
+    case "returnable material":
+      return "Returnable Material";
+
+    case "rlda_dra_adi project":
+      return "RLDA_DRA_ADI";
+
+    case "shapoorji leh":
+      return "SPCPL_Leh Airport";
+
+    default:
+      return text;
+  }
+};
+
+const normalizeCompanyName = (value) => {
+  if (value === undefined || value === null) return "";
+
+  const text = String(value).trim();
+
+  if (!text || text.toUpperCase() === "NA") {
+    return "";
+  }
+
+  const normalized = text.toUpperCase();
+
+  switch (normalized) {
+    case "SACHIN ELECTRICAL PRIVATE LIMITED":
+    case "SACHIN ELECTRICAL PVT LTD":
+    case "SACHIN ELECTRICAL PVT. LTD.":
+    case "SACHIN ELECTRICAL":
+      return "SEPL";
+
+    case "SACHIN POWER PROJECTS PRIVATE LIMITED":
+    case "SACHIN POWER PROJECT PRIVATE LIMITED":
+    case "SACHIN POWER PROJECTS PVT LTD":
+    case "SACHIN POWER PROJECTS PVT. LTD.":
+      return "SPPPL";
+
+    default:
+      return text;
+  }
+};
+
+
+const normalizeInOut = (value) => {
+  if (value === undefined || value === null) return "";
+
+  const text = String(value).trim();
+
+  if (!text || text.toUpperCase() === "NA") {
+    return "";
+  }
+
+  const normalized = text.toUpperCase();
+
+  switch (normalized) {
+    case "IN":
+      return "In";
+
+    case "OUT":
+      return "Out";
+
+    default:
+      return text;
+  }
+};
+
 const cleanString = (value) => {
   if (value === undefined || value === null) return "";
   const text = String(value).trim();
@@ -54,9 +188,9 @@ exports.bulkUploadMaterialMovement = async (req, res) => {
     }
 
     // Buffer to uplaod Excel 
-const workbook = XLSX.read(req.file.buffer, {
-  type: "buffer",
-});
+    const workbook = XLSX.read(req.file.buffer, {
+      type: "buffer",
+    });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
 
@@ -77,10 +211,10 @@ const workbook = XLSX.read(req.file.buffer, {
       .map((row) => ({
         itemName: cleanString(
           row["Item Name"] ||
-            row["Material Description"] ||
-            row["Material Discription"]
+          row["Material Description"] ||
+          row["Material Discription"]
         ),
-      
+
         uom: cleanString(row["UOM"]),
         quantity: cleanNumber(row["QTY"] || row["Qty"] || row["Quantity"]),
 
@@ -95,7 +229,9 @@ const workbook = XLSX.read(req.file.buffer, {
 
         materialInwardFor: cleanString(row["Material Inward For"]),
 
-        projectName: cleanString(row["Name of project"] || row["Project Name"]),
+        projectName: normalizeProjectName(
+          row["Name of project"] || row["Project Name"]
+        ),
         projectCode: cleanString(row["Project Code"]),
 
         documentNo: cleanString(row["Document No"]),
@@ -116,7 +252,9 @@ const workbook = XLSX.read(req.file.buffer, {
 
         remarks: cleanString(row["Remarks"]),
 
-        companyName: cleanString(row["Name of Company"] || row["Company Name"]),
+        companyName: normalizeCompanyName(
+          row["Name of Company"] || row["Company Name"]
+        ),
         brandMake: cleanString(row["Brand / Make"] || row["Brand Make"]),
         model: cleanString(row["Model"]),
         category: cleanString(row["Category"]),
@@ -142,7 +280,7 @@ const workbook = XLSX.read(req.file.buffer, {
 
         datePunchTime: cleanDate(row["Date Punch Time"]) || new Date(),
 
-        inOut: cleanString(row["In / Out"] || row["IN/OUT"]),
+        inOut: normalizeInOut(row["In / Out"] || row["IN/OUT"]),
 
         sourceModule: "ExcelUpload",
         createdBy: req.user?._id || null,
@@ -226,9 +364,37 @@ exports.getMaterialHistory = async (req, res) => {
       .sort({ documentDate: -1, createdAt: -1 })
       .limit(500);
 
+    const summary = await MaterialMovement.aggregate([
+      {
+        $match: filter
+      },
+      {
+        $group: {
+          _id: null,
+
+          totalRecords: {
+            $sum: 1
+          },
+
+          totalQuantity: {
+            $sum: "$quantity"
+          },
+
+          totalAmount: {
+            $sum: "$amount"
+          }
+        }
+      }
+    ]);
+
     return res.status(200).json({
       success: true,
       count: data.length,
+      summary: summary[0] || {
+        totalRecords: 0,
+        totalQuantity: 0,
+        totalAmount: 0
+      },
       data,
     });
   } catch (error) {
@@ -277,6 +443,68 @@ exports.getItemHistory = async (req, res) => {
     });
   } catch (error) {
     console.log("Item History Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+exports.deleteMaterialMovementByTime = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: "from and to time are required",
+      });
+    }
+
+    const result = await MaterialMovement.deleteMany({
+      createdAt: {
+        $gte: new Date(from),
+        $lte: new Date(to),
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} records deleted successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+exports.previewMaterialMovementByTime = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: "from and to time are required",
+      });
+    }
+
+    const records = await MaterialMovement.find({
+      createdAt: {
+        $gte: new Date(from),
+        $lte: new Date(to),
+      },
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: records.length,
+      data: records,
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: error.message,
