@@ -71,6 +71,8 @@ const workbook = XLSX.read(req.file.buffer, {
       });
     }
 
+    console.log(rows[0])
+
     const preparedData = rows
       .map((row) => ({
         itemName: cleanString(
@@ -78,7 +80,7 @@ const workbook = XLSX.read(req.file.buffer, {
             row["Material Description"] ||
             row["Material Discription"]
         ),
-
+      
         uom: cleanString(row["UOM"]),
         quantity: cleanNumber(row["QTY"] || row["Qty"] || row["Quantity"]),
 

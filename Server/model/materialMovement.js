@@ -15,7 +15,7 @@ const materialMovementSchema = new mongoose.Schema(
     storeItemCode: { type: String, default: "", trim: true, index: true },
     typeOfTransit: {
       type: String,
-      enum: ["In", "Out", "Return", "Transfer", ""],
+      enum: ["In", "Out", "Return", "Transfer", "DDC","DC","LPN","MRN"],
       default: "",
     },
 
