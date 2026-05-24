@@ -10,12 +10,40 @@ import {
 import { useNavigate } from "react-router-dom";
 import BASE_URL from "../../config/api";
 import toast from "react-hot-toast";
+import { AuthContext } from "../Context/AuthContext";
+import { useContext } from "react";
+import UploadMaterialMovementExcelModal from "./UploadMaterialMovementExcelModal";
+import ViewEditMaterialMovementModal from "./ViewEditMaterialMovementModal";
 
 export default function MaterialMovementHistoryPage() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+
+  const [summary, setSummary] = useState({
+    totalQuantity: 0,
+    totalAmount: 0,
+    inCount: 0,
+    outCount: 0,
+  });
+
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalRecords: 0,
+    limit: 20,
+  });
 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
+  // const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = user?.role || localStorage.getItem("role");
+
+  const canUpload = role === "Super Admin";
+  const canAction = ["Super Admin", "Admin"].includes(role);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [modalMode, setModalMode] = useState("view");
+  const [viewModalOpen, setViewModalOpen] = useState(false);
 
   const [filters, setFilters] = useState({
     itemName: "",
@@ -46,11 +74,13 @@ export default function MaterialMovementHistoryPage() {
       setLoading(true);
 
       const query = new URLSearchParams();
+      query.append("page", pagination.currentPage);
+      query.append("limit", pagination.limit);
 
       Object.entries(filters).forEach(([key, value]) => {
         if (value) query.append(key, value);
       });
-
+      // toast.loading("fetch records")
       const res = await fetch(
         `${BASE_URL}/material-movement/history?${query.toString()}`
       );
@@ -59,6 +89,9 @@ export default function MaterialMovementHistoryPage() {
 
       if (data.success) {
         setRecords(data.data || []);
+        setSummary(data.summary || {});
+        setPagination(data.pagination || pagination);
+
       } else {
         toast.error(data.message || "Failed to load history");
       }
@@ -72,7 +105,7 @@ export default function MaterialMovementHistoryPage() {
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [pagination.currentPage, pagination.limit]);
 
   const handleChange = (e) => {
     setFilters((prev) => ({
@@ -96,8 +129,68 @@ export default function MaterialMovementHistoryPage() {
     setTimeout(fetchHistory, 100);
   };
 
+ const exportExcel = async () => {
+  const loadingToast = toast.loading("Exporting Excel...");
+
+  try {
+    const query = new URLSearchParams();
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) query.append(key, value);
+    });
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `${BASE_URL}/material-movement/export-excel?${query.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Export failed");
+    }
+
+    const blob = await res.blob();
+
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `MaterialMovementHistory-${new Date()
+      .toISOString()
+      .slice(0, 10)}.xlsx`;
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Excel exported successfully");
+  } catch (error) {
+    toast.error(error?.message || "Export failed");
+  } finally {
+    toast.dismiss(loadingToast);
+  }
+};
+  const openView = (record) => {
+    setSelectedRecord(record);
+    setModalMode("view");
+    setViewModalOpen(true);
+  };
+
+  const openEdit = (record) => {
+    setSelectedRecord(record);
+    setModalMode("edit");
+    setViewModalOpen(true);
+  };
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 p-6 overflow-auto">
       <div className="max-w-7xl mx-auto">
 
         <div className="bg-white rounded-3xl shadow p-6 mb-6 border">
@@ -113,40 +206,67 @@ export default function MaterialMovementHistoryPage() {
           <p className="text-gray-500 mt-2">
             Search item history across projects, vendors, challans and invoices.
           </p>
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={exportExcel}
+              className="bg-green-600 text-white px-5 py-3 rounded-xl"
+            >
+              Export Excel
+            </button>
+
+            {canUpload && (
+              <button
+                onClick={() => setUploadModalOpen(true)}
+                className="bg-purple-600 text-white px-5 py-3 rounded-xl"
+              >
+                Upload Bulk Excel
+              </button>
+            )}
+
+            <button
+              onClick={() => navigate("/material-movement/analytics")}
+              className="bg-indigo-600 text-white px-5 py-3 rounded-xl"
+            >
+              View Reports
+            </button>
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-5 mb-6">
-          <div className="bg-white rounded-3xl p-6 shadow border">
-            <div className="flex justify-between">
-              <div>
-                <p className="text-gray-500">Total Records</p>
-                <h2 className="text-3xl font-bold mt-2">{records.length}</h2>
-              </div>
-              <Package className="text-blue-600" size={38} />
-            </div>
-          </div>
+        <div className="grid md:grid-cols-5 gap-5 mb-6">
+          <StatCard
+            title="Total Records"
+            value={pagination.totalRecords}
+            icon={<Package size={30} />}
+            color="blue"
+          />
 
-          <div className="bg-white rounded-3xl p-6 shadow border">
-            <div className="flex justify-between">
-              <div>
-                <p className="text-gray-500">Total Quantity</p>
-                <h2 className="text-3xl font-bold mt-2">{totalQty}</h2>
-              </div>
-              <Truck className="text-orange-600" size={38} />
-            </div>
-          </div>
+          <StatCard
+            title="Total Quantity"
+            value={summary.totalQuantity || 0}
+            icon={<Truck size={30} />}
+            color="orange"
+          />
 
-          <div className="bg-white rounded-3xl p-6 shadow border">
-            <div className="flex justify-between">
-              <div>
-                <p className="text-gray-500">Total Amount</p>
-                <h2 className="text-3xl font-bold mt-2">
-                  ₹ {formatAmount(totalAmount)}
-                </h2>
-              </div>
-              <IndianRupee className="text-green-600" size={38} />
-            </div>
-          </div>
+          <StatCard
+            title="Total Amount"
+            value={`₹ ${formatAmount(summary.totalAmount)}`}
+            icon={<IndianRupee size={30} />}
+            color="green"
+          />
+
+          <StatCard
+            title="In Records"
+            value={summary.inCount || 0}
+            icon={<Package size={30} />}
+            color="emerald"
+          />
+
+          <StatCard
+            title="Out Records"
+            value={summary.outCount || 0}
+            icon={<Truck size={30} />}
+            color="red"
+          />
         </div>
 
         <div className="bg-white rounded-3xl shadow p-6 mb-6 border">
@@ -266,6 +386,7 @@ export default function MaterialMovementHistoryPage() {
                     <th className="p-4 text-left">Invoice</th>
                     <th className="p-4 text-left">In/Out</th>
                     <th className="p-4 text-left">Amount</th>
+                    {canAction && <th className="p-4 text-left">Actions</th>}
                   </tr>
                 </thead>
 
@@ -288,11 +409,10 @@ export default function MaterialMovementHistoryPage() {
 
                       <td className="p-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            item.inOut === "In"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${item.inOut === "In"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                            }`}
                         >
                           {item.inOut || "-"}
                         </span>
@@ -301,6 +421,26 @@ export default function MaterialMovementHistoryPage() {
                       <td className="p-4 font-semibold">
                         ₹ {formatAmount(item.amount)}
                       </td>
+
+                      {canAction && (
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openView(item)}
+                              className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700"
+                            >
+                              View
+                            </button>
+
+                            <button
+                              onClick={() => openEdit(item)}
+                              className="px-3 py-1 rounded-lg bg-green-50 text-green-700"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -309,6 +449,98 @@ export default function MaterialMovementHistoryPage() {
           )}
         </div>
 
+      </div>
+      <div className="flex items-center justify-between p-4 border-t">
+        <select
+          value={pagination.limit}
+          onChange={(e) => {
+            setPagination((prev) => ({
+              ...prev,
+              limit: Number(e.target.value),
+              currentPage: 1,
+            }));
+          }}
+          className="border px-3 py-2 rounded-xl"
+        >
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+          <option value={100}>100</option>
+        </select>
+
+        <div className="flex items-center gap-3">
+          <button
+            disabled={pagination.currentPage === 1}
+            onClick={() =>
+              setPagination((prev) => ({
+                ...prev,
+                currentPage: prev.currentPage - 1,
+              }))
+            }
+            className="px-4 py-2 border rounded-xl disabled:opacity-50"
+          >
+            Previous
+          </button>
+
+          <span>
+            Page {pagination.currentPage} of {pagination.totalPages}
+          </span>
+
+          <button
+            disabled={pagination.currentPage === pagination.totalPages}
+            onClick={() =>
+              setPagination((prev) => ({
+                ...prev,
+                currentPage: prev.currentPage + 1,
+              }))
+            }
+            className="px-4 py-2 border rounded-xl disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+      <UploadMaterialMovementExcelModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        refreshData={fetchHistory}
+      />
+
+      {/*  View, Edit  */}
+      <ViewEditMaterialMovementModal
+        isOpen={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        selectedRecord={selectedRecord}
+        mode={modalMode}
+        refreshData={fetchHistory}
+      />
+    </div>
+  );
+}
+
+
+
+function StatCard({ title, value, icon, color = "blue", subtitle }) {
+  const colorMap = {
+    blue: "from-blue-500 to-blue-700",
+    green: "from-green-500 to-green-700",
+    orange: "from-orange-500 to-orange-700",
+    red: "from-red-500 to-red-700",
+    purple: "from-purple-500 to-purple-700",
+    emerald: "from-emerald-500 to-emerald-700",
+  };
+
+  return (
+    <div className={`rounded-3xl p-6 text-white shadow-lg bg-gradient-to-br ${colorMap[color]}`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-white/80 text-sm">{title}</p>
+          <h2 className="text-3xl font-bold mt-2">{value}</h2>
+          {subtitle && <p className="text-white/70 text-xs mt-2">{subtitle}</p>}
+        </div>
+
+        <div className="bg-white/20 p-3 rounded-2xl">
+          {icon}
+        </div>
       </div>
     </div>
   );

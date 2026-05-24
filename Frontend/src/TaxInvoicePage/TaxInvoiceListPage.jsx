@@ -283,6 +283,13 @@ export default function TaxInvoiceListPage() {
             <div className="flex gap-2">
 
               <button
+                onClick={() => navigate("/analytics/tax-invoice")}
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+              >
+                View Tax Invoice Analytics
+              </button>
+
+              <button
                 onClick={() => navigate("/tax-invoice/project-surveillance")}
                 className="flex items-center gap-2 bg-purple-600 text-white px-5 py-3 rounded-xl hover:bg-purple-700 transition"
               >

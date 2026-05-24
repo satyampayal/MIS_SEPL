@@ -2,11 +2,10 @@ const mongoose = require("mongoose");
 
 const taxInvoiceRegisterSchema = new mongoose.Schema(
   {
-    invoiceDate: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+invoiceDate: {
+  type: Date,
+  required: true,
+},
 
     invoiceNumber: {
       type: String,
@@ -16,7 +15,7 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
     },
 
     invoiceAmount: {
-      type: String,
+      type: Number,
       required: true,
     },
 
@@ -49,11 +48,10 @@ const taxInvoiceRegisterSchema = new mongoose.Schema(
       trim: true,
     },
 
-    challanDate: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+ challanDate: {
+  type: Date,
+  default: null,
+},
 
     deliveryStatus: {
       type: String,

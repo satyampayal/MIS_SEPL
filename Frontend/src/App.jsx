@@ -26,6 +26,8 @@ import BOQDetailPage from './boq/BOQDetailPage'
 import PartyListPage from './Party/PartyListPage'
 import ProjectSpendingSurveillancePage from './TaxInvoicePage/ProjectSpendingSurveillancePage'
 import MaterialMovementHistoryPage from './MaterialHistory/MaterialMovementHistoryPag'
+import MaterialMovementAnalyticsPage from './MaterialHistory/MaterialMovementAnalyticsPage'
+import TaxInvoiceAnalyticsPage from './pages/Analytics/TaxInvoiceAnalyticsPage'
 function App() {
   const { taxInvoiceId } = useParams();
 
@@ -97,8 +99,8 @@ function App() {
         }
       />
 
-  <Route
-         path="/tax-invoice/project-surveillance"
+      <Route
+        path="/tax-invoice/project-surveillance"
         element={
           <ProtectedRoute
             allowedRoles={[
@@ -110,7 +112,20 @@ function App() {
           </ProtectedRoute>
         }
       />
-
+      {/* ANALYTICAL  */}
+       <Route
+       path="/analytics/tax-invoice" 
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Accountant"
+            ]}
+          >
+            <TaxInvoiceAnalyticsPage />
+          </ProtectedRoute>
+        }
+      />
 
 
       {/* STORE */}
@@ -144,8 +159,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-  <Route
-          path="/material-movement/history"
+      <Route
+        path="/material-movement/history"
         element={
           <ProtectedRoute
             allowedRoles={[
@@ -153,9 +168,28 @@ function App() {
               "MIS User"
             ]}
           >
-            <MaterialMovementHistoryPage/>
+            <MaterialMovementHistoryPage />
           </ProtectedRoute>
         }
+      />
+
+      <Route
+        path="/material-movement/analytics"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "Store Manager",
+              "MIS User"
+            ]}
+          >
+            <MaterialMovementAnalyticsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/material-movement/analytics"
+        element={<MaterialMovementAnalyticsPage />}
       />
 
 

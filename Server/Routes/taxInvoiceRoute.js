@@ -9,7 +9,9 @@ const { getAllTaxInvoie,
   filterTaxInvoices,
   getProjectWiseSpending,
   getPendingChallans,
-  getVendorWiseSpending
+  getVendorWiseSpending,
+  fixInvoiceAndChallanDates,
+  fixInvoiceAmounts
   } = require("../controllers/taxInvoiceController");
 const upload = require("../config/multer");
 const taxInvoiceRouter = express.Router();
@@ -36,5 +38,8 @@ taxInvoiceRouter.get(
   "/vendor-wise-spending",
   getVendorWiseSpending
 );
+
+// Temp
+taxInvoiceRouter.get("/fix-invoice-amounts", fixInvoiceAmounts);
 
 module.exports=taxInvoiceRouter;

@@ -616,3 +616,63 @@ exports.getVendorWiseSpending = async (req, res) => {
     });
   }
 };
+
+
+
+// // Update old string dates into proper Date format
+// Convert old string invoiceAmount into Number format
+exports.fixInvoiceAmounts = async (req, res) => {
+  try {
+    const records = await TaxInvoice.collection
+      .find({
+        invoiceAmount: { $type: "string" },
+      })
+      .toArray();
+
+    const bulkOps = [];
+
+    for (const item of records) {
+      if (!item.invoiceAmount) continue;
+
+      const cleanAmount = Number(
+        String(item.invoiceAmount)
+          .replace(/₹/g, "")
+          .replace(/,/g, "")
+          .trim()
+      );
+
+      if (!isNaN(cleanAmount)) {
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: item._id },
+            update: {
+              $set: {
+                invoiceAmount: cleanAmount,
+              },
+            },
+          },
+        });
+      }
+    }
+
+    if (bulkOps.length > 0) {
+      await TaxInvoice.collection.bulkWrite(bulkOps);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Invoice amounts converted to Number successfully",
+      matchedRecords: records.length,
+      updatedRecords: bulkOps.length,
+    });
+
+  } catch (error) {
+    console.log("Invoice amount conversion error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Invoice amount conversion failed",
+      error: error.message,
+    });
+  }
+};
