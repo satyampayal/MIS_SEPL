@@ -22,6 +22,7 @@ import {
     CartesianGrid,
 } from "recharts";
 import BASE_URL from "../../../config/api";
+import CountUp from "react-countup";
 
 export default function TaxInvoiceAnalyticsPage() {
     const [summary, setSummary] = useState(null);
@@ -31,6 +32,7 @@ export default function TaxInvoiceAnalyticsPage() {
     const [deliveryStatus, setDeliveryStatus] = useState([]);
     const [differenceAlerts, setDifferenceAlerts] = useState([]);
     const [loading, setLoading] = useState(false);
+  
 
     const formatAmount = (value) => {
         if (!value) return "₹0";
@@ -156,20 +158,33 @@ export default function TaxInvoiceAnalyticsPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-white">{card.title}</p>
-                                    <h2 className="mt-2 text-2xl font-bold text-white">
-                                        {card.value}
+                                    <h2
+                                        className="
+                                        text-3xl
+                                        font-black
+                                        bg-gradient-to-r
+                                        from-cyan-400
+                                        to-blue-500
+                                        bg-clip-text
+                                        text-transparent
+                                        mt-2
+                                        "
+                                    >
+                                      
+                                        {    card.value}
+                                        
                                     </h2>
                                 </div>
 
                                 <div className="
-rounded-2xl
-bg-gradient-to-br
-from-cyan-500
-to-blue-600
-p-3
-shadow-lg
-shadow-cyan-500/30
-">
+                                              rounded-2xl
+                                             bg-gradient-to-br
+                                             from-cyan-500                                             
+                                             to-blue-600
+                                             p-3
+                                             shadow-lg
+                                             shadow-cyan-500/30">
+
                                     <Icon className="text-white" size={26} />
                                 </div>
                             </div>
@@ -218,61 +233,113 @@ shadow-cyan-500/30
                 </div>
             </div>
 
+
             {/* Vendor + Project */}
             <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                    <h2 className="mb-4 text-xl font-bold text-slate-800">
+                {/* Top Vendors */}
+                <div className="rounded-2xl bg-white/5 backdrop-blur-xl p-5 shadow-lg border border-white/10">
+                    <h2 className="mb-4 text-xl font-bold text-white">
                         Top Vendors
                     </h2>
 
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={vendorAnalysis}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="vendorName" />
-                                <YAxis />
-                                <Tooltip formatter={(value) => formatAmount(value)} />
-                                    <Bar
-                                    dataKey="totalAmount"
-                                    radius={[10, 10, 0, 0]}
-                                    fill="url(#vendorGradient)"
-                                />
-
                                 <defs>
                                     <linearGradient id="vendorGradient" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stopColor="#8B5CF6" />
                                         <stop offset="100%" stopColor="#06B6D4" />
                                     </linearGradient>
                                 </defs>
+
+                                <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                                <XAxis
+                                    dataKey="vendorName"
+                                    stroke="#CBD5E1"
+                                    tick={{ fill: "#CBD5E1", fontSize: 12 }}
+                                />
+
+                                <YAxis
+                                    stroke="#CBD5E1"
+                                    tick={{ fill: "#CBD5E1", fontSize: 12 }}
+                                />
+                                <Tooltip
+                                    formatter={(value) => formatAmount(value)}
+                                    cursor={{ fill: "rgba(255,255,255,0.08)" }}
+                                    contentStyle={{
+                                        backgroundColor: "#0F172A",
+                                        border: "1px solid rgba(255,255,255,0.15)",
+                                        borderRadius: "14px",
+                                        color: "#fff",
+                                    }}
+                                    labelStyle={{
+                                        color: "#E2E8F0",
+                                        fontWeight: "bold",
+                                    }}
+                                    itemStyle={{
+                                        color: "#67E8F9",
+                                    }}
+                                />
+
+                                <Bar
+                                    dataKey="totalAmount"
+                                    radius={[10, 10, 0, 0]}
+                                    fill="url(#vendorGradient)"
+                                />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                    <h2 className="mb-4 text-xl font-bold text-slate-900">
+                {/* Project/Site Analysis */}
+                <div className="rounded-2xl bg-white/5 backdrop-blur-xl p-5 shadow-lg border border-white/10">
+                    <h2 className="mb-4 text-xl font-bold text-white">
                         Project/Site Analysis
                     </h2>
 
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={projectAnalysis}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="projectSite" />
-                                <YAxis />
-                                <Tooltip formatter={(value) => formatAmount(value)} />
+                                <defs>
+                                    <linearGradient id="projectGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#F59E0B" />
+                                        <stop offset="100%" stopColor="#EC4899" />
+                                    </linearGradient>
+                                </defs>
+
+                                <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                                <XAxis
+                                    dataKey="projectSite"
+                                    stroke="#CBD5E1"
+                                    tick={{ fill: "#CBD5E1", fontSize: 12 }}
+                                />
+                                <YAxis
+                                    stroke="#CBD5E1"
+                                    tick={{ fill: "#CBD5E1", fontSize: 12 }}
+                                />
+                                <Tooltip
+                                    formatter={(value) => formatAmount(value)}
+                                    cursor={{ fill: "rgba(255,255,255,0.08)" }}
+                                    contentStyle={{
+                                        backgroundColor: "#0F172A",
+                                        border: "1px solid rgba(255,255,255,0.15)",
+                                        borderRadius: "14px",
+                                        color: "#fff",
+                                    }}
+                                    labelStyle={{
+                                        color: "#E2E8F0",
+                                        fontWeight: "bold",
+                                    }}
+                                    itemStyle={{
+                                        color: "#67E8F9",
+                                    }}
+                                />
+
                                 <Bar
                                     dataKey="totalAmount"
                                     radius={[10, 10, 0, 0]}
-                                    fill="url(#vendorGradient)"
+                                    fill="url(#projectGradient)"
                                 />
-
-                                <defs>
-                                    <linearGradient id="vendorGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#8B5CF6" />
-                                        <stop offset="100%" stopColor="#06B6D4" />
-                                    </linearGradient>
-                                </defs>
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

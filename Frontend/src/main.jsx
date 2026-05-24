@@ -6,10 +6,12 @@ import {BrowserRouter} from "react-router-dom"
 import {Toaster}  from 'react-hot-toast'
 import AuthProvider from './Context/AuthContext.jsx'
 import { TaskProvider } from './Context/TaskContext.jsx'
+import { DashboardProvider } from './Context/DashboardContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
+      <DashboardProvider>
       <TaskProvider>
     <BrowserRouter>
       <Toaster
@@ -29,6 +31,7 @@ createRoot(document.getElementById('root')).render(
     <App />
     </BrowserRouter>
     </TaskProvider>
+    </DashboardProvider>
     </AuthProvider>
     
   </StrictMode>,

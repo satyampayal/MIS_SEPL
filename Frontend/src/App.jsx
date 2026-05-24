@@ -28,18 +28,39 @@ import ProjectSpendingSurveillancePage from './TaxInvoicePage/ProjectSpendingSur
 import MaterialMovementHistoryPage from './MaterialHistory/MaterialMovementHistoryPag'
 import MaterialMovementAnalyticsPage from './MaterialHistory/MaterialMovementAnalyticsPage'
 import TaxInvoiceAnalyticsPage from './pages/Analytics/TaxInvoiceAnalyticsPage'
+
+import MainLayout from './layout/MainLayOut'
+import SuperAdminDashboard from './pages/Dashboard/SuperAdminDashboard'
+
 function App() {
   const { taxInvoiceId } = useParams();
 
   return (
+    
     <Routes>
 
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
 
+{/* Try New Layout */}
+<Route
+  element={
+    <ProtectedRoute>
+      <MainLayout />
+    </ProtectedRoute>
+  }
+>
+  <Route
+    path="/"
+    element={
+      <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+        <SuperAdminDashboard />
+      </ProtectedRoute>
+    }
+  />
+</Route>
 
-
-      {/* Dashboard */}
+      {/* Dashboard
       <Route
         path="/"
         element={
@@ -47,7 +68,7 @@ function App() {
             <ModernDashboardLandingPage />
           </ProtectedRoute>
         }
-      />
+      /> */}
 
 
 
@@ -185,11 +206,6 @@ function App() {
             <MaterialMovementAnalyticsPage />
           </ProtectedRoute>
         }
-      />
-
-      <Route
-        path="/material-movement/analytics"
-        element={<MaterialMovementAnalyticsPage />}
       />
 
 
