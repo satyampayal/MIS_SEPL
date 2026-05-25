@@ -29,7 +29,7 @@ import MaterialMovementHistoryPage from './MaterialHistory/MaterialMovementHisto
 import MaterialMovementAnalyticsPage from './MaterialHistory/MaterialMovementAnalyticsPage'
 import TaxInvoiceAnalyticsPage from './pages/Analytics/TaxInvoiceAnalyticsPage'
 
-import MainLayout from './layout/MainLayOut'
+import MainLayout from './layout/MainLayout'
 import SuperAdminDashboard from './pages/Dashboard/SuperAdminDashboard'
 
 function App() {
