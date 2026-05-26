@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useMemo, useEffect } from "react";
 import {
     LayoutDashboard,
     Building2,
@@ -9,18 +9,40 @@ import {
     Bell,
     Search,
     Menu,
-    Clipboard
+    Clipboard,
+    ClipboardList,
+    BarChart3
 } from "lucide-react";
 import { Outlet, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { AuthContext } from "../Context/AuthContext";
+import { useTasks } from "../Context/TaskContext";
+import TaskListModal from "../pages/Task/TaskListModal";
+import AddTaskModal from "../pages/Task/AddTaskModal";
+import BASE_URL from "../../config/api";
+import axios from "axios";
 
 export default function MainLayout() {
     const navigate = useNavigate();
     const { user, setUser } = useContext(AuthContext);
+    const { myTasks, fetchMyTasks } = useTasks();
+
     const [menuOpen, setMenuOpen] = useState(false);
 
+    const [taskModalOpen, setTaskModalOpen] = useState(false);
+    const [taskModalType, setTaskModalType] = useState("tasks");
+
+    const [addTaskOpen, setAddTaskOpen] = useState(false);
+    const [users, setUsers] = useState([]);
+
+    const [projects, setProjects] = useState([]);
+
     const isAdmin = user?.role === "Super Admin" || user?.role === "Admin";
+    const canAssignTask = ["Super Admin", "Admin", "Manager"].includes(
+        user?.role
+    );
+
+
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -38,9 +60,26 @@ export default function MainLayout() {
         { title: "Tax Analytics", icon: FileText, path: "/analytics/tax-invoice", roles: ["MIS User", "Accountant"] },
         { title: "Challan", icon: FileText, path: "/challan", roles: ["MIS User", "Store Manager", "Accountant"] },
         { title: "Material Analytics", icon: Warehouse, path: "/material-movement/analytics", roles: ["Store Manager", "MIS User"] },
+        { title: "Reports", icon: BarChart3, path: '/reports/material-analytics', roles: ["Super Admin", "Admin"] },
         { title: "DPR", icon: FileText, path: "/dpr", roles: ["MIS User", "Site Engineer", "Project Manager"] },
         { title: "Party Master", icon: FileText, path: "/party", roles: ["MIS User", "Site Engineer", "Store Manager", "Accountant", "Project Manager"] },
         { title: "Users", icon: UserCircle, path: "/user/mang", roles: ["Super Admin", "Admin"] },
+        { title: "Task  Management", icon: ClipboardList, path: null, roles: ["Super Admin", "Admin", "Project Manager"] },
+    ];
+
+    const navBar = [
+        // { title: "Dashboard", icon: LayoutDashboard, path: "/new-dashboard", roles: [] },
+        { title: "Projects", icon: Building2, path: "/projects", roles: ["MIS User", "Project Manager", "Site Engineer"] },
+        // { title: "Stores", icon: Warehouse, path: "/store", roles: ["Store Manager", "MIS User"] },
+        { title: "Tax Invoice", icon: FileText, path: "/TaxInvoiceListPage", roles: ["MIS User", "Accountant"] },
+        // { title: "Tax Analytics", icon: FileText, path: "/analytics/tax-invoice", roles: ["MIS User", "Accountant"] },
+        { title: "Challan", icon: FileText, path: "/challan", roles: ["MIS User", "Store Manager", "Accountant"] },
+        { title: "Material Analytics", icon: Warehouse, path: "/material-movement/analytics", roles: ["Store Manager", "MIS User"] },
+        { title: "Reports", icon: BarChart3, path: '/reports/material-analytics', roles: ["Super Admin", "Admin"] }
+        // { title: "DPR", icon: FileText, path: "/dpr", roles: ["MIS User", "Site Engineer", "Project Manager"] },
+        // { title: "Party Master", icon: FileText, path: "/party", roles: ["MIS User", "Site Engineer", "Store Manager", "Accountant", "Project Manager"] },
+        // { title: "Users", icon: UserCircle, path: "/user/mang", roles: ["Super Admin", "Admin"] },
+        // { title: "Task  Management",  icon: ClipboardList,  path: null, roles: ["Super Admin", "Admin", "Project Manager"] },
     ];
 
 
@@ -57,10 +96,97 @@ export default function MainLayout() {
 
     const allowedNavItems = navItems.filter((item) => hasAccess(item.roles));
 
-    console.log("USER ROLE:", user?.role);
-    console.log("ALLOWED MODULES:", allowedNavItems);
+    // console.log("USER ROLE:", user?.role);
+    // console.log("ALLOWED MODULES:", allowedNavItems);
+    const taskStats = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
+        return {
+            pending: myTasks.filter((t) => t.status === "pending"),
+            inProgress: myTasks.filter((t) => t.status === "in_progress"),
+            completed: myTasks.filter((t) => t.status === "completed"),
+            urgent: myTasks.filter(
+                (t) => t.priority === "urgent" && t.status !== "completed"
+            ),
+            overdue: myTasks.filter((t) => {
+                if (!t.dueDate || t.status === "completed") return false;
 
+                const due = new Date(t.dueDate);
+                due.setHours(0, 0, 0, 0);
+
+                return due < today;
+            })
+        };
+    }, [myTasks]);
+
+    const openTaskModal = (type) => {
+        setTaskModalType(type);
+        setTaskModalOpen(true);
+    };
+
+    const getModalTasks = () => {
+        switch (taskModalType) {
+            case "pending":
+                return taskStats.pending;
+
+            case "inProgress":
+                return taskStats.inProgress;
+
+            case "completed":
+                return taskStats.completed;
+
+            case "urgent":
+                return taskStats.urgent;
+
+            case "overdue":
+                return taskStats.overdue;
+
+            default:
+                return myTasks;
+        }
+    };
+    const fetchUsers = async () => {
+        try {
+            const token = localStorage.getItem("token");
+
+            const headers = {
+                Authorization: `Bearer ${token}`,
+            };
+            const res = await axios.get(`${BASE_URL}/user/all`, { headers });
+
+            setUsers(res.data.users || []);
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    const fetchProjects = async () => {
+        try {
+
+            const token = localStorage.getItem("token");
+
+            const headers = {
+                Authorization: `Bearer ${token}`,
+            };
+            const res = await axios.get(`${BASE_URL}/project-master/all`, { headers })
+
+            
+            setProjects(res.data.data || []);
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    useEffect(() => {
+        fetchMyTasks();
+        fetchProjects();
+
+        if (canAssignTask) {
+            fetchUsers();
+
+        }
+    }, []);
     return (
         <div className="min-h-screen bg-[#07111f] text-white relative overflow-hidden">
             {/* Background Glow */}
@@ -134,7 +260,7 @@ export default function MainLayout() {
 
                         {/* Center Nav */}
                         <nav className="hidden xl:flex items-center gap-2 rounded-2xl bg-white/5 border border-white/10 p-2">
-                            {navItems.map((item) => {
+                            {navBar.map((item) => {
                                 const Icon = item.icon;
 
                                 return (
@@ -160,11 +286,24 @@ export default function MainLayout() {
                                 />
                             </div>
 
-                            <button className="relative p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
-                                <Bell size={19} />
-                                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center">
-                                    3
-                                </span>
+                            <button
+                                onClick={() => openTaskModal("tasks")}
+                                className="relative rounded-xl border border-slate-700 bg-slate-900 p-2 text-slate-200 hover:bg-slate-800"
+                            >
+                                <Bell size={20} />
+
+                                {taskStats.pending.length > 0 && (
+                                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
+                                        {taskStats.pending.length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setAddTaskOpen(true)}
+                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                            >
+                                <ClipboardList size={17} />
+                                Add Task
                             </button>
 
                             <div className="hidden sm:block text-right">
@@ -193,6 +332,21 @@ export default function MainLayout() {
                 {/* Page Content */}
                 <main className="px-6 py-6">
                     <Outlet />
+                    <TaskListModal
+                        isOpen={taskModalOpen}
+                        onClose={() => setTaskModalOpen(false)}
+                        tasks={getModalTasks()}
+                        type={taskModalType}
+                    />
+
+
+                    <AddTaskModal
+                        isOpen={addTaskOpen}
+                        onClose={() => setAddTaskOpen(false)}
+                        mode={canAssignTask ? "assign" : "personal"}
+                        users={canAssignTask ? users : null}
+                        projects={projects}
+                    />
                 </main>
             </div>
         </div>

@@ -1,50 +1,57 @@
 // controllers/taskController.js
 const Task = require("../model/Task");
-const User = require("../model/User");
-// const { sendTaskAssignedMail } = require("../services/mailService");
 
-const isAdminRole = (role) => {
-  return ["Super Admin", "Admin", "Project Manager"].includes(role);
-};
-
-// Super Admin / Admin assign task
-exports.createAssignedTask = async (req, res) => {
+// ADMIN: assign task
+exports.assignTask = async (req, res) => {
   try {
-    const { title, description, assignedTo, priority, dueDate } = req.body;
 
-    if (!isAdminRole(req.user.role)) {
-      return res.status(403).json({
+    const {
+      title,
+      description,
+      assignedTo,
+      project,
+      department,
+      priority,
+      dueDate,
+      estimatedHours,
+      reminderDate
+    } = req.body;
+
+    if (!title || !assignedTo || !dueDate) {
+      return res.status(400).json({
         success: false,
-        message: "Only admin can assign tasks"
+        message: "Title, assigned user and due date are required"
       });
     }
+    const canAssign = ["Super Admin", "Admin", "Manager"].includes(req.user.role);
 
-    const user = await User.findById(assignedTo);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Assigned user not found"
-      });
-    }
+if (!canAssign) {
+  return res.status(403).json({
+    success: false,
+    message: "You are not allowed to assign tasks"
+  });
+}
 
     const task = await Task.create({
       title,
       description,
-      assignedTo,
+      taskType: project ? "project" : "assigned",
       assignedBy: req.user._id,
-      taskType: "assigned",
-      priority,
-      dueDate
+      assignedTo,
+      project: project || null,
+      department: department || "Other",
+      priority: priority || "medium",
+      dueDate,
+      estimatedHours: estimatedHours || 0,
+      reminderDate: reminderDate || null,
+      progressUpdates: [
+        {
+          status: "pending",
+          remarks: "Task assigned",
+          updatedBy: req.user._id
+        }
+      ]
     });
-
-    // await sendTaskAssignedMail({
-    //   to: user.email,
-    //   employeeName: user.name,
-    //   taskTitle: title,
-    //   priority,
-    //   dueDate
-    // });
 
     res.status(201).json({
       success: true,
@@ -52,27 +59,54 @@ exports.createAssignedTask = async (req, res) => {
       task
     });
   } catch (error) {
+    console.error("Assign Task Error:", error);
     res.status(500).json({
       success: false,
-      message: "Task assignment failed",
-      error: error.message
+      message: "Failed to assign task"
     });
   }
 };
 
-// User creates own personal task
+// USER: create own task
 exports.createPersonalTask = async (req, res) => {
   try {
-    const { title, description, priority, dueDate } = req.body;
+    const {
+      title,
+      description,
+      project,
+      department,
+      priority,
+      dueDate,
+      estimatedHours,
+      reminderDate
+    } = req.body;
+
+    if (!title || !dueDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and due date are required"
+      });
+    }
 
     const task = await Task.create({
       title,
       description,
-      assignedTo: req?.user._id,
-      assignedBy: req?.user._id,
       taskType: "personal",
-      priority,
-      dueDate
+      assignedBy: req.user._id,
+      assignedTo: req.user._id,
+      project: project || null,
+      department: department || "Other",
+      priority: priority || "medium",
+      dueDate,
+      estimatedHours: estimatedHours || 0,
+      reminderDate: reminderDate || null,
+      progressUpdates: [
+        {
+          status: "pending",
+          remarks: "Personal task created",
+          updatedBy: req.user._id
+        }
+      ]
     });
 
     res.status(201).json({
@@ -81,73 +115,88 @@ exports.createPersonalTask = async (req, res) => {
       task
     });
   } catch (error) {
+    console.error("Create Personal Task Error:", error);
     res.status(500).json({
       success: false,
-      message: "Personal task creation failed",
-      error: error.message
+      message: "Failed to create personal task"
     });
   }
 };
 
-// Logged in user's tasks
+// USER: my tasks
 exports.getMyTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ assignedTo: req.user._id })
-      .populate("assignedBy", "fullName email role")
-      .populate("assignedTo", "fullName email role")
-      .sort({
-        status: 1,
-        dueDate: 1,
-        createdAt: -1
-      });
+    const tasks = await Task.find({
+      assignedTo: req.user._id,
+      isDeleted: false
+    })
+      .populate("assignedBy", "fullName name email role")
+      .populate("assignedTo", "fullName name email role")
+      .populate("project", "projectName siteName name")
+      .sort({ dueDate: 1, createdAt: -1 });
 
     res.status(200).json({
       success: true,
+      count: tasks.length,
       tasks
     });
   } catch (error) {
+    console.error("Get My Tasks Error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch tasks",
-      error: error.message
+      message: "Failed to fetch my tasks"
     });
   }
 };
 
-// Admin sees all tasks
+// ADMIN: all tasks
 exports.getAllTasks = async (req, res) => {
   try {
-    if (!isAdminRole(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: "Not allowed"
-      });
-    }
-
-    const tasks = await Task.find()
-      .populate("assignedBy", "fullName email role")
-      .populate("assignedTo", "fullName email role")
+    const tasks = await Task.find({ isDeleted: false })
+      .populate("assignedBy", "fullName name email role")
+      .populate("assignedTo", "fullName name email role")
+      .populate("project", "projectName siteName name")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
+      count: tasks.length,
       tasks
     });
   } catch (error) {
+    console.error("Get All Tasks Error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch all tasks",
-      error: error.message
+      message: "Failed to fetch all tasks"
     });
   }
 };
 
-// User updates status
+// USER: update status
 exports.updateTaskStatus = async (req, res) => {
   try {
     const { status, remarks } = req.body;
 
-    const task = await Task.findById(req.params.id);
+    const allowedStatus = [
+      "pending",
+      "in_progress",
+      "completed",
+      "hold",
+      "cancelled",
+      "reopened"
+    ];
+
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task status"
+      });
+    }
+
+    const task = await Task.findOne({
+      _id: req.params.id,
+      isDeleted: false
+    });
 
     if (!task) {
       return res.status(404).json({
@@ -156,21 +205,37 @@ exports.updateTaskStatus = async (req, res) => {
       });
     }
 
-    const isOwner = task.assignedTo.toString() === req.user._id.toString();
+    const isAssignedUser =
+      task.assignedTo.toString() === req.user._id.toString();
 
-    if (!isOwner && !isAdminRole(req.user.role)) {
+    const isCreator =
+      task.assignedBy?.toString() === req.user._id.toString();
+
+    const isAdmin = ["Super Admin", "Admin"].includes(req.user.role);
+
+    if (!isAssignedUser && !isCreator && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: "Not allowed to update this task"
+        message: "You are not allowed to update this task"
       });
     }
 
-    task.status = status || task.status;
+    task.status = status;
     task.remarks = remarks || task.remarks;
 
     if (status === "completed") {
       task.completedAt = new Date();
     }
+
+    if (status !== "completed") {
+      task.completedAt = null;
+    }
+
+    task.progressUpdates.push({
+      status,
+      remarks,
+      updatedBy: req.user._id
+    });
 
     await task.save();
 
@@ -180,18 +245,21 @@ exports.updateTaskStatus = async (req, res) => {
       task
     });
   } catch (error) {
+    console.error("Update Task Status Error:", error);
     res.status(500).json({
       success: false,
-      message: "Status update failed",
-      error: error.message
+      message: "Failed to update task"
     });
   }
 };
 
-// Admin edit task OR personal task owner edit
-exports.updateTask = async (req, res) => {
+// soft delete
+exports.deleteTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findOne({
+      _id: req.params.id,
+      isDeleted: false
+    });
 
     if (!task) {
       return res.status(404).json({
@@ -200,67 +268,30 @@ exports.updateTask = async (req, res) => {
       });
     }
 
-    const isOwner = task.assignedBy.toString() === req.user._id.toString();
+    const isCreator =
+      task.assignedBy?.toString() === req.user._id.toString();
 
-    if (!isOwner && !isAdminRole(req.user.role)) {
+    const isAdmin = ["Super Admin", "Admin"].includes(req.user.role);
+
+    if (!isCreator && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: "Not allowed"
+        message: "You are not allowed to delete this task"
       });
     }
 
-    Object.assign(task, req.body);
-
+    task.isDeleted = true;
     await task.save();
 
     res.status(200).json({
       success: true,
-      message: "Task updated",
-      task
+      message: "Task deleted successfully"
     });
   } catch (error) {
+    console.error("Delete Task Error:", error);
     res.status(500).json({
       success: false,
-      message: "Task update failed",
-      error: error.message
-    });
-  }
-};
-
-// Delete task
-exports.deleteTask = async (req, res) => {
-  try {
-    const task = await Task.findById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: "Task not found"
-      });
-    }
-
-    const isPersonalOwner =
-      task.taskType === "personal" &&
-      task.assignedBy.toString() === req.user._id.toString();
-
-    if (!isPersonalOwner && !isAdminRole(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: "Assigned task cannot be deleted by employee"
-      });
-    }
-
-    await task.deleteOne();
-
-    res.status(200).json({
-      success: true,
-      message: "Task deleted"
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Task delete failed",
-      error: error.message
+      message: "Failed to delete task"
     });
   }
 };

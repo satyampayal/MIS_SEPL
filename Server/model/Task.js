@@ -1,6 +1,28 @@
 // models/Task.js
 const mongoose = require("mongoose");
 
+const taskUpdateSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ["pending", "in_progress", "completed", "hold", "cancelled", "reopened"],
+      required: true
+    },
+
+    remarks: {
+      type: String,
+      trim: true
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    }
+  },
+  { timestamps: true }
+);
+
 const taskSchema = new mongoose.Schema(
   {
     title: {
@@ -16,7 +38,7 @@ const taskSchema = new mongoose.Schema(
 
     taskType: {
       type: String,
-      enum: ["assigned", "personal"],
+      enum: ["assigned", "personal", "project", "department"],
       default: "personal"
     },
 
@@ -31,6 +53,17 @@ const taskSchema = new mongoose.Schema(
       required: true
     },
 
+    project: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project"
+    },
+
+    department: {
+      type: String,
+      enum: ["Store", "Accounts", "Project", "Billing", "HR", "Admin", "Other"],
+      default: "Other"
+    },
+
     priority: {
       type: String,
       enum: ["low", "medium", "high", "urgent"],
@@ -39,7 +72,7 @@ const taskSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "in_progress", "completed", "hold", "cancelled"],
+      enum: ["pending", "in_progress", "completed", "hold", "cancelled", "reopened"],
       default: "pending"
     },
 
@@ -48,12 +81,23 @@ const taskSchema = new mongoose.Schema(
       required: true
     },
 
+    estimatedHours: {
+      type: Number,
+      default: 0
+    },
+
+    reminderDate: {
+      type: Date
+    },
+
     completedAt: Date,
 
     remarks: {
       type: String,
       trim: true
     },
+
+    progressUpdates: [taskUpdateSchema],
 
     attachments: [
       {
@@ -66,9 +110,20 @@ const taskSchema = new mongoose.Schema(
     isRead: {
       type: Boolean,
       default: false
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: true }
 );
+
+taskSchema.index({ assignedTo: 1, status: 1 });
+taskSchema.index({ assignedBy: 1 });
+taskSchema.index({ project: 1 });
+taskSchema.index({ dueDate: 1 });
+taskSchema.index({ priority: 1 });
 
 module.exports = mongoose.model("Task", taskSchema);

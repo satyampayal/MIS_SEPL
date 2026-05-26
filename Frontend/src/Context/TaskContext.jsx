@@ -9,8 +9,6 @@ import {
   updateTaskStatusApi,
   deleteTaskApi
 } from "../Services/taskServices";
-// import BASE_URL from "../../config/api";
-
 
 const TaskContext = createContext();
 
@@ -25,7 +23,7 @@ export const TaskProvider = ({ children }) => {
       const res = await getMyTasksApi();
       setMyTasks(res.data.tasks || []);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to load tasks");
+      toast.error(error.response?.data?.message || "Failed to load my tasks");
     } finally {
       setLoading(false);
     }
@@ -43,47 +41,117 @@ export const TaskProvider = ({ children }) => {
     }
   };
 
+  const refreshTasks = async (role) => {
+    await fetchMyTasks();
+
+    if (["Super Admin", "Admin"].includes(role)) {
+      await fetchAllTasks();
+    }
+  };
+
   const assignTask = async (data) => {
     try {
+      setLoading(true);
       const res = await assignTaskApi(data);
+
       toast.success("Task assigned successfully");
-      fetchAllTasks();
-      return res.data;
+
+      await fetchAllTasks();
+
+      return {
+        success: true,
+        data: res.data
+      };
     } catch (error) {
       toast.error(error.response?.data?.message || "Task assign failed");
+
+      return {
+        success: false
+      };
+    } finally {
+      setLoading(false);
     }
   };
 
   const createPersonalTask = async (data) => {
     try {
+      setLoading(true);
       const res = await createPersonalTaskApi(data);
-      toast.success("Task created");
-      fetchMyTasks();
-      return res.data;
+
+      toast.success("Task created successfully");
+
+      await fetchMyTasks();
+
+      return {
+        success: true,
+        data: res.data
+      };
     } catch (error) {
       toast.error(error.response?.data?.message || "Task creation failed");
+
+      return {
+        success: false
+      };
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateTaskStatus = async (id, data) => {
+  const updateTaskStatus = async (id, data, role) => {
     try {
-      await updateTaskStatusApi(id, data);
+      setLoading(true);
+
+      const res = await updateTaskStatusApi(id, data);
+
       toast.success("Task updated");
-      fetchMyTasks();
-      fetchAllTasks();
+
+      await fetchMyTasks();
+
+      if (["Super Admin", "Admin"].includes(role)) {
+        await fetchAllTasks();
+      }
+
+      return {
+        success: true,
+        data: res.data
+      };
     } catch (error) {
       toast.error(error.response?.data?.message || "Status update failed");
+
+      return {
+        success: false
+      };
+    } finally {
+      setLoading(false);
     }
   };
 
-  const deleteTask = async (id) => {
+  const deleteTask = async (id, role) => {
     try {
-      await deleteTaskApi(id);
+      setLoading(true);
+
+      const res = await deleteTaskApi(id);
+
       toast.success("Task deleted");
-      fetchMyTasks();
-      fetchAllTasks();
+
+      await fetchMyTasks();
+
+      if (["Super Admin", "Admin"].includes(role)) {
+        await fetchAllTasks();
+      }
+
+      return {
+        success: true,
+        data: res.data
+      };
     } catch (error) {
       toast.error(error.response?.data?.message || "Delete failed");
+
+      return {
+        success: false
+      };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,8 +161,11 @@ export const TaskProvider = ({ children }) => {
         myTasks,
         allTasks,
         loading,
+
         fetchMyTasks,
         fetchAllTasks,
+        refreshTasks,
+
         assignTask,
         createPersonalTask,
         updateTaskStatus,

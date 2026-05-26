@@ -11,6 +11,13 @@ const {
   exportMaterialMovementExcel,
   updateMaterialMovement,
   getMaterialMovementAnalytics,
+  getProjectWiseMaterialHistory,
+  getMaterialHistorySummary,
+  getSingleProjectMaterialHistory,
+  updateProjectNameGlobally,
+  getProjectCategoryMaterialDetails,
+  getProjectLiveStockReport,
+  getHeadStoreLiveStockReport,
 } = require("../controllers/materialMovementController");
 
 const materialMovementRouter = express.Router();
@@ -24,5 +31,32 @@ materialMovementRouter.delete("/delete-by-time", deleteMaterialMovementByTime);
 materialMovementRouter.get("/export-excel", exportMaterialMovementExcel);
 materialMovementRouter.put("/update/:id", updateMaterialMovement);
 materialMovementRouter.get("/analytics", getMaterialMovementAnalytics);
+materialMovementRouter.get("/analytics/projects", getProjectWiseMaterialHistory);
+materialMovementRouter.get("/analytics/summary", getMaterialHistorySummary);
+materialMovementRouter.get(
+  "/analytics/project/:projectName",
+  getSingleProjectMaterialHistory
+);
+materialMovementRouter.get(
+  "/analytics/project/:projectName/category/:category",
+  getProjectCategoryMaterialDetails
+);
+
+materialMovementRouter.get(
+  "/analytics/project-stock",
+  getProjectLiveStockReport
+);
+materialMovementRouter.get(
+  "/analytics/head-store-stock",
+  getHeadStoreLiveStockReport
+);
+
+
+
+// Update the filed name
+materialMovementRouter.put(
+  "/update-project-name",
+  updateProjectNameGlobally
+);
 
 module.exports = materialMovementRouter;

@@ -39,8 +39,14 @@ export default function SuperAdminDashboard() {
 
 const COLORS = ["#06B6D4", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981"];
 const formatAmount = (value) => {
-  if (!value) return "₹0";
-  return `₹${Number(value).toLocaleString("en-IN")}`;
+  // if (!value) return "₹0";
+  // return `₹${Number(value).toLocaleString("en-IN"),{
+  //   maximumFractionDigits:0,
+  // }}`;
+
+   return  '₹'+Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 0,
+  });
 };
 
 const taxSummary = dashboardData?.taxSummary || {};
@@ -176,8 +182,8 @@ useEffect(() => {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={monthlyTrend}>
           <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-          <XAxis dataKey="month" stroke="#CBD5E1" />
-          <YAxis stroke="#CBD5E1" />
+          <XAxis dataKey="month" stroke="#CBD5E1"   />
+          <YAxis stroke="#CBD5E1" fontSize={14} />
           <Tooltip
             formatter={(value) => formatAmount(value)}
             contentStyle={{
@@ -258,8 +264,8 @@ useEffect(() => {
         </defs>
 
         <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-        <XAxis dataKey="vendorName" stroke="#CBD5E1" />
-        <YAxis stroke="#CBD5E1" />
+        <XAxis dataKey="vendorName" stroke="#CBD5E1" fontSize={14} />
+        <YAxis stroke="#CBD5E1" fontSize={14} />
         <Tooltip
           formatter={(value) => formatAmount(value)}
           cursor={{ fill: "rgba(255,255,255,0.08)" }}

@@ -41,7 +41,7 @@ const projectSchema = new mongoose.Schema(
       // required: true,
     },
     orderAmount: {
-      type: String,
+      type: Number,
       // required: true,
     },
     allotedCompany:{

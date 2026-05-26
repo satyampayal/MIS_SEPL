@@ -195,7 +195,7 @@ storeItemSchema.pre("save", function (next) {
     this.status = "Available";
   }
 
- 
+ next();
 });
 
 module.exports = mongoose.model("StoreItem", storeItemSchema);

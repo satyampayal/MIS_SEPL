@@ -1,7 +1,8 @@
 const XLSX = require("xlsx");
 const MaterialMovement = require("../model/materialMovement");
 const ExcelJS = require("exceljs");
-
+const ProjectMaster = require("../model/Project");
+const Bill = require("../model/projectBill");
 const normalizeProjectName = (value) => {
   if (value === undefined || value === null) return "";
 
@@ -191,7 +192,20 @@ const buildMaterialFilter = (query) => {
 
   return filter;
 };
+const PROJECT_IN_TYPES = ["DDC", "DC", "LPN"];
+const PROJECT_OUT_TYPES = ["MRS"];
 
+const HEAD_STORE_IN_TYPES = ["MRN", "MRS"];
+const HEAD_STORE_OUT_TYPES = ["DC"];
+
+const getProjectDirection = (typeOfTransit) => {
+  const type = String(typeOfTransit || "").toUpperCase();
+
+  if (PROJECT_IN_TYPES.includes(type)) return "In";
+  if (PROJECT_OUT_TYPES.includes(type)) return "Out";
+
+  return "";
+};
 //Export  excel as on per filter
 exports.exportMaterialMovementExcel = async (req, res) => {
   try {
@@ -204,88 +218,88 @@ exports.exportMaterialMovementExcel = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     //  Summary
     const summaryAgg = await MaterialMovement.aggregate([
-  {
-    $match: filter,
-  },
-  {
-    $group: {
-      _id: null,
-      totalRecords: { $sum: 1 },
-      totalQuantity: { $sum: "$quantity" },
-      totalAmount: { $sum: "$amount" },
-      totalInward: {
-        $sum: {
-          $cond: [{ $eq: ["$inOut", "In"] }, 1, 0],
+      {
+        $match: filter,
+      },
+      {
+        $group: {
+          _id: null,
+          totalRecords: { $sum: 1 },
+          totalQuantity: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+          totalInward: {
+            $sum: {
+              $cond: [{ $eq: ["$inOut", "In"] }, 1, 0],
+            },
+          },
+          totalOutward: {
+            $sum: {
+              $cond: [{ $eq: ["$inOut", "Out"] }, 1, 0],
+            },
+          },
         },
       },
-      totalOutward: {
-        $sum: {
-          $cond: [{ $eq: ["$inOut", "Out"] }, 1, 0],
+    ]);
+
+    const topVendors = await MaterialMovement.aggregate([
+      {
+        $match: filter,
+      },
+      {
+        $group: {
+          _id: "$vendorName",
+          amount: { $sum: "$amount" },
         },
       },
-    },
-  },
-]);
+      {
+        $sort: {
+          amount: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
 
-const topVendors = await MaterialMovement.aggregate([
-  {
-    $match: filter,
-  },
-  {
-    $group: {
-      _id: "$vendorName",
-      amount: { $sum: "$amount" },
-    },
-  },
-  {
-    $sort: {
-      amount: -1,
-    },
-  },
-  {
-    $limit: 10,
-  },
-]);
+    const topProjects = await MaterialMovement.aggregate([
+      {
+        $match: filter,
+      },
+      {
+        $group: {
+          _id: "$projectName",
+          quantity: { $sum: "$quantity" },
+        },
+      },
+      {
+        $sort: {
+          quantity: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
 
-const topProjects = await MaterialMovement.aggregate([
-  {
-    $match: filter,
-  },
-  {
-    $group: {
-      _id: "$projectName",
-      quantity: { $sum: "$quantity" },
-    },
-  },
-  {
-    $sort: {
-      quantity: -1,
-    },
-  },
-  {
-    $limit: 10,
-  },
-]);
-
-const topItems = await MaterialMovement.aggregate([
-  {
-    $match: filter,
-  },
-  {
-    $group: {
-      _id: "$itemName",
-      quantity: { $sum: "$quantity" },
-    },
-  },
-  {
-    $sort: {
-      quantity: -1,
-    },
-  },
-  {
-    $limit: 10,
-  },
-]);
+    const topItems = await MaterialMovement.aggregate([
+      {
+        $match: filter,
+      },
+      {
+        $group: {
+          _id: "$itemName",
+          quantity: { $sum: "$quantity" },
+        },
+      },
+      {
+        $sort: {
+          quantity: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
     const worksheet = workbook.addWorksheet("Material Movement");
 
     worksheet.columns = [
@@ -316,13 +330,13 @@ const topItems = await MaterialMovement.aggregate([
       { header: "Remarks", key: "remarks", width: 35 },
     ];
 
-//     worksheet.getRow(1).font = { bold: true };
-// worksheet.autoFilter = {
-//   from: "A1",
-//   to: "Y1",
-// };
+    //     worksheet.getRow(1).font = { bold: true };
+    // worksheet.autoFilter = {
+    //   from: "A1",
+    //   to: "Y1",
+    // };
 
-// worksheet.views = [{ state: "frozen", ySplit: 1 }];
+    // worksheet.views = [{ state: "frozen", ySplit: 1 }];
     records.forEach((item) => {
       worksheet.addRow({
         documentDate: item.documentDate
@@ -360,87 +374,87 @@ const topItems = await MaterialMovement.aggregate([
     // Summary Sheet
     const summarySheet = workbook.addWorksheet("Summary");
 
-summarySheet.columns = [
-  { header: "Metric", key: "metric", width: 35 },
-  { header: "Value", key: "value", width: 30 },
-];
+    summarySheet.columns = [
+      { header: "Metric", key: "metric", width: 35 },
+      { header: "Value", key: "value", width: 30 },
+    ];
 
-summarySheet.getRow(1).font = { bold: true };
+    summarySheet.getRow(1).font = { bold: true };
 
-const summary = summaryAgg[0] || {};
+    const summary = summaryAgg[0] || {};
 
-summarySheet.addRows([
-  {
-    metric: "Total Records",
-    value: summary.totalRecords || 0,
-  },
-  {
-    metric: "Total Quantity",
-    value: summary.totalQuantity || 0,
-  },
-  {
-    metric: "Total Amount",
-    value: summary.totalAmount || 0,
-  },
-  {
-    metric: "Total Inward",
-    value: summary.totalInward || 0,
-  },
-  {
-    metric: "Total Outward",
-    value: summary.totalOutward || 0,
-  },
-]);
+    summarySheet.addRows([
+      {
+        metric: "Total Records",
+        value: summary.totalRecords || 0,
+      },
+      {
+        metric: "Total Quantity",
+        value: summary.totalQuantity || 0,
+      },
+      {
+        metric: "Total Amount",
+        value: summary.totalAmount || 0,
+      },
+      {
+        metric: "Total Inward",
+        value: summary.totalInward || 0,
+      },
+      {
+        metric: "Total Outward",
+        value: summary.totalOutward || 0,
+      },
+    ]);
 
-// Top Vendor Shet 
-const vendorSheet = workbook.addWorksheet("Top Vendors");
+    // Top Vendor Shet 
+    const vendorSheet = workbook.addWorksheet("Top Vendors");
 
-vendorSheet.columns = [
-  { header: "Vendor Name", key: "vendor", width: 40 },
-  { header: "Amount", key: "amount", width: 20 },
-];
+    vendorSheet.columns = [
+      { header: "Vendor Name", key: "vendor", width: 40 },
+      { header: "Amount", key: "amount", width: 20 },
+    ];
 
-vendorSheet.getRow(1).font = { bold: true };
+    vendorSheet.getRow(1).font = { bold: true };
 
-topVendors.forEach((vendor) => {
-  vendorSheet.addRow({
-    vendor: vendor._id || "-",
-    amount: vendor.amount || 0,
-  });
-});
-// Top Project Sheet
-const projectSheet = workbook.addWorksheet("Top Projects");
+    topVendors.forEach((vendor) => {
+      vendorSheet.addRow({
+        vendor: vendor._id || "-",
+        amount: vendor.amount || 0,
+      });
+    });
+    // Top Project Sheet
+    const projectSheet = workbook.addWorksheet("Top Projects");
 
-projectSheet.columns = [
-  { header: "Project Name", key: "project", width: 40 },
-  { header: "Quantity", key: "quantity", width: 20 },
-];
+    projectSheet.columns = [
+      { header: "Project Name", key: "project", width: 40 },
+      { header: "Quantity", key: "quantity", width: 20 },
+    ];
 
-projectSheet.getRow(1).font = { bold: true };
+    projectSheet.getRow(1).font = { bold: true };
 
-topProjects.forEach((project) => {
-  projectSheet.addRow({
-    project: project._id || "-",
-    quantity: project.quantity || 0,
-  });
-});
+    topProjects.forEach((project) => {
+      projectSheet.addRow({
+        project: project._id || "-",
+        quantity: project.quantity || 0,
+      });
+    });
 
-//Top Items Sheet
-const itemSheet = workbook.addWorksheet("Top Items");
+    //Top Items Sheet
+    const itemSheet = workbook.addWorksheet("Top Items");
 
-itemSheet.columns = [
-  { header: "Item Name", key: "item", width: 50 },
-  { header: "Quantity", key: "quantity", width: 20 },
-];
+    itemSheet.columns = [
+      { header: "Item Name", key: "item", width: 50 },
+      { header: "Quantity", key: "quantity", width: 20 },
+    ];
 
-itemSheet.getRow(1).font = { bold: true };
+    itemSheet.getRow(1).font = { bold: true };
 
-topItems.forEach((item) => {
-  itemSheet.addRow({
-    item: item._id || "-",
-    quantity: item.quantity || 0,
-  });
-});
+    topItems.forEach((item) => {
+      itemSheet.addRow({
+        item: item._id || "-",
+        quantity: item.quantity || 0,
+      });
+    });
 
     res.setHeader(
       "Content-Type",
@@ -569,7 +583,7 @@ exports.updateMaterialMovement = async (req, res) => {
     });
   }
 };
-
+//Upload bulk data
 exports.bulkUploadMaterialMovement = async (req, res) => {
   try {
     if (!req.file) {
@@ -748,11 +762,23 @@ exports.getMaterialHistory = async (req, res) => {
             totalQuantity: { $sum: "$quantity" },
             totalAmount: { $sum: "$amount" },
             inCount: {
-              $sum: { $cond: [{ $eq: ["$inOut", "In"] }, 1, 0] }
+              $sum: {
+                $cond: [
+                  { $in: ["$typeOfTransit", PROJECT_IN_TYPES] },
+                  1,
+                  0,
+                ],
+              },
             },
             outCount: {
-              $sum: { $cond: [{ $eq: ["$inOut", "Out"] }, 1, 0] }
-            }
+              $sum: {
+                $cond: [
+                  { $in: ["$typeOfTransit", PROJECT_OUT_TYPES] },
+                  1,
+                  0,
+                ],
+              },
+            },
           }
         }
       ])
@@ -896,10 +922,27 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
           totalQuantity: { $sum: "$quantity" },
           totalAmount: { $sum: "$amount" },
           totalInward: {
-            $sum: { $cond: [{ $eq: ["$inOut", "In"] }, 1, 0] },
+            $sum: {
+              $cond: [
+                {
+                  $in: ["$typeOfTransit", ["DDC", "DC", "LPN"]],
+                },
+                1,
+                0,
+              ],
+            },
           },
+
           totalOutward: {
-            $sum: { $cond: [{ $eq: ["$inOut", "Out"] }, 1, 0] },
+            $sum: {
+              $cond: [
+                {
+                  $in: ["$typeOfTransit", ["MRS", "MRNs"]],
+                },
+                1,
+                0,
+              ],
+            },
           },
         },
       },
@@ -928,14 +971,27 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
       {
         $group: {
           _id: "$_id.date",
-          inward: {
+          inwardQty: {
             $sum: {
-              $cond: [{ $eq: ["$_id.inOut", "In"] }, "$quantity", 0],
+              $cond: [
+                {
+                  $in: ["$typeOfTransit", ["DDC", "DC", "LPN"]],
+                },
+                "$quantity",
+                0,
+              ],
             },
           },
-          outward: {
+
+          outwardQty: {
             $sum: {
-              $cond: [{ $eq: ["$_id.inOut", "Out"] }, "$quantity", 0],
+              $cond: [
+                {
+                  $in: ["$typeOfTransit", ["MRS", "MRN"]],
+                },
+                "$quantity",
+                0,
+              ],
             },
           },
         },
@@ -1058,6 +1114,886 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
     });
   } catch (error) {
     console.log("Material Movement Analytics Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+// Project wise anlytics reports 
+exports.getProjectWiseMaterialHistory = async (req, res) => {
+  try {
+    const data = await MaterialMovement.aggregate([
+      {
+        $group: {
+          _id: "$projectName",
+
+          totalQuantity: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+
+          totalEntries: { $sum: 1 },
+
+          materials: { $addToSet: "$itemName" },
+          vendors: { $addToSet: "$vendorName" },
+
+          inwardQty: {
+            $sum: {
+              $cond: [
+                {
+                  $in: ["$typeOfTransit", ["DDC", "DC", "LPN"]],
+                },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+
+          outwardQty: {
+            $sum: {
+              $cond: [
+                {
+                  $in: ["$typeOfTransit", ["MRS"]],
+                },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+        },
+      },
+
+      {
+        $project: {
+          _id: 0,
+
+          projectName: "$_id",
+
+          totalQuantity: 1,
+          totalAmount: 1,
+          totalEntries: 1,
+
+          inwardQty: 1,
+          outwardQty: 1,
+
+          totalMaterials: { $size: "$materials" },
+          totalVendors: { $size: "$vendors" },
+        },
+      },
+
+      {
+        $sort: { totalAmount: -1 },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    console.error("Project Wise Material History Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch project wise material history",
+    });
+  }
+};
+
+// Mterial Hitory  Summary
+exports.getMaterialHistorySummary = async (req, res) => {
+  try {
+    const { fromDate, toDate, project, challanType } = req.query;
+
+    const match = {};
+
+    if (project) match.projectName = project;
+    if (challanType) match.typeOfTransit = challanType;
+
+    if (fromDate || toDate) {
+      match.documentDate = {};
+      if (fromDate) match.documentDate.$gte = new Date(fromDate);
+      if (toDate) match.documentDate.$lte = new Date(toDate);
+    }
+
+    const totalMaterialsUsed = await MaterialMovement.countDocuments(match);
+
+    const challanDocs = await MaterialMovement.aggregate([
+      {
+        $match: {
+          ...match,
+          typeOfTransit: { $in: ["DDC", "DC", "LPN", "MRN", "MRS"] },
+          documentName: { $ne: "" },
+        },
+      },
+      {
+        $group: {
+          _id: "$documentName",
+        },
+      },
+      {
+        $count: "total",
+      },
+    ]);
+
+    const totalChallans = challanDocs[0]?.total || 0;
+
+    const activeSites = await MaterialMovement.distinct("projectName", match);
+    const totalVendors = await MaterialMovement.distinct("vendorName", match);
+
+    const topMaterials = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$itemName",
+          totalQuantity: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+        },
+      },
+      { $sort: { totalQuantity: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const challanTypeSummary = await MaterialMovement.aggregate([
+      {
+        $match: {
+          ...match,
+          typeOfTransit: { $in: ["DDC", "DC", "LPN", "MRN", "MRS"] },
+          documentName: { $ne: "" },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            typeOfTransit: "$typeOfTransit",
+            documentName: "$documentName",
+          },
+          totalQuantity: { $sum: "$quantity" },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.typeOfTransit",
+          count: { $sum: 1 },
+          totalQuantity: { $sum: "$totalQuantity" },
+        },
+      },
+      { $sort: { count: -1 } },
+    ]);
+
+    const topVendors = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$vendorName",
+          totalAmount: { $sum: "$amount" },
+          totalQuantity: { $sum: "$quantity" },
+        },
+      },
+      { $sort: { totalAmount: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const topSites = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$projectName",
+          totalQuantity: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+        },
+      },
+      { $sort: { totalQuantity: -1 } },
+      { $limit: 10 },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalMaterialsUsed,
+        totalChallans,
+        activeSites: activeSites.filter(Boolean).length,
+        totalVendors: totalVendors.filter(Boolean).length,
+        topMaterials,
+        challanTypeSummary,
+        topVendors,
+        topSites,
+      },
+    });
+  } catch (error) {
+    console.error("Material History Summary Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch material history summary",
+    });
+  }
+};
+
+
+//  Get Single Project Reports
+exports.getSingleProjectMaterialHistory = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+    const decodedProjectName = decodeURIComponent(projectName);
+    //  console.log("PROJECT NAME:"+decodedProjectName)
+    const project = await ProjectMaster.findOne({
+      name: projectName
+    });
+
+    const match = { projectName: decodedProjectName };
+
+    const materialSummary = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$projectName",
+          totalInQty: {
+            $sum: {
+              $cond: [
+                {
+                  $in: ["$typeOfTransit", ["DDC", "DC", "LPN"]],
+                },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+
+          totalOutQty: {
+            $sum: {
+              $cond: [
+                {
+                  $in: ["$typeOfTransit", ["MRS", "MRN"]],
+                },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+          materialAmount: { $sum: "$amount" },
+          materials: { $addToSet: "$itemName" },
+          vendors: { $addToSet: "$vendorName" },
+        },
+      },
+      {
+        $project: {
+          totalInQty: 1,
+          totalOutQty: 1,
+          materialAmount: 1,
+          totalMaterials: { $size: "$materials" },
+          totalVendors: { $size: "$vendors" },
+        },
+      },
+    ]);
+
+    const billSummary = await Bill.aggregate([
+      {
+        $match: {
+          project: project?._id,
+        },
+      },
+      {
+        $group: {
+          _id: "$billType",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$billAmount" },
+        },
+      },
+    ]);
+
+    const totalBilledAmount = billSummary.reduce(
+      (sum, item) => sum + Number(item.totalAmount || 0),
+      0
+    );
+
+    const challanSummary = await MaterialMovement.aggregate([
+      {
+        $match: {
+          ...match,
+          documentName: { $ne: "" },
+          typeOfTransit: { $in: ["DDC", "DC", "LPN", "MRN", "MRS"] },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            typeOfTransit: "$typeOfTransit",
+            documentName: "$documentName",
+          },
+          totalQty: { $sum: "$quantity" },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.typeOfTransit",
+          count: { $sum: 1 },
+          totalQty: { $sum: "$totalQty" },
+        },
+      },
+    ]);
+
+    const topMaterials = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$itemName",
+          totalQty: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+          uom: { $first: "$uom" },
+        },
+      },
+      { $sort: { totalQty: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const categorySummary = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $or: [{ $eq: ["$category", ""] }, { $eq: ["$category", null] }] },
+              "Uncategorized",
+              "$category",
+            ],
+          },
+          totalQty: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+          itemCount: { $sum: 1 },
+          uniqueItems: { $addToSet: "$itemName" },
+        },
+      },
+      {
+        $project: {
+          category: "$_id",
+          totalQty: 1,
+          totalAmount: 1,
+          itemCount: 1,
+          uniqueItemCount: { $size: "$uniqueItems" },
+          _id: 0,
+        },
+      },
+      { $sort: { totalAmount: -1 } },
+    ]);
+    const recentMovements = await MaterialMovement.find(match)
+      .sort({ documentDate: -1, createdAt: -1 })
+      .limit(20);
+
+    const workOrderValue = Number(
+      (project?.orderAmount || "0")
+    );
+    // console.log(project)
+    res.status(200).json({
+      success: true,
+      data: {
+        projectOverview: {
+          projectName: project?.name || decodedProjectName,
+          projectCode: project?.code || "",
+          workOrderValue,
+          status: project?.status || "",
+          totalBilledAmount,
+          remainingAmount:
+            workOrderValue - Number(totalBilledAmount || 0),
+        },
+        materialSummary: materialSummary[0] || {},
+        billSummary,
+        challanSummary,
+        categorySummary,
+        topMaterials,
+        recentMovements,
+      },
+    });
+  } catch (error) {
+    console.error("Single Project Report Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch single project report",
+    });
+  }
+};
+
+// Get Item By Category 
+exports.getProjectCategoryMaterialDetails = async (req, res) => {
+  try {
+    const { projectName, category } = req.params;
+
+    const decodedProjectName = decodeURIComponent(projectName);
+    const decodedCategory = decodeURIComponent(category);
+
+    const match = {
+      projectName: decodedProjectName,
+      category: decodedCategory,
+    };
+
+    const records = await MaterialMovement.find(match)
+      .sort({ documentDate: -1, createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    const summaryAgg = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          totalRecords: { $sum: 1 },
+          totalQty: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+          uniqueItems: { $addToSet: "$itemName" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalRecords: 1,
+          totalQty: 1,
+          totalAmount: 1,
+          uniqueItemCount: { $size: "$uniqueItems" },
+        },
+      },
+    ]);
+
+    const highestRateItem = await MaterialMovement.findOne(match)
+      .sort({ rate: -1 })
+      .select("itemName rate uom vendorName documentName")
+      .lean();
+
+    const mostUsedItem = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$itemName",
+          totalQty: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+          uom: { $first: "$uom" },
+        },
+      },
+      { $sort: { totalQty: -1 } },
+      { $limit: 1 },
+    ]);
+
+    const topConsumptionItems = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$itemName",
+          totalQty: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+          avgRate: { $avg: "$rate" },
+          uom: { $first: "$uom" },
+        },
+      },
+      { $sort: { totalAmount: -1 } },
+      { $limit: 5 },
+    ]);
+
+    const uniqueItemCards = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$itemName",
+          totalQty: { $sum: "$quantity" },
+          totalAmount: { $sum: "$amount" },
+          avgRate: { $avg: "$rate" },
+          maxRate: { $max: "$rate" },
+          minRate: { $min: "$rate" },
+          uom: { $first: "$uom" },
+          recordsCount: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          itemName: "$_id",
+          totalQty: 1,
+          totalAmount: 1,
+          avgRate: 1,
+          maxRate: 1,
+          minRate: 1,
+          uom: 1,
+          recordsCount: 1,
+        },
+      },
+      { $sort: { totalAmount: -1 } },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        category: decodedCategory,
+        summary: summaryAgg[0] || {
+          totalRecords: 0,
+          totalQty: 0,
+          totalAmount: 0,
+          uniqueItemCount: 0,
+        },
+        highestRateItem,
+        mostUsedItem: mostUsedItem[0] || null,
+        topConsumptionItems,
+        uniqueItemCards,
+        records,
+      },
+    });
+  } catch (error) {
+    console.error("Project Category Material Details Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch category material details",
+    });
+  }
+};
+
+
+
+exports.getProjectLiveStockReport = async (req, res) => {
+  try {
+    const PROJECT_IN_TYPES = ["DDC", "DC", "LPN"];
+    const PROJECT_OUT_TYPES = ["MRS"];
+
+    const data = await MaterialMovement.aggregate([
+      {
+        $match: {
+          projectName: { $ne: "" },
+          itemName: { $ne: "" },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            projectName: "$projectName",
+            itemName: "$itemName",
+            uom: "$uom",
+          },
+
+          inQty: {
+            $sum: {
+              $cond: [
+                { $in: ["$typeOfTransit", PROJECT_IN_TYPES] },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+
+          outQty: {
+            $sum: {
+              $cond: [
+                { $in: ["$typeOfTransit", PROJECT_OUT_TYPES] },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+
+          totalValue: { $sum: "$amount" },
+          avgRate: { $avg: "$rate" },
+          recordsCount: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          projectName: "$_id.projectName",
+          itemName: "$_id.itemName",
+          uom: "$_id.uom",
+          inQty: 1,
+          outQty: 1,
+          availableQty: { $subtract: ["$inQty", "$outQty"] },
+          totalValue: 1,
+          avgRate: 1,
+          recordsCount: 1,
+        },
+      },
+      {
+        $sort: {
+          projectName: 1,
+          availableQty: -1,
+        },
+      },
+    ]);
+
+    const projectSummary = await MaterialMovement.aggregate([
+      {
+        $match: {
+          projectName: { $ne: "" },
+          itemName: { $ne: "" },
+        },
+      },
+      {
+        $group: {
+          _id: "$projectName",
+
+          uniqueItems: { $addToSet: "$itemName" },
+
+          totalInQty: {
+            $sum: {
+              $cond: [
+                { $in: ["$typeOfTransit", PROJECT_IN_TYPES] },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+
+          totalOutQty: {
+            $sum: {
+              $cond: [
+                { $in: ["$typeOfTransit", PROJECT_OUT_TYPES] },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+
+          totalValue: { $sum: "$amount" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          projectName: "$_id",
+          totalUniqueItems: { $size: "$uniqueItems" },
+          totalInQty: 1,
+          totalOutQty: 1,
+          availableQty: { $subtract: ["$totalInQty", "$totalOutQty"] },
+          totalValue: 1,
+        },
+      },
+      {
+        $sort: {
+          totalValue: -1,
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        projectSummary,
+        itemWiseStock: data,
+      },
+    });
+  } catch (error) {
+    console.error("Project Live Stock Report Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch project live stock report",
+    });
+  }
+};
+
+
+exports.getHeadStoreLiveStockReport = async (req, res) => {
+  try {
+    const HEAD_STORE_IN_TYPES = ["MRN", "MRS"];
+    const HEAD_STORE_OUT_TYPES = ["DC"];
+
+    const itemWiseStock = await MaterialMovement.aggregate([
+      {
+        $match: {
+          itemName: { $ne: "" },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            itemName: "$itemName",
+            uom: "$uom",
+            
+          },
+      
+      vendorInQty: {
+        $sum: {
+          $cond: [{ $eq: ["$typeOfTransit", "MRN"] }, "$quantity", 0],
+        },
+      },
+
+      siteReturnQty: {
+        $sum: {
+          $cond: [{ $eq: ["$typeOfTransit", "MRS"] }, "$quantity", 0],
+        },
+      },
+
+      storeOutQty: {
+        $sum: {
+          $cond: [{ $in: ["$typeOfTransit", HEAD_STORE_OUT_TYPES] }, "$quantity", 0],
+        },
+      },
+
+      totalInQty: {
+        $sum: {
+          $cond: [{ $in: ["$typeOfTransit", HEAD_STORE_IN_TYPES] }, "$quantity", 0],
+        },
+      },
+
+      totalAmount: { $sum: "$amount" },
+      avgRate: { $avg: "$rate" },
+      recordsCount: { $sum: 1 },
+      sites: { $addToSet: "$projectName" },
+      vendors: { $addToSet: "$vendorName" },
+        },
+},
+{
+  $project: {
+    _id: 0,
+    itemName: "$_id.itemName",
+    uom: "$_id.uom",
+    vendorInQty: 1,
+    siteReturnQty: 1,
+    storeOutQty: 1,
+    totalInQty: 1,
+    availableQty: { $subtract: ["$totalInQty", "$storeOutQty"] },
+    totalAmount: 1,
+    avgRate: 1,
+    recordsCount: 1,
+    totalSites: { $size: "$sites" },
+    totalVendors: { $size: "$vendors" },
+    availableStockValue: 1,
+  },
+},
+  { $sort: { availableQty: -1 } },
+    ]);
+
+const summaryAgg = await MaterialMovement.aggregate([
+  {
+    $match: {
+      itemName: { $ne: "" },
+    },
+  },
+  {
+    $group: {
+      _id: null,
+
+      uniqueItems: { $addToSet: "$itemName" },
+
+      vendorInQty: {
+        $sum: {
+          $cond: [{ $eq: ["$typeOfTransit", "MRN"] }, "$quantity", 0],
+        },
+      },
+
+      siteReturnQty: {
+        $sum: {
+          $cond: [{ $eq: ["$typeOfTransit", "MRS"] }, "$quantity", 0],
+        },
+      },
+
+      storeOutQty: {
+        $sum: {
+          $cond: [{ $eq: ["$typeOfTransit", "DC"] }, "$quantity", 0],
+        },
+      },
+
+      totalAmount: { $sum: "$amount" },
+      stockValue:{$sum:0}
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      totalUniqueItems: { $size: "$uniqueItems" },
+      vendorInQty: 1,
+      siteReturnQty: 1,
+      storeOutQty: 1,
+      availableQty: {
+        $subtract: [{ $add: ["$vendorInQty", "$siteReturnQty"] }, "$storeOutQty"],
+      },
+      totalAmount: 1,
+    },
+  },
+]);
+
+const returnFromSites = await MaterialMovement.aggregate([
+  {
+    $match: {
+      typeOfTransit: "MRS",
+      projectName: { $ne: "" },
+    },
+  },
+  {
+    $group: {
+      _id: "$projectName",
+      returnQty: { $sum: "$quantity" },
+      returnValue: { $sum: "$amount" },
+      uniqueItems: { $addToSet: "$itemName" },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      projectName: "$_id",
+      returnQty: 1,
+      returnValue: 1,
+      totalReturnedItems: { $size: "$uniqueItems" },
+    },
+  },
+  { $sort: { returnQty: -1 } },
+  { $limit: 10 },
+]);
+
+res.status(200).json({
+  success: true,
+  data: {
+    summary: summaryAgg[0] || {
+      totalUniqueItems: 0,
+      vendorInQty: 0,
+      siteReturnQty: 0,
+      storeOutQty: 0,
+      availableQty: 0,
+      totalAmount: 0,
+      stockValue:0,
+      
+    },
+    itemWiseStock,
+    returnFromSites,
+  },
+});
+  } catch (error) {
+  console.error("Head Store Live Stock Error:", error);
+  res.status(500).json({
+    success: false,
+    message: "Failed to fetch head store live stock report",
+  });
+}
+};
+// Update Project Name Globally
+exports.updateProjectNameGlobally = async (req, res) => {
+  try {
+    const { oldProjectName, newProjectName } = req.body;
+
+    if (!oldProjectName || !newProjectName) {
+      return res.status(400).json({
+        success: false,
+        message: "oldProjectName and newProjectName are required",
+      });
+    }
+
+    // Update Material Movement
+    const materialResult = await MaterialMovement.updateMany(
+      {
+        projectName: oldProjectName,
+      },
+      {
+        $set: {
+          projectName: newProjectName,
+        },
+      }
+    );
+
+
+
+    return res.status(200).json({
+      success: true,
+      message: "Project name updated successfully",
+
+      updated: {
+        materialMovementRecords: materialResult.modifiedCount,
+      },
+    });
+  } catch (error) {
+    console.log("Update Project Name Error:", error);
+
     return res.status(500).json({
       success: false,
       message: error.message,

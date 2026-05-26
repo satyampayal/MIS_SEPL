@@ -31,6 +31,14 @@ import TaxInvoiceAnalyticsPage from './pages/Analytics/TaxInvoiceAnalyticsPage'
 
 import MainLayout from './layout/MainLayout'
 import SuperAdminDashboard from './pages/Dashboard/SuperAdminDashboard'
+import MaterialAnalyticsCenter from './reports/MaterialAnalyticsCenter'
+import MaterialSummaryReport from './pages/Reports/MaterialSummaryReport'
+import ProjectWiseMaterialHistory from './pages/Reports/ProjectWiseMaterialHistory'
+import ProjectMaterialDetail from './pages/Reports/ProjectMaterialDetail'
+import ProjectLiveStockReport from './pages/Reports/ProjectLiveStockReport'
+import HeadStoreLiveStockReport from './pages/Reports/HeadStoreLiveStockReport'
+import AddTaskModal from './AddTaskModal'
+import TaskListModal from './TaskListModal'
 
 function App() {
   const { taxInvoiceId } = useParams();
@@ -58,6 +66,60 @@ function App() {
       </ProtectedRoute>
     }
   />
+<Route
+  path="/reports/material-analytics"
+  element={
+    <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+      <MaterialAnalyticsCenter />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/reports/material-summary"
+  element={
+    <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+      <MaterialSummaryReport />
+    </ProtectedRoute>
+  }
+/>
+<Route
+path="/reports/material-history/projects"
+  element={
+    <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+      <ProjectWiseMaterialHistory />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/reports/material-history/projects/:projectName"
+  element={
+    <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+      <ProjectMaterialDetail />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/reports/material-history/project-stock"
+  element={<ProjectLiveStockReport />}
+/>
+<Route
+  path="/reports/material-history/head-store-stock"
+  element={<HeadStoreLiveStockReport />}
+/>
+
+
+{/* TAsk  */}
+{/* <Route
+  path="/task/mng"
+  element={
+    <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+      <TaskListModal />
+    </ProtectedRoute>
+  }
+/> */}
+
 </Route>
 
       {/* Dashboard
