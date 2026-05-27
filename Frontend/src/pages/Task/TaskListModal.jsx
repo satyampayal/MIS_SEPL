@@ -255,6 +255,7 @@ export default function TaskListModal({
       <div className="w-full max-w-7xl max-h-[90vh] overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 shadow-[0_0_45px_rgba(15,23,42,0.95)]">
         <div className="flex flex-col gap-4 border-b border-slate-800 bg-slate-900/70 px-6 py-5 backdrop-blur lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
+            
             <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3 text-blue-400">
               <ClipboardList size={22} />
             </div>

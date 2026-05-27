@@ -36,3 +36,7 @@ export const updateTaskStatusApi = (id, data) => {
 export const deleteTaskApi = (id) => {
   return axios.delete(`${API}/delete/${id}`, getAuthConfig());
 };
+
+export const getAssignedByMeTasksApi = () => {
+  return axios.get(`${API}/assigned-by-me`, getAuthConfig());
+};

@@ -30,7 +30,7 @@ app.use(
       "http://localhost:5173",
       "https://mis-sepl.vercel.app"
     ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE","PATCH"],
     credentials: true,
   })
 );
@@ -42,7 +42,7 @@ app.use('/user',userRouter)
 // Tax Invoice Routes
 app.use('/tax-invoice',taxInvoiceRouter);
 // task assign or  My task
-app.use('/api/tasks',taskRouter)
+app.use('/task',taskRouter)
 // Party Master Routes
 app.use('/party',partyRouter);
 

@@ -1202,7 +1202,7 @@ exports.getProjectWiseMaterialHistory = async (req, res) => {
   }
 };
 
-// Mterial Hitory  Summary
+// Material History Summary
 exports.getMaterialHistorySummary = async (req, res) => {
   try {
     const { fromDate, toDate, project, challanType } = req.query;
@@ -1215,27 +1215,57 @@ exports.getMaterialHistorySummary = async (req, res) => {
     if (fromDate || toDate) {
       match.documentDate = {};
       if (fromDate) match.documentDate.$gte = new Date(fromDate);
-      if (toDate) match.documentDate.$lte = new Date(toDate);
+      if (toDate) {
+        const endDate = new Date(toDate);
+        endDate.setHours(23, 59, 59, 999);
+        match.documentDate.$lte = endDate;
+      }
     }
 
     const totalMaterialsUsed = await MaterialMovement.countDocuments(match);
+
+    const moneySummary = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          totalTransactionAmount: { $sum: { $ifNull: ["$amount", 0] } },
+          totalTransactionCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const quantityByUom = await MaterialMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            uom: { $ifNull: ["$uom", "NA"] }
+          },
+          totalQuantity: { $sum: { $ifNull: ["$quantity", 0] } },
+          totalAmount: { $sum: { $ifNull: ["$amount", 0] } },
+          transactionCount: { $sum: 1 }
+        }
+      },
+      { $sort: { totalAmount: -1 } }
+    ]);
 
     const challanDocs = await MaterialMovement.aggregate([
       {
         $match: {
           ...match,
           typeOfTransit: { $in: ["DDC", "DC", "LPN", "MRN", "MRS"] },
-          documentName: { $ne: "" },
-        },
+          documentName: { $nin: ["", null] }
+        }
       },
       {
         $group: {
-          _id: "$documentName",
-        },
+          _id: "$documentName"
+        }
       },
       {
-        $count: "total",
-      },
+        $count: "total"
+      }
     ]);
 
     const totalChallans = challanDocs[0]?.total || 0;
@@ -1247,13 +1277,17 @@ exports.getMaterialHistorySummary = async (req, res) => {
       { $match: match },
       {
         $group: {
-          _id: "$itemName",
-          totalQuantity: { $sum: "$quantity" },
-          totalAmount: { $sum: "$amount" },
-        },
+          _id: {
+            itemName: "$itemName",
+            uom: { $ifNull: ["$uom", "NA"] }
+          },
+          totalQuantity: { $sum: { $ifNull: ["$quantity", 0] } },
+          totalAmount: { $sum: { $ifNull: ["$amount", 0] } },
+          transactionCount: { $sum: 1 }
+        }
       },
-      { $sort: { totalQuantity: -1 } },
-      { $limit: 10 },
+      { $sort: { totalAmount: -1 } },
+      { $limit: 10 }
     ]);
 
     const challanTypeSummary = await MaterialMovement.aggregate([
@@ -1261,52 +1295,68 @@ exports.getMaterialHistorySummary = async (req, res) => {
         $match: {
           ...match,
           typeOfTransit: { $in: ["DDC", "DC", "LPN", "MRN", "MRS"] },
-          documentName: { $ne: "" },
-        },
+          documentName: { $nin: ["", null] }
+        }
       },
       {
         $group: {
           _id: {
             typeOfTransit: "$typeOfTransit",
             documentName: "$documentName",
+            uom: { $ifNull: ["$uom", "NA"] }
           },
-          totalQuantity: { $sum: "$quantity" },
-        },
+          totalQuantity: { $sum: { $ifNull: ["$quantity", 0] } },
+          totalAmount: { $sum: { $ifNull: ["$amount", 0] } }
+        }
       },
       {
         $group: {
-          _id: "$_id.typeOfTransit",
-          count: { $sum: 1 },
+          _id: {
+            typeOfTransit: "$_id.typeOfTransit",
+            uom: "$_id.uom"
+          },
+          challanCount: { $sum: 1 },
           totalQuantity: { $sum: "$totalQuantity" },
-        },
+          totalAmount: { $sum: "$totalAmount" }
+        }
       },
-      { $sort: { count: -1 } },
+      { $sort: { totalAmount: -1 } }
     ]);
 
     const topVendors = await MaterialMovement.aggregate([
-      { $match: match },
+      {
+        $match: {
+          ...match,
+          vendorName: { $nin: ["", null] }
+        }
+      },
       {
         $group: {
           _id: "$vendorName",
-          totalAmount: { $sum: "$amount" },
-          totalQuantity: { $sum: "$quantity" },
-        },
+          totalAmount: { $sum: { $ifNull: ["$amount", 0] } },
+          transactionCount: { $sum: 1 }
+        }
       },
       { $sort: { totalAmount: -1 } },
-      { $limit: 10 },
+      { $limit: 10 }
     ]);
 
     const topSites = await MaterialMovement.aggregate([
-      { $match: match },
+      {
+        $match: {
+          ...match,
+          projectName: { $nin: ["", null] }
+        }
+      },
       {
         $group: {
           _id: "$projectName",
-          totalQuantity: { $sum: "$quantity" },
-          totalAmount: { $sum: "$amount" },
-        },
+          totalAmount: { $sum: { $ifNull: ["$amount", 0] } },
+          transactionCount: { $sum: 1 }
+        }
       },
-      { $sort: { totalQuantity: -1 } },
-      { $limit: 10 },
+      { $sort: { totalAmount: -1 } },
+      { $limit: 10 }
     ]);
 
     res.status(200).json({
@@ -1314,19 +1364,28 @@ exports.getMaterialHistorySummary = async (req, res) => {
       data: {
         totalMaterialsUsed,
         totalChallans,
+
+        totalTransactionAmount:
+          moneySummary[0]?.totalTransactionAmount || 0,
+
+        totalTransactionCount:
+          moneySummary[0]?.totalTransactionCount || 0,
+
         activeSites: activeSites.filter(Boolean).length,
         totalVendors: totalVendors.filter(Boolean).length,
+
+        quantityByUom,
         topMaterials,
         challanTypeSummary,
         topVendors,
-        topSites,
-      },
+        topSites
+      }
     });
   } catch (error) {
     console.error("Material History Summary Error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch material history summary",
+      message: "Failed to fetch material history summary"
     });
   }
 };

@@ -7,8 +7,9 @@ import {
   getMyTasksApi,
   getAllTasksApi,
   updateTaskStatusApi,
-  deleteTaskApi
-} from "../Services/taskServices";
+  deleteTaskApi,
+  getAssignedByMeTasksApi
+} from "../Services/taskService";
 
 const TaskContext = createContext();
 
@@ -16,6 +17,7 @@ export const TaskProvider = ({ children }) => {
   const [myTasks, setMyTasks] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [assignedByMeTasks, setAssignedByMeTasks] = useState([]);
 
   const fetchMyTasks = async () => {
     try {
@@ -44,7 +46,7 @@ export const TaskProvider = ({ children }) => {
   const refreshTasks = async (role) => {
     await fetchMyTasks();
 
-    if (["Super Admin", "Admin"].includes(role)) {
+    if (["Super Admin", "Admin","Manager"].includes(role)) {
       await fetchAllTasks();
     }
   };
@@ -155,12 +157,26 @@ export const TaskProvider = ({ children }) => {
     }
   };
 
+  const fetchAssignedByMeTasks = async () => {
+  try {
+    setLoading(true);
+    const res = await getAssignedByMeTasksApi();
+    setAssignedByMeTasks(res.data.tasks || []);
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Failed to load assigned tasks");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   return (
     <TaskContext.Provider
       value={{
         myTasks,
         allTasks,
         loading,
+        assignedByMeTasks,
 
         fetchMyTasks,
         fetchAllTasks,
@@ -169,7 +185,10 @@ export const TaskProvider = ({ children }) => {
         assignTask,
         createPersonalTask,
         updateTaskStatus,
-        deleteTask
+
+
+        deleteTask,
+        fetchAssignedByMeTasks
       }}
     >
       {children}

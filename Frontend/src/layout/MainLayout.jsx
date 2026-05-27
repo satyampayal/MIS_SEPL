@@ -25,7 +25,7 @@ import axios from "axios";
 export default function MainLayout() {
     const navigate = useNavigate();
     const { user, setUser } = useContext(AuthContext);
-    const { myTasks, fetchMyTasks } = useTasks();
+    const { myTasks, assignedByMeTasks, fetchMyTasks, fetchAssignedByMeTasks } = useTasks();
 
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -36,6 +36,7 @@ export default function MainLayout() {
     const [users, setUsers] = useState([]);
 
     const [projects, setProjects] = useState([]);
+    const [activeTaskView, setActiveTaskView] = useState("my");
 
     const isAdmin = user?.role === "Super Admin" || user?.role === "Admin";
     const canAssignTask = ["Super Admin", "Admin", "Manager"].includes(
@@ -43,6 +44,8 @@ export default function MainLayout() {
     );
 
 
+
+    console.log(assignedByMeTasks)
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -171,19 +174,28 @@ export default function MainLayout() {
             };
             const res = await axios.get(`${BASE_URL}/project-master/all`, { headers })
 
-            
+
             setProjects(res.data.data || []);
         } catch (error) {
             console.log(error);
         }
     };
 
+    // Assigned by me task
+    const getTaskModalData = () => {
+        if (activeTaskView === "assignedByMe") {
+            return assignedByMeTasks;
+        }
+
+        return getModalTasks();
+    };
     useEffect(() => {
         fetchMyTasks();
         fetchProjects();
 
         if (canAssignTask) {
             fetchUsers();
+            fetchAssignedByMeTasks();
 
         }
     }, []);
@@ -278,16 +290,19 @@ export default function MainLayout() {
 
                         {/* Right */}
                         <div className="flex items-center gap-3">
-                            <div className="hidden lg:flex items-center gap-2 rounded-2xl bg-white/5 border border-white/10 px-4 py-2">
+                            {/* <div className="hidden lg:flex items-center gap-2 rounded-2xl bg-white/5 border border-white/10 px-4 py-2">
                                 <Search size={17} className="text-slate-400" />
                                 <input
                                     placeholder="Search module..."
                                     className="bg-transparent outline-none text-sm text-white placeholder:text-slate-500 w-44"
                                 />
-                            </div>
+                            </div> */}
 
                             <button
-                                onClick={() => openTaskModal("tasks")}
+                                onClick={() => {
+                                    setActiveTaskView("my");
+                                    openTaskModal("tasks");
+                                }}
                                 className="relative rounded-xl border border-slate-700 bg-slate-900 p-2 text-slate-200 hover:bg-slate-800"
                             >
                                 <Bell size={20} />
@@ -298,6 +313,22 @@ export default function MainLayout() {
                                     </span>
                                 )}
                             </button>
+
+                            {canAssignTask && (
+                                <button
+                                    onClick={() => {
+                                        setActiveTaskView("assignedByMe");
+                                        setTaskModalType("assignedByMe");
+                                        setTaskModalOpen(true);
+                                    }}
+                                    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${activeTaskView === "assignedByMe"
+                                        ? "bg-indigo-600 text-white"
+                                        : "text-slate-400 hover:text-white"
+                                        }`}
+                                >
+                                    Assigned By Me
+                                </button>
+                            )}
                             <button
                                 onClick={() => setAddTaskOpen(true)}
                                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
@@ -335,8 +366,9 @@ export default function MainLayout() {
                     <TaskListModal
                         isOpen={taskModalOpen}
                         onClose={() => setTaskModalOpen(false)}
-                        tasks={getModalTasks()}
-                        type={taskModalType}
+                        tasks={getTaskModalData()}
+                        type={activeTaskView === "assignedByMe" ? "assignedByMe" : taskModalType}
+                        currentUser={user}
                     />
 
 

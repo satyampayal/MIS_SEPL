@@ -295,3 +295,29 @@ exports.deleteTask = async (req, res) => {
     });
   }
 };
+
+// ADMIN / MANAGER: tasks assigned by me
+exports.getAssignedByMeTasks = async (req, res) => {
+  try {
+    const tasks = await Task.find({
+      assignedBy: req.user._id,
+      isDeleted: false
+    })
+      .populate("assignedBy", "fullName name email role")
+      .populate("assignedTo", "fullName name email role")
+      .populate("project", "projectName siteName name")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: tasks.length,
+      tasks
+    });
+  } catch (error) {
+    console.error("Get Assigned By Me Tasks Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch assigned tasks"
+    });
+  }
+};
