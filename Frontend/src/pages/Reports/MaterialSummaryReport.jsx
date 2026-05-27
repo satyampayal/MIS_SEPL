@@ -43,7 +43,7 @@ export default function MaterialSummaryReport() {
 
   const formatQty = (qty, uom = "") => {
     return `${Number(qty || 0).toLocaleString("en-IN", {
-      maximumFractionDigits: 2
+      maximumFractionDigits: 0
     })} ${uom || ""}`.trim();
   };
 
