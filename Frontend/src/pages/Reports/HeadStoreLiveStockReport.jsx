@@ -774,21 +774,21 @@ function ShortageModal({ items, summary, onClose }) {
             </p>
           </div>
 
-<div  className=" flex items-right gap-10">
-  <button
-            onClick={exportShortageReport}
-            className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition"
-          >
-            Export Excel
-          </button>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl"
-          >
-            ×
-          </button>
-</div>
-        
+          <div className=" flex items-right gap-10">
+            <button
+              onClick={exportShortageReport}
+              className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition"
+            >
+              Export Excel
+            </button>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white text-2xl"
+            >
+              ×
+            </button>
+          </div>
+
         </div>
 
         <div className="p-5 border-b border-slate-800 space-y-4">
