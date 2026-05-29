@@ -39,6 +39,7 @@ import ProjectLiveStockReport from './pages/Reports/ProjectLiveStockReport'
 import HeadStoreLiveStockReport from './pages/Reports/HeadStoreLiveStockReport'
 import AddTaskModal from './AddTaskModal'
 import TaskListModal from './TaskListModal'
+import ProjectMaterialPlanningPage from './pages/ProjectMaterialPlanning/ProjectMaterialPlanningPage'
 
 function App() {
   const { taxInvoiceId } = useParams();
@@ -110,31 +111,7 @@ path="/reports/material-history/projects"
 />
 
 
-{/* TAsk  */}
-{/* <Route
-  path="/task/mng"
-  element={
-    <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
-      <TaskListModal />
-    </ProtectedRoute>
-  }
-/> */}
-
-</Route>
-
-      {/* Dashboard
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <ModernDashboardLandingPage />
-          </ProtectedRoute>
-        }
-      /> */}
-
-
-
-      {/* TAX INVOICE */}
+ {/* TAX INVOICE */}
 
       <Route
         path="/add-tax-invoice"
@@ -439,7 +416,45 @@ path="/reports/material-history/projects"
             <BOQDetailPage />
           </ProtectedRoute>
         }
+        
       />
+      {/* Project Material Planning */}
+
+      <Route
+  path="/project-material-planning"
+  element={
+    <ProtectedRoute allowedRoles={["Super Admin", "Admin", "Manager", "MIS"]}>
+      <ProjectMaterialPlanningPage />
+    </ProtectedRoute>
+  }
+/>
+
+
+{/* TAsk  */}
+{/* <Route
+  path="/task/mng"
+  element={
+    <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+      <TaskListModal />
+    </ProtectedRoute>
+  }
+/> */}
+
+</Route>
+
+      {/* Dashboard
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <ModernDashboardLandingPage />
+          </ProtectedRoute>
+        }
+      /> */}
+
+
+
+     
 
     </Routes>
   );

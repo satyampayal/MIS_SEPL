@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BASE_URL from "../../../config/api";
-
+import * as XLSX from "xlsx";
 export default function HeadStoreLiveStockReport() {
   const navigate = useNavigate();
 
@@ -24,6 +24,11 @@ export default function HeadStoreLiveStockReport() {
   const [search, setSearch] = useState("");
   const [stockModalOpen, setStockModalOpen] = useState(false);
 
+  //Mis Leading Store Items
+  const [overIssuedItems, setOverIssuedItems] = useState([]);
+  const [shortageModalOpen, setShortageModalOpen] = useState(false);
+
+
   const fetchReport = async () => {
     try {
       setLoading(true);
@@ -33,34 +38,38 @@ export default function HeadStoreLiveStockReport() {
       );
 
       const receivedItems = res.data.items || [];
+      const backendSummary = res.data.summary || {};
+
 
       setItems(receivedItems);
       setReturnFromSites([]);
+      // Set Misleading Items
+      setOverIssuedItems(res.data.overIssuedItems || []);
 
-      const totalMrnValue = receivedItems.reduce(
-        (sum, item) => sum + Number(item.totalAmountMRN || 0),
-        0
-      );
+      // const totalMrnValue = receivedItems.reduce(
+      //   (sum, item) => sum + Number(item.totalAmountMRN || 0),
+      //   0
+      // );
 
-      const totalMrsValue = receivedItems.reduce(
-        (sum, item) => sum + Number(item.totalAmountMRS || 0),
-        0
-      );
+      // const totalMrsValue = receivedItems.reduce(
+      //   (sum, item) => sum + Number(item.totalAmountMRS || 0),
+      //   0
+      // );
 
-      const totalOutValue = receivedItems.reduce(
-        (sum, item) => sum + Number(item.totalAmountOutDC || 0),
-        0
-      );
-      const totalOpeningStockValue=receivedItems.reduce(
-          (sum, item) => sum + Number(item.openingStockAmount || 0),
-        0
-      )
+      // const totalOutValue = receivedItems.reduce(
+      //   (sum, item) => sum + Number(item.totalAmountOutDC || 0),
+      //   0
+      // );
+      // const totalOpeningStockValue=receivedItems.reduce(
+      //     (sum, item) => sum + Number(item.openingStockAmount || 0),
+      //   0
+      // )
 
-      const currentStoreStockValue =
-        totalOpeningStockValue +
-        totalMrnValue +
-        totalMrsValue -
-        totalOutValue;
+      // const currentStoreStockValue =
+      //   totalOpeningStockValue +
+      //   totalMrnValue +
+      //   totalMrsValue -
+      //   totalOutValue;
 
       setSummary({
         totalUniqueItems: res.data.totalItems || receivedItems.length,
@@ -80,12 +89,18 @@ export default function HeadStoreLiveStockReport() {
           0
         ),
 
-        openingStockValue: totalOpeningStockValue,
-        totalMrnValue,
-        totalMrsValue,
-        totalOutValue,
+        openingStockValue: backendSummary.totalOpeningStockValue,
+        totalMrnValue: backendSummary.totalMrnValue,
+        totalMrsValue: backendSummary.totalMrsValue,
+        totalOutValue: backendSummary.totalDCValue,
 
-        currentStoreStockValue,
+        currentStoreStockValue: backendSummary.totalCurrentStockValue,
+
+        // mis leading items 
+        negativeStockItems: backendSummary.negativeStockItems || 0,
+        totalNegativeQty: backendSummary.totalNegativeQty || 0,
+        totalNegativeStockValue:
+          backendSummary.totalNegativeStockValue || 0,
       });
     } catch (error) {
       console.error("Head store stock error:", error);
@@ -143,19 +158,20 @@ export default function HeadStoreLiveStockReport() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
         {/* <Stat icon={Package} title="Unique Items" value={num(summary.totalUniqueItems)} /> */}
         {/* <Stat icon={ArrowDownCircle} title="Vendor In MRN" value={num(summary.vendorInQty)} tone="emerald" /> */}
         {/* <Stat icon={RotateCcw} title="Site Return MRS" value={num(summary.siteReturnQty)} tone="cyan" /> */}
         {/* <Stat icon={ArrowUpCircle} title="Store Out DC" value={num(summary.storeOutQty)} tone="red" /> */}
         {/* Opening Stock */}
-         <Stat
+
+        <Stat
           icon={IndianRupee}
           title="opening Stock Value"
           value={`₹ ${num(summary.openingStockValue)}`}
           tone="green"
         />
-        {/* MRN Value */}
+        {/* MRN Value// */}
 
         <Stat
           icon={IndianRupee}
@@ -186,11 +202,21 @@ export default function HeadStoreLiveStockReport() {
         /> */}
         <Stat
           icon={IndianRupee}
-          title="Stock Value"
+          title="Live Stock Value"
           value={`₹ ${num(summary.currentStoreStockValue)}`}
           tone="green"
           onClick={() => setStockModalOpen(true)}
         />
+
+        {/*  Misleading Items stat */}
+        <Stat
+          icon={ArrowUpCircle}
+          title="Shortage / Misleading"
+          value={num(summary.negativeStockItems)}
+          tone="red"
+          onClick={() => setShortageModalOpen(true)}
+        />
+
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -251,6 +277,14 @@ export default function HeadStoreLiveStockReport() {
           onClose={() => setStockModalOpen(false)}
         />
       )}
+      {shortageModalOpen && (
+        <ShortageModal
+          items={overIssuedItems}
+          summary={summary}
+          onClose={() => setShortageModalOpen(false)}
+        />
+      )}
+
     </div>
   );
 }
@@ -350,7 +384,7 @@ function num(value) {
   });
 }
 
-function CurrentStockModal({ items,summary, onClose }) {
+function CurrentStockModal({ items, summary, onClose }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [materialType, setMaterialType] = useState("All");
 
@@ -680,3 +714,208 @@ function BreakupCard({ title, data, tone = "blue" }) {
     </div>
   );
 }
+
+
+function ShortageModal({ items, summary, onClose }) {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredItems = items.filter((item) => {
+    const keyword = searchTerm.toLowerCase();
+
+    return (
+      item.itemName?.toLowerCase().includes(keyword) ||
+      item.storeItemCode?.toLowerCase().includes(keyword) ||
+      item.hsnCode?.toLowerCase().includes(keyword) ||
+      item.boqNo?.toLowerCase().includes(keyword) ||
+      item.lastDocumentNo?.toLowerCase().includes(keyword)
+    );
+  });
+
+  //  Export shortage material 
+  const exportShortageReport = () => {
+    const exportData = filteredItems.map((item, index) => ({
+      "S.No": index + 1,
+      "Item Name": item.itemName || "",
+      "Store Item Code": item.storeItemCode || "",
+      "UOM": item.uom || "",
+      "HSN Code": item.hsnCode || "",
+      "Opening Stock": Number(item.openingStock || 0),
+      "MRN Qty": Number(item.vendorInQty || 0),
+      "MRS Qty": Number(item.siteReturnQty || 0),
+      "Total Out Qty": Number(item.storeOutQty || 0),
+      "Available Qty": Number(item.availableQty || 0),
+      "Shortage Qty": Number(item.shortageQty || 0),
+      "Average Rate": Number(item.avgCostRate || 0),
+      "Negative Stock Value": Number(item.negativeStockValue || 0),
+      "Last Document No": item.lastDocumentNo || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Shortage Report");
+
+    XLSX.writeFile(
+      workbook,
+      `Head_Store_Shortage_Report_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-950 border border-red-500/30 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+          <div>
+            <h2 className="text-xl font-bold text-white">
+              Shortage / Misleading Stock Items
+            </h2>
+            <p className="text-sm text-slate-400 mt-1">
+              These items have more outward quantity than available stock.
+            </p>
+          </div>
+
+<div  className=" flex items-right gap-10">
+  <button
+            onClick={exportShortageReport}
+            className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition"
+          >
+            Export Excel
+          </button>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white text-2xl"
+          >
+            ×
+          </button>
+</div>
+        
+        </div>
+
+        <div className="p-5 border-b border-slate-800 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Mini
+              label="Misleading Items"
+              value={num(summary.negativeStockItems)}
+              tone="text-red-400"
+            />
+
+            <Mini
+              label="Total Shortage Qty"
+              value={num(summary.totalNegativeQty)}
+              tone="text-red-400"
+            />
+
+            <Mini
+              label="Showing Records"
+              value={num(filteredItems.length)}
+              tone="text-orange-400"
+            />
+            <Mini
+              label="Negative Stock Value"
+              value={`₹ ${num(summary.totalNegativeStockValue)}`}
+              tone="text-red-400"
+            />
+          </div>
+
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+            />
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search shortage item..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm text-white outline-none focus:border-red-500"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-auto max-h-[55vh]">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-slate-900 text-slate-300 z-10">
+              <tr>
+                <th className="text-left p-3">Item</th>
+                <th className="text-left p-3">Code</th>
+                <th className="text-right p-3">Opening</th>
+
+                <th className="text-right p-3">MRN</th>
+                <th className="text-right p-3">MRS</th>
+                <th className="text-right p-3">Out</th>
+                <th className="text-right p-3">Available</th>
+                <th className="text-right p-3">Shortage</th>
+                <th className="text-right p-3">Negative Value</th>
+
+                <th className="text-left p-3">Last Doc</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="p-6 text-center text-slate-500">
+                    No shortage item found.
+                  </td>
+                </tr>
+              ) : (
+                filteredItems.map((item, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-slate-800 hover:bg-red-500/5"
+                  >
+                    <td className="p-3 min-w-[260px]">
+                      <p className="font-medium text-white">
+                        {item.itemName || "N/A"}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {item.uom || "-"} {item.hsnCode ? `• HSN ${item.hsnCode}` : ""}
+                      </p>
+                    </td>
+
+                    <td className="p-3 text-slate-300 whitespace-nowrap">
+                      {item.storeItemCode || "-"}
+                    </td>
+
+                    <td className="p-3 text-right text-green-400">
+                      {num(item.openingStock)}
+                    </td>
+
+
+
+                    <td className="p-3 text-right text-emerald-400">
+                      {num(item.vendorInQty)}
+                    </td>
+
+                    <td className="p-3 text-right text-cyan-400">
+                      {num(item.siteReturnQty)}
+                    </td>
+
+                    <td className="p-3 text-right text-red-400">
+                      {num(item.storeOutQty)}
+                    </td>
+
+                    <td className="p-3 text-right font-semibold text-red-400">
+                      {num(item.availableQty)}
+                    </td>
+
+                    <td className="p-3 text-right font-bold text-orange-400">
+                      {num(item.shortageQty)}
+                    </td>
+                    <td className="p-3 text-right font-bold text-red-400">
+                      ₹ {num(item.negativeStockValue)}
+                    </td>
+
+                    <td className="p-3 text-slate-300">
+                      {item.lastDocumentNo || "-"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+

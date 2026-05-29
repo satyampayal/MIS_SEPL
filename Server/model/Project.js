@@ -2,6 +2,37 @@
 
 const mongoose = require("mongoose");
 
+
+const contactPersonSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    designation: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    email: {
+      type: String,
+      default: "",
+      trim: true,
+      lowercase: true,
+    },
+
+    contactNumber: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
 const projectSchema = new mongoose.Schema(
   {
     name: {
@@ -105,7 +136,16 @@ const projectSchema = new mongoose.Schema(
     gstNumber:{
       type:String,
       default:""
-    }
+    },
+projectContacts: {
+  client: [contactPersonSchema],
+  project: [contactPersonSchema],
+  electrical: [contactPersonSchema],
+  hr: [contactPersonSchema],
+  accounts: [contactPersonSchema],
+  safety: [contactPersonSchema],
+  store: [contactPersonSchema]
+}
   },
   {
     timestamps: true

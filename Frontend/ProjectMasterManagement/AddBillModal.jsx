@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import BASE_URL from "../config/api";
+
 export default function AddBillModal({
   isOpen,
   onClose,
@@ -11,6 +12,13 @@ export default function AddBillModal({
 }) {
   const isView = mode === "view";
   const isEdit = mode === "edit";
+
+  const loggedInUser = JSON.parse(localStorage.getItem("user")) || {};
+  const userRole = loggedInUser?.role;
+
+  const canManageProject = ["Super Admin", "Admin", "Manager"].includes(
+    userRole
+  );
 
   const [formData, setFormData] = useState({
     billType: "RA",
@@ -32,11 +40,11 @@ export default function AddBillModal({
         billTypeCount: bill.billTypeCount || 1,
         billNumber: bill.billNumber || "",
         billAmount: bill.billAmount || "",
+        receivedAmount: bill.receivedAmount || "",
         billDate: bill.billDate || "",
         billFile: null,
         billDescription: bill.billDescription || "",
         billGroup: bill.billGroup || "",
-        receivedAmount: bill.receivedAmount || "",
         billStatus: bill.billStatus || "Submitted",
       });
     } else {
@@ -45,17 +53,19 @@ export default function AddBillModal({
         billTypeCount: 1,
         billNumber: "",
         billAmount: "",
+        receivedAmount: "",
         billDate: "",
         billFile: null,
         billDescription: "",
         billGroup: "",
-        receivedAmount: "",
         billStatus: "Submitted",
       });
     }
   }, [bill, isOpen]);
 
   if (!isOpen) return null;
+
+  const readOnlyMode = isView || !canManageProject;
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -68,7 +78,7 @@ export default function AddBillModal({
 
   const handleSubmit = async () => {
     try {
-      if (isView) {
+      if (readOnlyMode) {
         onClose();
         return;
       }
@@ -90,12 +100,17 @@ export default function AddBillModal({
         form.append("billFile", formData.billFile);
       }
 
+      const token = localStorage.getItem("token");
+
       const url = isEdit
         ? `${BASE_URL}/project-master/update/bill/${bill._id}`
         : `${BASE_URL}/project-master/add/bill/${projectId}`;
 
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: form,
       });
 
@@ -113,29 +128,41 @@ export default function AddBillModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-gray-200 max-h-[95vh] overflow-y-auto">
+  const inputClass =
+    "mt-1 w-full bg-slate-950 border border-slate-700 px-4 py-3 rounded-xl text-slate-100 outline-none focus:border-cyan-400 disabled:bg-slate-800 disabled:text-slate-500 placeholder:text-slate-500";
 
-        <div className="sticky top-0 bg-white z-10 border-b px-6 py-5 rounded-t-3xl">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isView ? "View Bill" : isEdit ? "Edit Bill" : "Add New Bill"}
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="relative bg-slate-900 text-slate-100 w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-700 max-h-[95vh] overflow-y-auto">
+        <div className="sticky top-0 bg-slate-900 z-10 border-b border-slate-800 px-6 py-5 rounded-t-3xl">
+          <h2 className="text-2xl font-bold text-white">
+            {readOnlyMode
+              ? "View Bill"
+              : isEdit
+              ? "Edit Bill"
+              : "Add New Bill"}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage project billing, payment received and bill copy details
+
+          <p className="text-sm text-slate-400 mt-1">
+            Manage project billing, payment received and bill copy details.
           </p>
+
+          {!canManageProject && (
+            <p className="text-xs text-amber-400 mt-2">
+              You have view-only access for this bill.
+            </p>
+          )}
         </div>
 
         <div className="p-6">
           <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600">Bill Type</label>
+            <Field label="Bill Type">
               <select
                 name="billType"
                 value={formData.billType}
-                disabled={isView}
+                disabled={readOnlyMode}
                 onChange={handleChange}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+                className={inputClass}
               >
                 <option value="RA">RA Bill</option>
                 <option value="Final">Final Bill</option>
@@ -143,163 +170,155 @@ export default function AddBillModal({
                 <option value="Credit Note">Credit Note</option>
                 <option value="Debit Note">Debit Note</option>
               </select>
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-sm font-medium text-gray-600">Bill Count</label>
+            <Field label="Bill Count">
               <input
                 type="number"
                 name="billTypeCount"
                 placeholder="1, 2, 3..."
                 value={formData.billTypeCount}
-                disabled={isView}
+                disabled={readOnlyMode}
                 onChange={handleChange}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+                className={inputClass}
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-sm font-medium text-gray-600">Bill Number</label>
+            <Field label="Bill Number">
               <input
                 name="billNumber"
                 placeholder="Example: SEPL247823"
                 value={formData.billNumber}
-                disabled={isView}
+                disabled={readOnlyMode}
                 onChange={handleChange}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+                className={inputClass}
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-sm font-medium text-gray-600">Bill Date</label>
+            <Field label="Bill Date">
               <input
                 type="date"
                 name="billDate"
                 value={formData.billDate}
-                disabled={isView}
+                disabled={readOnlyMode}
                 onChange={handleChange}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+                className={inputClass}
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-sm font-medium text-gray-600">Bill Amount</label>
+            <Field label="Bill Amount">
               <input
                 type="number"
                 name="billAmount"
                 placeholder="Enter bill amount"
                 value={formData.billAmount}
-                disabled={isView}
+                disabled={readOnlyMode}
                 onChange={handleChange}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+                className={inputClass}
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-sm font-medium text-gray-600">Received Amount</label>
+            <Field label="Received Amount">
               <input
                 type="number"
                 name="receivedAmount"
                 placeholder="Enter received amount"
                 value={formData.receivedAmount}
-                disabled={isView}
+                disabled={readOnlyMode}
                 onChange={handleChange}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+                className={inputClass}
               />
-            </div>
+            </Field>
           </div>
 
           <div className="grid md:grid-cols-3 gap-4 my-6">
-            <div className="rounded-2xl border bg-blue-50 p-5">
-              <p className="text-sm text-gray-500">Bill Amount</p>
-              <h3 className="text-2xl font-bold text-blue-700 mt-1">
-                ₹ {Number(formData.billAmount || 0).toLocaleString("en-IN")}
-              </h3>
-            </div>
+            <AmountCard
+              title="Bill Amount"
+              value={formData.billAmount}
+              color="text-cyan-400"
+            />
 
-            <div className="rounded-2xl border bg-green-50 p-5">
-              <p className="text-sm text-gray-500">Received</p>
-              <h3 className="text-2xl font-bold text-green-700 mt-1">
-                ₹ {Number(formData.receivedAmount || 0).toLocaleString("en-IN")}
-              </h3>
-            </div>
+            <AmountCard
+              title="Received"
+              value={formData.receivedAmount}
+              color="text-emerald-400"
+            />
 
-            <div className="rounded-2xl border bg-red-50 p-5">
-              <p className="text-sm text-gray-500">Pending</p>
-              <h3 className="text-2xl font-bold text-red-700 mt-1">
-                ₹ {Math.max(
-                  Number(formData.billAmount || 0) -
+            <AmountCard
+              title="Pending"
+              value={Math.max(
+                Number(formData.billAmount || 0) -
                   Number(formData.receivedAmount || 0),
-                  0
-                ).toLocaleString("en-IN")}
-              </h3>
-            </div>
+                0
+              )}
+              color="text-red-400"
+            />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600">Type of Work</label>
+            <Field label="Type of Work">
               <select
                 name="billGroup"
                 value={formData.billGroup}
-                disabled={isView}
+                disabled={readOnlyMode}
                 onChange={handleChange}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+                className={inputClass}
               >
                 <option value="">Select Type Of Work</option>
                 <option value="Erection">Erection</option>
                 <option value="Supply">Supply</option>
               </select>
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-sm font-medium text-gray-600">Bill Status</label>
+            <Field label="Bill Status">
               <select
                 name="billStatus"
                 value={formData.billStatus}
-                disabled={isView}
+                disabled={readOnlyMode}
                 onChange={handleChange}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+                className={inputClass}
               >
                 <option value="Draft">Draft</option>
                 <option value="Submitted">Submitted</option>
                 <option value="Approved">Approved</option>
                 <option value="Rejected">Rejected</option>
               </select>
-            </div>
+            </Field>
 
             <div className="md:col-span-2">
-              <label className="text-sm font-medium text-gray-600">Bill Description</label>
-              <textarea
-                name="billDescription"
-                placeholder="Write short bill description..."
-                value={formData.billDescription}
-                disabled={isView}
-                onChange={handleChange}
-                rows={3}
-                className="mt-1 w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 resize-none"
-              />
+              <Field label="Bill Description">
+                <textarea
+                  name="billDescription"
+                  placeholder="Write short bill description..."
+                  value={formData.billDescription}
+                  disabled={readOnlyMode}
+                  onChange={handleChange}
+                  rows={3}
+                  className={`${inputClass} resize-none`}
+                />
+              </Field>
             </div>
 
-            {!isView && (
+            {!readOnlyMode && (
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-600">Upload Bill File</label>
-                <input
-                  type="file"
-                  name="billFile"
-                  onChange={handleChange}
-                  className="mt-1 w-full border border-dashed border-gray-300 px-4 py-3 rounded-xl bg-gray-50"
-                />
+                <Field label="Upload Bill File">
+                  <input
+                    type="file"
+                    name="billFile"
+                    onChange={handleChange}
+                    className="mt-1 w-full border border-dashed border-slate-700 px-4 py-3 rounded-xl bg-slate-950 text-slate-300"
+                  />
+                </Field>
               </div>
             )}
 
             {bill?.billFile && (
-              <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-xl p-4">
+              <div className="md:col-span-2 bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
                 <a
                   href={bill.billFile}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-blue-700 font-medium underline"
+                  className="text-cyan-400 font-medium underline"
                 >
                   View Existing Bill File
                 </a>
@@ -308,22 +327,42 @@ export default function AddBillModal({
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-3 rounded-b-3xl">
+        <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-6 py-4 flex justify-end gap-3 rounded-b-3xl">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition font-medium"
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 transition font-medium"
           >
             Cancel
           </button>
 
           <button
             onClick={handleSubmit}
-            className="px-6 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition font-medium shadow"
+            className="px-6 py-2.5 rounded-xl bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition font-bold shadow"
           >
-            {isView ? "Close" : isEdit ? "Update Bill" : "Save Bill"}
+            {readOnlyMode ? "Close" : isEdit ? "Update Bill" : "Save Bill"}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-slate-400">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function AmountCard({ title, value, color }) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+      <p className="text-sm text-slate-500">{title}</p>
+      <h3 className={`text-2xl font-bold mt-1 ${color}`}>
+        ₹ {Number(value || 0).toLocaleString("en-IN")}
+      </h3>
     </div>
   );
 }

@@ -764,7 +764,7 @@ exports.getMaterialHistory = async (req, res) => {
             inCount: {
               $sum: {
                 $cond: [
-                  { $in: ["$typeOfTransit", PROJECT_IN_TYPES] },
+                  { $in: ["$typeOfTransit", PROJECT_IN_TYPES] },// May  be think about opening stock
                   1,
                   0,
                 ],
@@ -925,7 +925,7 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
             $sum: {
               $cond: [
                 {
-                  $in: ["$typeOfTransit", ["DDC", "DC", "LPN"]],
+                  $in: ["$typeOfTransit", ["DDC", "DC", "LPN"]],// forproject
                 },
                 1,
                 0,
@@ -937,7 +937,7 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
             $sum: {
               $cond: [
                 {
-                  $in: ["$typeOfTransit", ["MRS", "MRNs"]],
+                  $in: ["$typeOfTransit", ["MRS"]],//for project store /site
                 },
                 1,
                 0,
@@ -954,6 +954,7 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
           documentDate: { $ne: null },
         },
       },
+
       {
         $group: {
           _id: {
@@ -963,15 +964,9 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
                 date: "$documentDate",
               },
             },
-            inOut: "$inOut",
           },
-          quantity: { $sum: "$quantity" },
-        },
-      },
-      {
-        $group: {
-          _id: "$_id.date",
-          inwardQty: {
+
+          inward: {
             $sum: {
               $cond: [
                 {
@@ -983,11 +978,11 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
             },
           },
 
-          outwardQty: {
+          outward: {
             $sum: {
               $cond: [
                 {
-                  $in: ["$typeOfTransit", ["MRS", "MRN"]],
+                  $in: ["$typeOfTransit", ["MRS"]],
                 },
                 "$quantity",
                 0,
@@ -996,15 +991,25 @@ exports.getMaterialMovementAnalytics = async (req, res) => {
           },
         },
       },
+
       {
         $project: {
           _id: 0,
-          date: "$_id",
+          date: "$_id.date",
           inward: 1,
           outward: 1,
         },
       },
-      { $limit: 30 },
+
+      {
+        $sort: {
+          date: 1,
+        },
+      },
+
+      {
+        $limit: 30,
+      },
     ]);
 
     const topItems = await MaterialMovement.aggregate([
@@ -1859,162 +1864,162 @@ exports.getHeadStoreLiveStockReport = async (req, res) => {
           _id: {
             itemName: "$itemName",
             uom: "$uom",
-            
+
           },
-      
-      vendorInQty: {
-        $sum: {
-          $cond: [{ $eq: ["$typeOfTransit", "MRN"] }, "$quantity", 0],
+
+          vendorInQty: {
+            $sum: {
+              $cond: [{ $eq: ["$typeOfTransit", "MRN"] }, "$quantity", 0],
+            },
+          },
+
+          siteReturnQty: {
+            $sum: {
+              $cond: [{ $eq: ["$typeOfTransit", "MRS"] }, "$quantity", 0],
+            },
+          },
+
+          storeOutQty: {
+            $sum: {
+              $cond: [{ $in: ["$typeOfTransit", HEAD_STORE_OUT_TYPES] }, "$quantity", 0],
+            },
+          },
+
+          totalInQty: {
+            $sum: {
+              $cond: [{ $in: ["$typeOfTransit", HEAD_STORE_IN_TYPES] }, "$quantity", 0],
+            },
+          },
+
+          totalAmount: { $sum: "$amount" },
+          avgRate: { $avg: "$rate" },
+          recordsCount: { $sum: 1 },
+          sites: { $addToSet: "$projectName" },
+          vendors: { $addToSet: "$vendorName" },
         },
       },
-
-      siteReturnQty: {
-        $sum: {
-          $cond: [{ $eq: ["$typeOfTransit", "MRS"] }, "$quantity", 0],
+      {
+        $project: {
+          _id: 0,
+          itemName: "$_id.itemName",
+          uom: "$_id.uom",
+          vendorInQty: 1,
+          siteReturnQty: 1,
+          storeOutQty: 1,
+          totalInQty: 1,
+          availableQty: { $subtract: ["$totalInQty", "$storeOutQty"] },
+          totalAmount: 1,
+          avgRate: 1,
+          recordsCount: 1,
+          totalSites: { $size: "$sites" },
+          totalVendors: { $size: "$vendors" },
+          availableStockValue: 1,
         },
       },
-
-      storeOutQty: {
-        $sum: {
-          $cond: [{ $in: ["$typeOfTransit", HEAD_STORE_OUT_TYPES] }, "$quantity", 0],
-        },
-      },
-
-      totalInQty: {
-        $sum: {
-          $cond: [{ $in: ["$typeOfTransit", HEAD_STORE_IN_TYPES] }, "$quantity", 0],
-        },
-      },
-
-      totalAmount: { $sum: "$amount" },
-      avgRate: { $avg: "$rate" },
-      recordsCount: { $sum: 1 },
-      sites: { $addToSet: "$projectName" },
-      vendors: { $addToSet: "$vendorName" },
-        },
-},
-{
-  $project: {
-    _id: 0,
-    itemName: "$_id.itemName",
-    uom: "$_id.uom",
-    vendorInQty: 1,
-    siteReturnQty: 1,
-    storeOutQty: 1,
-    totalInQty: 1,
-    availableQty: { $subtract: ["$totalInQty", "$storeOutQty"] },
-    totalAmount: 1,
-    avgRate: 1,
-    recordsCount: 1,
-    totalSites: { $size: "$sites" },
-    totalVendors: { $size: "$vendors" },
-    availableStockValue: 1,
-  },
-},
-  { $sort: { availableQty: -1 } },
+      { $sort: { availableQty: -1 } },
     ]);
 
-const summaryAgg = await MaterialMovement.aggregate([
-  {
-    $match: {
-      itemName: { $ne: "" },
-    },
-  },
-  {
-    $group: {
-      _id: null,
-
-      uniqueItems: { $addToSet: "$itemName" },
-
-      vendorInQty: {
-        $sum: {
-          $cond: [{ $eq: ["$typeOfTransit", "MRN"] }, "$quantity", 0],
+    const summaryAgg = await MaterialMovement.aggregate([
+      {
+        $match: {
+          itemName: { $ne: "" },
         },
       },
+      {
+        $group: {
+          _id: null,
 
-      siteReturnQty: {
-        $sum: {
-          $cond: [{ $eq: ["$typeOfTransit", "MRS"] }, "$quantity", 0],
+          uniqueItems: { $addToSet: "$itemName" },
+
+          vendorInQty: {
+            $sum: {
+              $cond: [{ $eq: ["$typeOfTransit", "MRN"] }, "$quantity", 0],
+            },
+          },
+
+          siteReturnQty: {
+            $sum: {
+              $cond: [{ $eq: ["$typeOfTransit", "MRS"] }, "$quantity", 0],
+            },
+          },
+
+          storeOutQty: {
+            $sum: {
+              $cond: [{ $eq: ["$typeOfTransit", "DC"] }, "$quantity", 0],
+            },
+          },
+
+          totalAmount: { $sum: "$amount" },
+          stockValue: { $sum: 0 }
         },
       },
-
-      storeOutQty: {
-        $sum: {
-          $cond: [{ $eq: ["$typeOfTransit", "DC"] }, "$quantity", 0],
+      {
+        $project: {
+          _id: 0,
+          totalUniqueItems: { $size: "$uniqueItems" },
+          vendorInQty: 1,
+          siteReturnQty: 1,
+          storeOutQty: 1,
+          availableQty: {
+            $subtract: [{ $add: ["$vendorInQty", "$siteReturnQty"] }, "$storeOutQty"],
+          },
+          totalAmount: 1,
         },
       },
+    ]);
 
-      totalAmount: { $sum: "$amount" },
-      stockValue:{$sum:0}
-    },
-  },
-  {
-    $project: {
-      _id: 0,
-      totalUniqueItems: { $size: "$uniqueItems" },
-      vendorInQty: 1,
-      siteReturnQty: 1,
-      storeOutQty: 1,
-      availableQty: {
-        $subtract: [{ $add: ["$vendorInQty", "$siteReturnQty"] }, "$storeOutQty"],
+    const returnFromSites = await MaterialMovement.aggregate([
+      {
+        $match: {
+          typeOfTransit: "MRS",
+          projectName: { $ne: "" },
+        },
       },
-      totalAmount: 1,
-    },
-  },
-]);
+      {
+        $group: {
+          _id: "$projectName",
+          returnQty: { $sum: "$quantity" },
+          returnValue: { $sum: "$amount" },
+          uniqueItems: { $addToSet: "$itemName" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          projectName: "$_id",
+          returnQty: 1,
+          returnValue: 1,
+          totalReturnedItems: { $size: "$uniqueItems" },
+        },
+      },
+      { $sort: { returnQty: -1 } },
+      { $limit: 10 },
+    ]);
 
-const returnFromSites = await MaterialMovement.aggregate([
-  {
-    $match: {
-      typeOfTransit: "MRS",
-      projectName: { $ne: "" },
-    },
-  },
-  {
-    $group: {
-      _id: "$projectName",
-      returnQty: { $sum: "$quantity" },
-      returnValue: { $sum: "$amount" },
-      uniqueItems: { $addToSet: "$itemName" },
-    },
-  },
-  {
-    $project: {
-      _id: 0,
-      projectName: "$_id",
-      returnQty: 1,
-      returnValue: 1,
-      totalReturnedItems: { $size: "$uniqueItems" },
-    },
-  },
-  { $sort: { returnQty: -1 } },
-  { $limit: 10 },
-]);
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: summaryAgg[0] || {
+          totalUniqueItems: 0,
+          vendorInQty: 0,
+          siteReturnQty: 0,
+          storeOutQty: 0,
+          availableQty: 0,
+          totalAmount: 0,
+          stockValue: 0,
 
-res.status(200).json({
-  success: true,
-  data: {
-    summary: summaryAgg[0] || {
-      totalUniqueItems: 0,
-      vendorInQty: 0,
-      siteReturnQty: 0,
-      storeOutQty: 0,
-      availableQty: 0,
-      totalAmount: 0,
-      stockValue:0,
-      
-    },
-    itemWiseStock,
-    returnFromSites,
-  },
-});
+        },
+        itemWiseStock,
+        returnFromSites,
+      },
+    });
   } catch (error) {
-  console.error("Head Store Live Stock Error:", error);
-  res.status(500).json({
-    success: false,
-    message: "Failed to fetch head store live stock report",
-  });
-}
+    console.error("Head Store Live Stock Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch head store live stock report",
+    });
+  }
 };
 // Update Project Name Globally
 exports.updateProjectNameGlobally = async (req, res) => {

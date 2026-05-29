@@ -1,9 +1,7 @@
 const MaterialMovement = require("../model/materialMovement");
 
-
 const HEAD_STORE_IN_TYPES = ["MRN", "MRS", "In", "Return"];
-// const HEAD_STORE_OUT_TYPES = ["DC", "DDC", "LPN", "Out"];
-const HEAD_STORE_OUT_TYPES = ["DC","Out"];
+const HEAD_STORE_OUT_TYPES = ["DC", "Out"]; // for safety
 
 exports.getHeadStoreReceivedItems = async (req, res) => {
     try {
@@ -51,14 +49,16 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
                             onNull: 0,
                         },
                     },
-                    safeOpeningStock: {
-                        $convert: {
-                            input: "$openingStock",
-                            to: "double",
-                            onError: 0,
-                            onNull: 0,
-                        },
-                    },
+                    // From 29/05/2026 opening stock not need to inmaterial hitory we take from else 
+                    // safeOpeningStock: {
+                    //     $convert: {
+                    //         input: "$openingStock",
+                    //         to: "double",
+                    //         onError: 0,
+                    //         onNull: 0,
+                    //     },
+                    // },
+                     safeOpeningStock: 0
                 },
             },
 
@@ -82,7 +82,8 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
                     commodity: { $first: "$commodity" },
                     mepHead: { $first: "$mepHead" },
 
-                    openingStock: { $max: "$safeOpeningStock" },
+                    openingStock: { $sum: "$safeOpeningStock" },
+                    // openingStock:0,
 
                     vendorInQty: {
                         $sum: {
@@ -99,7 +100,7 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
                     storeOutQty: {
                         $sum: {
                             $cond: [
-                                { $in: ["$typeOfTransit", HEAD_STORE_OUT_TYPES] },
+                                { $eq: ["$typeOfTransit", "DC"] },
                                 "$safeQty",
                                 0,
                             ],
@@ -125,7 +126,7 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
                             ],
                         },
                     },
-                    // NEW CALCULATIONS
+
                     totalAmountMRN: {
                         $sum: {
                             $cond: [
@@ -157,13 +158,12 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
                     },
 
                     openingStockAmount: {
-                        $max: {
+                        $sum: {
                             $multiply: ["$safeOpeningStock", "$safeRate"],
                         },
                     },
 
                     fixedUnitRate: { $max: "$safeRate" },
-
                     lastPurchaseRate: { $last: "$safeRate" },
                     lastReceivedDate: { $max: "$documentDate" },
                     lastDocumentNo: { $last: "$documentNo" },
@@ -182,11 +182,23 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
                         ],
                     },
 
-                    // frontend can also calculate, but backend sends raw values safely
+                    totalStockInQty: {
+                        $add: ["$openingStock", "$totalReceivedQty"],
+                    },
+
+                    totalStockInValue: {
+                        $add: ["$openingStockAmount", "$totalCostAmount"],
+                    },
+
                     avgCostRate: {
                         $cond: [
-                            { $gt: ["$totalReceivedQty", 0] },
-                            { $divide: ["$totalCostAmount", "$totalReceivedQty"] },
+                            { $gt: [{ $add: ["$openingStock", "$totalReceivedQty"] }, 0] },
+                            {
+                                $divide: [
+                                    { $add: ["$openingStockAmount", "$totalCostAmount"] },
+                                    { $add: ["$openingStock", "$totalReceivedQty"] },
+                                ],
+                            },
                             0,
                         ],
                     },
@@ -194,59 +206,24 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
                     storeIssueRate: 0,
                     profitPerUnit: 0,
                     estimatedProfitValue: 0,
-
                 },
             },
 
             {
                 $match: {
-                    totalReceivedQty: { $gt: 0 },
+                    totalStockInQty: { $gt: 0 },
                 },
             },
-            {
-                $addFields: {
-                    availableQty: {
-                        $subtract: [
-                            { $add: ["$openingStock", "$totalReceivedQty"] },
-                            "$storeOutQty",
-                        ],
-                    },
 
-                    avgCostRate: {
-                        $cond: [
-                            { $gt: ["$totalReceivedQty", 0] },
-                            { $divide: ["$totalCostAmount", "$totalReceivedQty"] },
-                            0,
-                        ],
-                    },
-                },
-            },
             {
                 $addFields: {
                     currentStoreStockValue: {
-                        $multiply: ["$availableQty", "$fixedUnitRate"],
+                        $multiply: ["$availableQty", "$avgCostRate"],
                     },
-
-                    storeIssueRate: 0,
 
                     currentStoreIssueValue: {
-                        $multiply: ["$availableQty", "$fixedUnitRate"],
+                        $multiply: ["$availableQty", "$avgCostRate"],
                     },
-
-                    // profitPerUnit: {
-                    //     $subtract: [0, "$avgCostRate"],
-                    // },
-
-                    // estimatedProfitValue: {
-                    //     $multiply: [
-                    //         "$availableQty",
-                    //         { $subtract: [0, "$avgCostRate"] },
-                    //     ],
-                    // },
-                    profitPerUnit: 0,
-                    estimatedProfitValue: 0,
-
-
                 },
             },
 
@@ -257,7 +234,126 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
                         { $skip: skip },
                         { $limit: Number(limit) },
                     ],
+
                     totalCount: [{ $count: "count" }],
+                    overIssuedItems: [
+                        {
+                            $match: {
+                                availableQty: { $lt: 0 },
+                            },
+                        },
+                        {
+                            $project: {
+                                _id: 0,
+                                itemName: 1,
+                                storeItemCode: 1,
+                                uom: 1,
+                                hsnCode: 1,
+                                boqNo: 1,
+                                openingStock: 1,
+                                vendorInQty: 1,
+                                siteReturnQty: 1,
+                                totalReceivedQty: 1,
+                                storeOutQty: 1,
+                                availableQty: 1,
+                                shortageQty: { $abs: "$availableQty" },
+                                avgCostRate: 1,
+                                currentStoreStockValue: 1,
+                                lastDocumentNo: 1,
+                                lastVendorName: 1,
+                                lastReceivedDate: 1,
+                                recordsCount: 1,
+                                negativeStockValue: {
+                                    $multiply: [
+                                        { $abs: "$availableQty" },
+                                        "$avgCostRate"
+                                    ]
+                                },
+                            },
+                        },
+                        {
+                            $sort: {
+                                shortageQty: -1,
+                            },
+                        },
+                    ],
+
+                    summary: [
+                        {
+                            $group: {
+                                _id: null,
+
+                                totalCurrentStockValue: {
+                                    $sum: "$currentStoreStockValue",
+                                },
+
+                                totalOpeningStockValue: {
+                                    $sum: "$openingStockAmount",
+                                },
+
+                                totalMrnValue: {
+                                    $sum: "$totalAmountMRN",
+                                },
+
+                                totalMrsValue: {
+                                    $sum: "$totalAmountMRS",
+                                },
+
+                                totalDCValue: {
+                                    $sum: "$totalAmountOutDC",
+                                },
+
+                                totalAvailableQty: {
+                                    $sum: "$availableQty",
+                                },
+
+                                totalReceivedQty: {
+                                    $sum: "$totalReceivedQty",
+                                },
+
+                                totalStockInQty: {
+                                    $sum: "$totalStockInQty",
+                                },
+
+                                totalStockInValue: {
+                                    $sum: "$totalStockInValue",
+                                },
+
+                                totalStoreOutQty: {
+                                    $sum: "$storeOutQty",
+                                },
+                                negativeStockItems: {
+                                    $sum: {
+                                        $cond: [{ $lt: ["$availableQty", 0] }, 1, 0],
+                                    },
+                                },
+
+                                totalNegativeQty: {
+                                    $sum: {
+                                        $cond: [
+                                            { $lt: ["$availableQty", 0] },
+                                            { $abs: "$availableQty" },
+                                            0,
+                                        ],
+                                    },
+                                },
+                                totalNegativeStockValue: {
+                                    $sum: {
+                                        $cond: [
+                                            { $lt: ["$availableQty", 0] },
+                                            {
+                                                $multiply: [
+                                                    { $abs: "$availableQty" },
+                                                    "$avgCostRate"
+                                                ]
+                                            },
+                                            0,
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    ],
                 },
             },
         ];
@@ -266,6 +362,20 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
 
         const items = result[0]?.data || [];
         const totalItems = result[0]?.totalCount[0]?.count || 0;
+        const overIssuedItems = result[0]?.overIssuedItems || [];
+
+        const summary = result[0]?.summary[0] || {
+            totalCurrentStockValue: 0,
+            totalOpeningStockValue: 0,
+            totalMrnValue: 0,
+            totalMrsValue: 0,
+            totalDCValue: 0,
+            totalAvailableQty: 0,
+            totalReceivedQty: 0,
+            totalStockInQty: 0,
+            totalStockInValue: 0,
+            totalStoreOutQty: 0,
+        };
 
         return res.status(200).json({
             success: true,
@@ -273,6 +383,12 @@ exports.getHeadStoreReceivedItems = async (req, res) => {
             totalItems,
             currentPage: Number(page),
             totalPages: Math.ceil(totalItems / Number(limit)),
+            summary,
+
+            overIssueCount: overIssuedItems.length,
+            overIssuedItems,
+
+
             items,
 
         });

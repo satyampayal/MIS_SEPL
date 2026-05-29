@@ -23,6 +23,7 @@ const partyRouter=require('./Routes/partyMasterRoutes')
 const materialMovementRouter=require('./Routes/materialMovementRoutes')
 const analyticalRouter=require('./Routes/analyticsRoutes')
 const headStoreItemRoutes = require("./Routes/headStoreItemRoutes");
+const projectMaterialPlanningRouter=require('./Routes/projectMaterialPlanningRoutes')
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -68,6 +69,8 @@ app.use('/boq',boqRouter);
 
 // Material Movement Routes
 app.use("/material-movement", materialMovementRouter);
+//Project MaterialPlanning Routes
+app.use("/project-material-planning",projectMaterialPlanningRouter)
 // All ANalytics
 app.use("/analytics", analyticalRouter);
 app.use("/head-store", headStoreItemRoutes);

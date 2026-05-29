@@ -40,6 +40,12 @@ const reportCards = [
     icon: MapPin,
     path: "/reports/material-history/project-stock",
   },
+   {
+    title: "Project Material Planning Center",
+    desc: "Analyze Material Planning for each project.",
+    icon: Building2,
+    path: "/project-material-planning",
+  },
 ];
 
 export default function MaterialAnalyticsCenter() {

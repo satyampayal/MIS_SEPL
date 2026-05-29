@@ -30,6 +30,27 @@ const deleteFileFromCloudinary = async (publicId) => {
     console.log("Error deleting file from Cloudinary:", error);
   }
 }
+
+//   Project contacts 
+const parseProjectContacts = (projectContacts) => {
+  if (!projectContacts) {
+    return {
+      client: [],
+      project: [],
+      electrical: [],
+      hr: [],
+      accounts: [],
+      safety: [],
+      store: [],
+    };
+  }
+
+  if (typeof projectContacts === "string") {
+    return JSON.parse(projectContacts);
+  }
+
+  return projectContacts;
+};
 exports.addProject = async (req, res) => {
   try {
 
@@ -65,7 +86,7 @@ exports.addProject = async (req, res) => {
       });
     }
 
-    // console.log("New Site Create  sai Phale")
+ 
 
     const newProject = new Project({
       name,
@@ -123,10 +144,19 @@ exports.updateProject = async (req, res) => {
       });
     }
 
+        let projectContacts;
+
+    try {
+      projectContacts = parseProjectContacts(req.body.projectContacts);
+    } catch (error) {
+      return res.status(400).json({
+        message: "Invalid projectContacts format",
+      });
+    }
     // 🧠 Smart update object
     const updateData = {
       ...formData,
-
+       projectContacts,
       // ✅ Only update file if new uploaded
       poFile: poFileObj ? poFileObj.path : existingProject.poFileUrl,
       poFilePublicId: poFileObj

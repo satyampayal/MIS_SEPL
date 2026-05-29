@@ -354,6 +354,7 @@ exports.filterTaxInvoices = async (req, res) => {
       deliveryStatus,
       typeOfChallan,
       invoiceDate,
+      challanDate,
       challanNumber,
     } = req.query;
 
@@ -372,7 +373,7 @@ exports.filterTaxInvoices = async (req, res) => {
     }
 
     if (deliveryStatus) {
-      filter.deliveryStatus = deliveryStatus;
+      filter.deliveryStatus = { $regex: deliveryStatus.trim(), $options: "i" };
     }
 
     if (typeOfChallan) {
@@ -381,6 +382,9 @@ exports.filterTaxInvoices = async (req, res) => {
 
     if (invoiceDate) {
       filter.invoiceDate = invoiceDate;
+    }
+     if (challanDate) {
+      filter.challanDate = challanDate;
     }
 
     if (challanNumber) {

@@ -1,6 +1,6 @@
 const Challan = require("../model/Challan");
 const Project = require("../model/Project");
-const  StoreItem=require('../model/StoreItem')
+const  StoreItem=require('../model/ItemIdentity')
 
 const generateChallanNumber = async () => {
   const count = await Challan.countDocuments();

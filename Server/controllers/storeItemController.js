@@ -1,4 +1,4 @@
-const StoreItem = require("../model/StoreItem");
+const StoreItem = require("../model/ItemIdentity");
 const XLSX = require("xlsx");
 
 exports.createStoreItem = async (req, res) => {
