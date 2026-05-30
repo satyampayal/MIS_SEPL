@@ -1,40 +1,82 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { X, Plus, Trash2, Loader2 } from "lucide-react";
-import ChallanPreview from "./ChallanPreview";
+import {
+  X,
+  Plus,
+  Trash2,
+  Loader2,
+  FileText,
+  PackageCheck,
+  AlertTriangle,
+} from "lucide-react";
 import BASE_URL from "../../config/api";
+import ChallanPreview from "./ChallanPreview";
 
 const CHALLAN_API = `${BASE_URL}/challan`;
 const PROJECT_API = `${BASE_URL}/project-master/all`;
 const STORE_API = `${BASE_URL}/store-master/all`;
-const ITEM_API = `${BASE_URL}/api/store-items/challan-items`;
+const MAIN_STOCK_API = `${BASE_URL}/main-store-stock/live-stock`;
+const SITE_STOCK_API = `${BASE_URL}/site-store-stock/live-stock`;
+
+const DOCUMENT_TYPES = ["DC", "DDC", "LPN", "ISTN", "MRN", "MRS", "CN"];
+
+const PURPOSES = [
+  { value: "BOQ_INSTALLATION", label: "BOQ Installation" },
+  { value: "CONSUMABLE", label: "Consumable" },
+  { value: "TOOL", label: "Tool" },
+  { value: "SAFETY", label: "Safety" },
+  { value: "TEMPORARY_USE", label: "Temporary Use" },
+  { value: "OTHER", label: "Other" },
+];
 
 const emptyForm = {
-  challanType: "Delivery Challan",
-  projectId: "",
-  projectName: "",
-  site: "",
-  dispatchFromStoreRef: "",
-  dispatchFrom: "Store",
-  dispatchTo: "Project Site",
+  documentNumber: "",
+  documentDate: new Date().toISOString().slice(0, 10),
+  documentType: "DC",
+
+  fromMainStoreRef: "",
+  toMainStoreRef: "",
+
+  fromSiteRef: "",
+  toSiteRef: "",
+
+  vendorRef: "",
   vendorName: "",
-  dispatchDate: "",
-  deliveryStatus: "Pending",
+
+  projectRef: "",
+  projectName: "",
+
   remarks: "",
 };
 
 const emptyItem = {
   itemRef: "",
+  fromStockRef: "",
+  toStockRef: "",
+
   itemName: "",
-  description: "",
-  hsnCode: "",
-  boqNo: "",
-  quantity: 1,
+  itemCode: "",
   unit: "Nos",
+  hsnCode: "",
+  description: "",
+
+  quantity: 1,
   rate: 0,
   amount: 0,
+
+  itemPurpose: "BOQ_INSTALLATION",
+  boqItemRef: "",
+  boqRef: "",
+  boqQty: 0,
+  alreadyIssuedQty: 0,
+  remainingBoqQty: 0,
+
+  isReturnable: false,
+  expectedReturnDate: "",
+
   stockError: "",
+  remarks: "",
 };
 
 export default function ChallanModal({
@@ -52,78 +94,126 @@ export default function ChallanModal({
 
   const [projects, setProjects] = useState([]);
   const [stores, setStores] = useState([]);
-  const [storeItems, setStoreItems] = useState([]);
+  const [stockItems, setStockItems] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [itemLoading, setItemLoading] = useState(false);
 
+  const needsMainStore = ["DC", "MRN", "MRS", "CN"].includes(form.documentType);
+  const needsFromMainStore = ["DC", "CN"].includes(form.documentType);
+  const needsToMainStore = ["MRN", "MRS"].includes(form.documentType);
+
+  const needsToSite = ["DC", "DDC", "LPN", "ISTN"].includes(form.documentType);
+  const needsFromSite = ["ISTN", "MRS"].includes(form.documentType);
+  const needsVendor = ["DDC", "LPN", "MRN", "CN"].includes(form.documentType);
+
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchProjects();
-      fetchStores();
+  const title = isView ? "View Challan" : isEdit ? "Edit Challan" : "Create Challan";
 
-      if (!challan) {
-        setForm(emptyForm);
-        setItems([{ ...emptyItem }]);
-      }
-    }
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchProjects();
+    fetchStores();
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (challan) {
+      setForm({
+        documentNumber: challan.documentNumber || "",
+        documentDate: challan.documentDate
+          ? challan.documentDate.slice(0, 10)
+          : new Date().toISOString().slice(0, 10),
+        documentType: challan.documentType || "DC",
+
+        fromMainStoreRef:
+          challan.fromMainStoreRef?._id || challan.fromMainStoreRef || "",
+        toMainStoreRef:
+          challan.toMainStoreRef?._id || challan.toMainStoreRef || "",
+
+        fromSiteRef: challan.fromSiteRef?._id || challan.fromSiteRef || "",
+        toSiteRef: challan.toSiteRef?._id || challan.toSiteRef || "",
+
+        vendorRef: challan.vendorRef?._id || challan.vendorRef || "",
+        vendorName: challan.vendorName || "",
+
+        projectRef:
+          challan.projectRef?._id ||
+          challan.projectRef ||
+          challan.toSiteRef?._id ||
+          challan.toSiteRef ||
+          "",
+        projectName:
+          challan.projectName ||
+          challan.projectRef?.projectName ||
+          challan.projectRef?.name ||
+          challan.toSiteRef?.projectName ||
+          challan.toSiteRef?.name ||
+          "",
+
+        remarks: challan.remarks || "",
+      });
+
+      setItems(
+        challan.items?.length
+          ? challan.items.map((item) => ({
+            itemRef: item.itemRef?._id || item.itemRef || "",
+            fromStockRef: item.fromStockRef?._id || item.fromStockRef || "",
+            toStockRef: item.toStockRef?._id || item.toStockRef || "",
+
+            itemName: item.itemName || item.itemRef?.itemName || "",
+            itemCode: item.itemCode || item.itemRef?.itemCode || "",
+            unit: item.unit || "Nos",
+            hsnCode: item.hsnCode || "",
+            description: item.description || item.itemName || "",
+
+            quantity: Number(item.quantity || 1),
+            rate: Number(item.rate || 0),
+            amount: Number(item.amount || 0),
+
+            itemPurpose: item.itemPurpose || "BOQ_INSTALLATION",
+            boqItemRef: item.boqItemRef?._id || item.boqItemRef || "",
+            boqRef: item.boqRef?._id || item.boqRef || "",
+            boqQty: Number(item.boqQty || 0),
+            alreadyIssuedQty: Number(item.alreadyIssuedQty || 0),
+            remainingBoqQty: Number(item.remainingBoqQty || 0),
+
+            isReturnable: Boolean(item.isReturnable),
+            expectedReturnDate: item.expectedReturnDate
+              ? item.expectedReturnDate.slice(0, 10)
+              : "",
+
+            stockError: "",
+            remarks: item.remarks || "",
+          }))
+          : [{ ...emptyItem }]
+      );
+
+      const storeId =
+        challan.fromMainStoreRef?._id || challan.fromMainStoreRef || "";
+      if (storeId) fetchItemsByMainStore(storeId);
+    } else {
+      setForm(emptyForm);
+      setItems([{ ...emptyItem }]);
+      setStockItems([]);
+    }
+  }, [challan, isOpen]);
 
  useEffect(() => {
   if (!isOpen) return;
 
-  if (challan) {
-    const storeId =
-      challan.dispatchFromStoreRef?._id ||
-      challan.dispatchFromStoreRef ||
-      "";
-
-    setForm({
-      challanType: challan.challanType || "Delivery Challan",
-      projectId: challan.projectId?._id || challan.projectId || "",
-      projectName: challan.projectName || "",
-      site: challan.site || "",
-
-      dispatchFromStoreRef: storeId,
-
-      dispatchFrom: challan.dispatchFrom || "Store",
-      dispatchTo: challan.dispatchTo || "Project Site",
-      vendorName: challan.vendorName || "",
-      dispatchDate: challan.dispatchDate
-        ? challan.dispatchDate.slice(0, 10)
-        : "",
-      deliveryStatus: challan.deliveryStatus || "Pending",
-      remarks: challan.remarks || "",
-    });
-
-    setItems(
-      challan.items?.length
-        ? challan.items.map((item) => ({
-            itemRef: item.itemRef?._id || item.itemRef || "",
-            itemName: item.itemName || item.itemRef?.itemName || "",
-            description: item.description || "",
-            hsnCode: item.hsnCode || "",
-            boqNo: item.boqNo || "",
-            quantity: Number(item.quantity || 1),
-            unit: item.unit || "Nos",
-            rate: Number(item.rate || 0),
-            amount: Number(item.amount || 0),
-            stockError: "",
-          }))
-        : [{ ...emptyItem }]
-    );
-
-    if (storeId) {
-      fetchItemsByStore(storeId);
-    }
-  } else {
-    setForm(emptyForm);
-    setItems([{ ...emptyItem }]);
-    setStoreItems([]);
+  if (["DC", "CN"].includes(form.documentType) && form.fromMainStoreRef) {
+    fetchItemsByMainStore(form.fromMainStoreRef);
+    return;
   }
-}, [challan, isOpen]);
+
+  if (["ISTN", "MRS"].includes(form.documentType) && form.fromSiteRef) {
+    fetchItemsBySite(form.fromSiteRef);
+    return;
+  }
+}, [isOpen, form.fromMainStoreRef, form.fromSiteRef, form.documentType]);
 
   if (!isOpen) return null;
 
@@ -131,7 +221,7 @@ export default function ChallanModal({
     try {
       const res = await axios.get(PROJECT_API);
       setProjects(res.data.data || []);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load projects");
     }
   };
@@ -140,61 +230,107 @@ export default function ChallanModal({
     try {
       const res = await axios.get(STORE_API);
       setStores(res.data.data || []);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load stores");
     }
   };
 
-  const fetchItemsByStore = async (storeId) => {
+  const fetchItemsByMainStore = async (mainStoreRef) => {
     try {
       setItemLoading(true);
-      const res = await axios.get(`${ITEM_API}?storeId=${storeId}`);
-      setStoreItems(res.data.data || []);
-    } catch (error) {
-      toast.error("Failed to load store items");
+      const res = await axios.get(`${MAIN_STOCK_API}?mainStoreRef=${mainStoreRef}`);
+      setStockItems(res.data.data || []);
+    } catch {
+      toast.error("Failed to load available stock items");
     } finally {
       setItemLoading(false);
     }
   };
 
-  const totalAmount = items.reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
+  const fetchItemsBySite = async (siteRef) => {
+  try {
+    setItemLoading(true);
+
+    const res = await axios.get(`${SITE_STOCK_API}?siteRef=${siteRef}`);
+
+    setStockItems(res.data.data || []);
+  } catch (error) {
+    toast.error("Failed to load site stock items");
+  } finally {
+    setItemLoading(false);
+  }
+};
+
+  const totalAmount = useMemo(
+    () => items.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    [items]
   );
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === "projectId") {
-      const selectedProject = projects.find((p) => p._id === value);
-
+    if (name === "documentType") {
       setForm((prev) => ({
-        ...prev,
-        projectId: selectedProject?._id || "",
-        projectName: selectedProject?.name || "",
-        site: selectedProject?.location || "",
+        ...emptyForm,
+        documentNumber: prev.documentNumber,
+        documentDate: prev.documentDate,
+        documentType: value,
       }));
-
-      return;
-    }
-
-    if (name === "dispatchFromStoreRef") {
-      setForm((prev) => ({
-        ...prev,
-        dispatchFromStoreRef: value,
-      }));
-
       setItems([{ ...emptyItem }]);
-      setStoreItems([]);
-
-      if (value) fetchItemsByStore(value);
+      setStockItems([]);
       return;
     }
 
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === "toSiteRef" || name === "fromSiteRef" || name === "projectRef") {
+  const selectedProject = projects.find((p) => p._id === value);
+
+  setForm((prev) => ({
+    ...prev,
+    [name]: value,
+    projectRef:
+      name === "toSiteRef" || name === "fromSiteRef"
+        ? value
+        : prev.projectRef,
+    projectName:
+      selectedProject?.projectName ||
+      selectedProject?.name ||
+      prev.projectName,
+  }));
+
+  setItems([{ ...emptyItem }]);
+  setStockItems([]);
+
+  if (name === "fromSiteRef" && ["ISTN", "MRS"].includes(form.documentType)) {
+    fetchItemsBySite(value);
+  }
+
+  return;
+}
+
+    if (name === "fromMainStoreRef") {
+      setForm((prev) => ({ ...prev, fromMainStoreRef: value }));
+      setItems([{ ...emptyItem }]);
+      setStockItems([]);
+      if (value) fetchItemsByMainStore(value);
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const extractStockItem = (stock) => {
+    const item = stock.itemRef || {};
+    return {
+      stockId: stock._id,
+      itemId: item._id || stock.itemRef,
+      itemName: item.itemName || "",
+      itemCode: item.itemCode || "",
+      unit: item.unit || "Nos",
+      hsnCode: item.hsnCode || "",
+      description: item.description || item.specification || item.itemName || "",
+      rate: Number(stock.averageRate || 0),
+      availableStock: Number(stock.availableStock || 0),
+    };
   };
 
   const handleItemChange = (index, field, value) => {
@@ -205,21 +341,33 @@ export default function ChallanModal({
       [field]: value,
     };
 
-    if (field === "itemRef") {
-      const selectedItem = storeItems.find((item) => item._id === value);
+    if (field === "itemPurpose") {
+      updated[index].isReturnable = value === "TOOL";
+      updated[index].boqItemRef = "";
+      updated[index].boqRef = "";
+    }
 
-      if (selectedItem) {
+    if (field === "itemRef") {
+      const selectedStock = stockItems.find((stock) => {
+        const itemId = stock.itemRef?._id || stock.itemRef;
+        return itemId === value;
+      });
+
+      if (selectedStock) {
+        const selected = extractStockItem(selectedStock);
+
         updated[index] = {
           ...updated[index],
-          itemRef: selectedItem._id,
-          itemName: selectedItem.itemName || "",
-          description: selectedItem.description || selectedItem.itemName || "",
-          hsnCode: selectedItem.hsnCode || "",
-          boqNo: selectedItem.boqNo || "",
-          unit: selectedItem.unit || "Nos",
-          rate: Number(selectedItem.rate || 0),
+          itemRef: selected.itemId,
+          fromStockRef: selected.stockId,
+          itemName: selected.itemName,
+          itemCode: selected.itemCode,
+          unit: selected.unit,
+          hsnCode: selected.hsnCode,
+          description: selected.description,
+          rate: selected.rate,
           quantity: 1,
-          amount: Number(selectedItem.rate || 0),
+          amount: selected.rate,
           stockError: "",
         };
       }
@@ -231,15 +379,18 @@ export default function ChallanModal({
     }
 
     if (field === "quantity") {
-      const selectedItem = storeItems.find(
-        (item) => item._id === updated[index].itemRef
-      );
+      const selectedStock = stockItems.find((stock) => {
+        const itemId = stock.itemRef?._id || stock.itemRef;
+        return itemId === updated[index].itemRef;
+      });
 
       if (
-        selectedItem &&
-        Number(value) > Number(selectedItem.currentStock || 0)
+        selectedStock &&
+        ["DC", "CN"].includes(form.documentType) &&
+        Number(value) > Number(selectedStock.availableStock || 0)
       ) {
-        updated[index].stockError = `Only ${selectedItem.currentStock} ${selectedItem.unit} available`;
+        updated[index].stockError = `Only ${selectedStock.availableStock} ${selectedStock.itemRef?.unit || ""
+          } available`;
       } else {
         updated[index].stockError = "";
       }
@@ -257,23 +408,42 @@ export default function ChallanModal({
       toast.error("At least one item is required");
       return;
     }
-
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const validate = () => {
-    if (!form.projectId) {
-      toast.error("Project is required");
+    if (!form.documentNumber.trim()) {
+      toast.error("Document number is required");
       return false;
     }
 
-    if (!form.dispatchFromStoreRef) {
-      toast.error("Dispatch store is required");
+    if (!form.documentDate) {
+      toast.error("Document date is required");
       return false;
     }
 
-    if (!form.dispatchDate) {
-      toast.error("Dispatch date is required");
+    if (needsFromMainStore && !form.fromMainStoreRef) {
+      toast.error("From main store is required");
+      return false;
+    }
+
+    if (needsToMainStore && !form.toMainStoreRef) {
+      toast.error("To main store is required");
+      return false;
+    }
+
+    if (needsFromSite && !form.fromSiteRef) {
+      toast.error("From site is required");
+      return false;
+    }
+
+    if (needsToSite && !form.toSiteRef) {
+      toast.error("To site is required");
+      return false;
+    }
+
+    if (needsVendor && !form.vendorName.trim()) {
+      toast.error("Vendor name is required");
       return false;
     }
 
@@ -288,6 +458,15 @@ export default function ChallanModal({
         return false;
       }
 
+      if (
+        items[i].itemPurpose === "TOOL" &&
+        items[i].isReturnable &&
+        !items[i].expectedReturnDate
+      ) {
+        toast.error(`Expected return date required for tool in row ${i + 1}`);
+        return false;
+      }
+
       if (items[i].stockError) {
         toast.error(items[i].stockError);
         return false;
@@ -297,23 +476,68 @@ export default function ChallanModal({
     return true;
   };
 
+  const buildPayload = () => {
+    return {
+      documentNumber: form.documentNumber,
+      documentDate: form.documentDate,
+      documentType: form.documentType,
+
+      fromMainStoreRef: form.fromMainStoreRef || null,
+      toMainStoreRef: form.toMainStoreRef || null,
+
+      fromSiteRef: form.fromSiteRef || null,
+      toSiteRef: form.toSiteRef || null,
+
+      vendorRef: form.vendorRef || null,
+      vendorName: form.vendorName,
+
+      projectRef: form.projectRef || form.toSiteRef || form.fromSiteRef || null,
+      projectName: form.projectName,
+
+      remarks: form.remarks,
+
+      items: items.map((item) => ({
+        itemRef: item.itemRef,
+        fromStockRef: item.fromStockRef || null,
+        toStockRef: item.toStockRef || null,
+
+        itemName: item.itemName,
+        itemCode: item.itemCode,
+        unit: item.unit,
+        hsnCode: item.hsnCode,
+
+        quantity: Number(item.quantity || 0),
+        rate: Number(item.rate || 0),
+        amount: Number(item.amount || 0),
+
+        itemPurpose: item.itemPurpose,
+        boqItemRef: item.boqItemRef || null,
+        boqRef: item.boqRef || null,
+        boqQty: Number(item.boqQty || 0),
+        alreadyIssuedQty: Number(item.alreadyIssuedQty || 0),
+        remainingBoqQty: Number(item.remainingBoqQty || 0),
+
+        isReturnable: Boolean(item.isReturnable),
+        expectedReturnDate: item.expectedReturnDate || null,
+
+        remarks: item.remarks || "",
+      })),
+    };
+  };
+
   const saveChallan = async () => {
     if (!validate()) return;
 
     try {
       setLoading(true);
-
-      const payload = {
-        ...form,
-        items,
-      };
+      const payload = buildPayload();
 
       if (isEdit) {
         await axios.put(`${CHALLAN_API}/update/${challan._id}`, payload);
         toast.success("Challan updated successfully");
       } else {
-        await axios.post(`${CHALLAN_API}/add`, payload);
-        toast.success("Challan created successfully");
+        await axios.post(`${CHALLAN_API}/create`, payload);
+        toast.success("Challan created for approval");
       }
 
       refreshChallans?.();
@@ -328,33 +552,132 @@ export default function ChallanModal({
   const hasError = items.some((item) => item.stockError);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-2xl shadow-xl">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">
-            {isView ? "View Challan" : isEdit ? "Edit Challan" : "Create Challan"}
-          </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 text-slate-100">
+      <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-950/95 px-6 py-4 backdrop-blur">
+          <div>
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300">
+              <PackageCheck size={14} />
+              Approval Based Digital Challan
+            </div>
+            <h2 className="text-2xl font-bold text-white">{title}</h2>
+          </div>
 
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button
+            onClick={onClose}
+            className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+          >
             <X size={22} />
           </button>
         </div>
 
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-3">
+          <Input
+            label="Document Number *"
+            name="documentNumber"
+            value={form.documentNumber}
+            onChange={handleFormChange}
+            disabled={isView || isEdit}
+          />
+
+          <Input
+            label="Document Date *"
+            type="date"
+            name="documentDate"
+            value={form.documentDate}
+            onChange={handleFormChange}
+            disabled={isView}
+          />
+
           <SelectBox
-            label="Project *"
-            name="projectId"
-            value={form.projectId}
+            label="Document Type *"
+            name="documentType"
+            value={form.documentType}
             onChange={handleFormChange}
             disabled={isView || isEdit}
           >
-            <option value="">Select Project</option>
-            {projects.map((project) => (
-              <option key={project._id} value={project._id}>
-                {project.name} - {project?.code}
-              </option>
+            {DOCUMENT_TYPES.map((type) => (
+              <option key={type}>{type}</option>
             ))}
           </SelectBox>
+
+          {needsFromMainStore && (
+            <SelectBox
+              label="From Main Store *"
+              name="fromMainStoreRef"
+              value={form.fromMainStoreRef}
+              onChange={handleFormChange}
+              disabled={isView || isEdit}
+            >
+              <option value="">Select Main Store</option>
+              {stores.map((store) => (
+                <option key={store._id} value={store._id}>
+                  {store.storeName} - {store.storeCode}
+                </option>
+              ))}
+            </SelectBox>
+          )}
+
+          {needsToMainStore && (
+            <SelectBox
+              label="To Main Store *"
+              name="toMainStoreRef"
+              value={form.toMainStoreRef}
+              onChange={handleFormChange}
+              disabled={isView}
+            >
+              <option value="">Select Main Store</option>
+              {stores.map((store) => (
+                <option key={store._id} value={store._id}>
+                  {store.storeName} - {store.storeCode}
+                </option>
+              ))}
+            </SelectBox>
+          )}
+
+          {needsFromSite && (
+            <SelectBox
+              label="From Site *"
+              name="fromSiteRef"
+              value={form.fromSiteRef}
+              onChange={handleFormChange}
+              disabled={isView || isEdit}
+            >
+              <option value="">Select Site</option>
+              {projects.map((project) => (
+                <option key={project._id} value={project._id}>
+                  {project.projectName || project.name}
+                </option>
+              ))}
+            </SelectBox>
+          )}
+
+          {needsToSite && (
+            <SelectBox
+              label="To Site *"
+              name="toSiteRef"
+              value={form.toSiteRef}
+              onChange={handleFormChange}
+              disabled={isView || isEdit}
+            >
+              <option value="">Select Site</option>
+              {projects.map((project) => (
+                <option key={project._id} value={project._id}>
+                  {project.projectName || project.name}
+                </option>
+              ))}
+            </SelectBox>
+          )}
+
+          {needsVendor && (
+            <Input
+              label="Vendor Name *"
+              name="vendorName"
+              value={form.vendorName}
+              onChange={handleFormChange}
+              disabled={isView}
+            />
+          )}
 
           <Input
             label="Project Name"
@@ -364,106 +687,34 @@ export default function ChallanModal({
             disabled
           />
 
-          <Input
-            label="Site / Location"
-            name="site"
-            value={form.site}
-            onChange={handleFormChange}
-            disabled={isView}
-          />
-
-          <SelectBox
-            label="Dispatch Store *"
-            name="dispatchFromStoreRef"
-            value={form.dispatchFromStoreRef}
-            onChange={handleFormChange}
-            disabled={isView || isEdit}
-          >
-            <option value="">Select Store</option>
-            {stores.map((store) => (
-              <option key={store._id} value={store._id}>
-                {store.storeName} - {store.storeCode}
-              </option>
-            ))}
-          </SelectBox>
-
-          <Input
-            label="Vendor Name"
-            name="vendorName"
-            value={form.vendorName}
-            onChange={handleFormChange}
-            disabled={isView}
-          />
-
-          <Input
-            label="Dispatch Date *"
-            type="date"
-            name="dispatchDate"
-            value={form.dispatchDate}
-            onChange={handleFormChange}
-            disabled={isView}
-          />
-
-          <SelectBox
-            label="Dispatch From"
-            name="dispatchFrom"
-            value={form.dispatchFrom}
-            onChange={handleFormChange}
-            disabled={isView}
-          >
-            <option>Store</option>
-            <option>Office</option>
-            <option>Vendor</option>
-            <option>Warehouse</option>
-          </SelectBox>
-
-          <SelectBox
-            label="Dispatch To"
-            name="dispatchTo"
-            value={form.dispatchTo}
-            onChange={handleFormChange}
-            disabled={isView}
-          >
-            <option>Project Site</option>
-            <option>Office</option>
-            <option>Vendor</option>
-            <option>Store</option>
-          </SelectBox>
-
-          <SelectBox
-            label="Status"
-            name="deliveryStatus"
-            value={form.deliveryStatus}
-            onChange={handleFormChange}
-            disabled={isView}
-          >
-            <option>Pending</option>
-            <option>In Transit</option>
-            <option>Delivered</option>
-            <option>Cancelled</option>
-          </SelectBox>
-
-          <div className="md:col-span-2">
-            <label className="block mb-2 font-medium">Remarks</label>
+          <div className="md:col-span-3">
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+              Remarks
+            </label>
             <textarea
               name="remarks"
               value={form.remarks}
               onChange={handleFormChange}
               disabled={isView}
               rows={2}
-              className="w-full border rounded-xl px-4 py-3"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-500 disabled:bg-slate-800 disabled:text-slate-400"
             />
           </div>
         </div>
 
         <div className="px-6 pb-6">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-bold text-lg">Items</h3>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-white">Items</h3>
+              <p className="text-xs text-slate-500">
+                BOQ items, consumables, tools and safety material can be added here.
+              </p>
+            </div>
 
             {!isView && (
               <button
                 onClick={addItemRow}
-                className="flex items-center gap-2 text-blue-600 font-semibold"
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-400"
               >
                 <Plus size={17} />
                 Add Item
@@ -471,167 +722,231 @@ export default function ChallanModal({
             )}
           </div>
 
-          <div className="overflow-x-auto border rounded-2xl">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3 min-w-[220px]">Item</th>
-                  <th className="text-left p-3 min-w-[220px]">Description</th>
-                  <th className="text-left p-3 min-w-[100px]">HSN</th>
-                  <th className="text-left p-3 min-w-[90px]">Qty</th>
-                  <th className="text-left p-3 min-w-[90px]">Unit</th>
-                  <th className="text-left p-3 min-w-[100px]">Rate</th>
-                  <th className="text-left p-3 min-w-[110px]">Amount</th>
-                  {!isView && <th className="text-center p-3">Action</th>}
-                </tr>
-              </thead>
+          <div className="overflow-hidden rounded-2xl border border-slate-800">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1250px] text-sm">
+                <thead className="bg-slate-900 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="p-3 text-left">Purpose</th>
+                    <th className="p-3 text-left">Item</th>
+                    <th className="p-3 text-left">Code</th>
+                    <th className="p-3 text-left">HSN</th>
+                    <th className="p-3 text-left">Qty</th>
+                    <th className="p-3 text-left">Unit</th>
+                    <th className="p-3 text-left">Rate</th>
+                    <th className="p-3 text-left">Amount</th>
+                    <th className="p-3 text-left">Returnable</th>
+                    <th className="p-3 text-left">Return Date</th>
+                    <th className="p-3 text-left">Remarks</th>
+                    {!isView && <th className="p-3 text-center">Action</th>}
+                  </tr>
+                </thead>
 
-              <tbody>
-                {items.map((item, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="p-3">
-                      <select
-                        value={item.itemRef}
-                        disabled={isView || !form.dispatchFromStoreRef}
-                        onChange={(e) =>
-                          handleItemChange(index, "itemRef", e.target.value)
-                        }
-                        className="w-full border rounded-lg px-3 py-2"
-                      >
-                        <option value="">
-                          {itemLoading ? "Loading..." : "Select Item"}
+                <tbody className="divide-y divide-slate-800">
+                  {items.map((item, index) => (
+                    <tr key={index} className="bg-slate-950/60">
+                      <td className="p-3">
+                        <select
+                          value={item.itemPurpose}
+                          disabled={isView}
+                          onChange={(e) =>
+                            handleItemChange(index, "itemPurpose", e.target.value)
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-cyan-500"
+                        >
+                          {PURPOSES.map((purpose) => (
+                            <option key={purpose.value} value={purpose.value}>
+                              {purpose.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
 
-                        </option>
-
-                        {item.itemRef && item.itemName && (
-                          <option value={item.itemRef}>{item.itemName}</option>
-                        )}// this is update to see item name on the view and edit
-
-
-                        {storeItems.map((storeItem) => (
-                          <option key={storeItem._id} value={storeItem._id}>
-                            {storeItem.itemName} — Avl:{" "}
-                            {storeItem.currentStock} {storeItem.unit}
+                      <td className="p-3">
+                        <select
+                          value={item.itemRef}
+                          disabled={
+                            isView ||
+                            (["DC", "CN"].includes(form.documentType) &&
+                              !form.fromMainStoreRef)
+                          }
+                          onChange={(e) =>
+                            handleItemChange(index, "itemRef", e.target.value)
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-cyan-500"
+                        >
+                          <option value="">
+                            {itemLoading ? "Loading..." : "Select Item"}
                           </option>
-                        ))}
-                      </select>
-                    </td>
 
-                    <TdInput
-                      value={item.description}
-                      disabled={isView}
-                      onChange={(e) =>
-                        handleItemChange(index, "description", e.target.value)
-                      }
-                    />
+                          {item.itemRef && item.itemName && (
+                            <option value={item.itemRef}>{item.itemName}</option>
+                          )}
 
-                    <TdInput
-                      value={item.hsnCode}
-                      disabled={isView}
-                      onChange={(e) =>
-                        handleItemChange(index, "hsnCode", e.target.value)
-                      }
-                    />
+                          {stockItems.map((stock) => {
+                            const itemData = stock.itemRef || {};
+                            return (
+                              <option
+                                key={stock._id}
+                                value={itemData._id || stock.itemRef}
+                              >
+                                {itemData.itemName} — Avl: {stock.availableStock}{" "}
+                                {itemData.unit}
+                              </option>
+                            );
+                          })}
+                        </select>
 
-                    <td className="p-3">
-                      <input
+                        {item.stockError && (
+                          <p className="mt-1 flex items-center gap-1 text-xs text-red-400">
+                            <AlertTriangle size={12} />
+                            {item.stockError}
+                          </p>
+                        )}
+                      </td>
+
+                      <TdInput
+                        value={item.itemCode}
+                        disabled
+                        onChange={(e) =>
+                          handleItemChange(index, "itemCode", e.target.value)
+                        }
+                      />
+
+                      <TdInput
+                        value={item.hsnCode}
+                        disabled={isView}
+                        onChange={(e) =>
+                          handleItemChange(index, "hsnCode", e.target.value)
+                        }
+                      />
+
+                      <TdInput
                         type="number"
                         value={item.quantity}
                         disabled={isView}
                         onChange={(e) =>
-                          handleItemChange(
-                            index,
-                            "quantity",
-                            Number(e.target.value)
-                          )
+                          handleItemChange(index, "quantity", Number(e.target.value))
                         }
-                        className={`w-full border rounded-lg px-3 py-2 ${item.stockError ? "border-red-500 bg-red-50" : ""
-                          }`}
                       />
 
-                      {item.stockError && (
-                        <p className="text-xs text-red-600 mt-1">
-                          {item.stockError}
-                        </p>
-                      )}
-                    </td>
+                      <TdInput
+                        value={item.unit}
+                        disabled={isView}
+                        onChange={(e) =>
+                          handleItemChange(index, "unit", e.target.value)
+                        }
+                      />
 
-                    <TdInput
-                      value={item.unit}
-                      disabled={isView}
-                      onChange={(e) =>
-                        handleItemChange(index, "unit", e.target.value)
-                      }
-                    />
+                      <TdInput
+                        type="number"
+                        value={item.rate}
+                        disabled={isView}
+                        onChange={(e) =>
+                          handleItemChange(index, "rate", Number(e.target.value))
+                        }
+                      />
 
-                    <TdInput
-                      type="number"
-                      value={item.rate}
-                      disabled={isView}
-                      onChange={(e) =>
-                        handleItemChange(index, "rate", Number(e.target.value))
-                      }
-                    />
-
-                    <td className="p-3 font-semibold">
-                      ₹{Number(item.amount || 0).toLocaleString("en-IN")}
-                    </td>
-
-                    {!isView && (
-                      <td className="p-3 text-center">
-                        <button
-                          onClick={() => removeItemRow(index)}
-                          className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
-                        >
-                          <Trash2 size={17} />
-                        </button>
+                      <td className="p-3 font-semibold text-white">
+                        ₹{Number(item.amount || 0).toLocaleString("en-IN")}
                       </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={item.isReturnable}
+                          disabled={isView || item.itemPurpose === "TOOL"}
+                          onChange={(e) =>
+                            handleItemChange(index, "isReturnable", e.target.checked)
+                          }
+                          className="h-4 w-4 accent-cyan-500"
+                        />
+                      </td>
+
+                      <TdInput
+                        type="date"
+                        value={item.expectedReturnDate}
+                        disabled={isView || !item.isReturnable}
+                        onChange={(e) =>
+                          handleItemChange(
+                            index,
+                            "expectedReturnDate",
+                            e.target.value
+                          )
+                        }
+                      />
+
+                      <TdInput
+                        value={item.remarks}
+                        disabled={isView}
+                        onChange={(e) =>
+                          handleItemChange(index, "remarks", e.target.value)
+                        }
+                      />
+
+                      {!isView && (
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => removeItemRow(index)}
+                            className="rounded-lg p-2 text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="flex justify-end mt-5">
-            <div className="border rounded-xl px-5 py-3 bg-gray-50">
-              <p className="text-sm text-gray-500">Total Amount</p>
-              <h3 className="text-xl font-bold">
+          <div className="mt-5 flex justify-end">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 px-6 py-4">
+              <p className="text-sm text-slate-400">Total Amount</p>
+              <h3 className="mt-1 text-2xl font-bold text-cyan-300">
                 ₹{totalAmount.toLocaleString("en-IN")}
               </h3>
             </div>
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-3">
+        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-800 bg-slate-950/95 px-6 py-4 backdrop-blur">
           <button
             onClick={onClose}
-            className="px-5 py-3 rounded-xl border"
             disabled={loading}
+            className="rounded-xl border border-slate-700 px-5 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white"
           >
             {isView ? "Close" : "Cancel"}
           </button>
 
-          <button
-            onClick={() => {
-              if (!validate()) return;
-              setPreviewOpen(true);
-            }}
-            disabled={hasError}
-            className="px-5 py-3 rounded-xl bg-green-600 text-white disabled:opacity-50"
-          >
-            Preview Challan
-          </button>
-
           {!isView && (
-            <button
-              onClick={saveChallan}
-              disabled={loading || hasError}
-              className="px-5 py-3 rounded-xl bg-blue-600 text-white disabled:opacity-50 flex items-center gap-2"
-            >
-              {loading && <Loader2 size={18} className="animate-spin" />}
-              {isEdit ? "Update Challan" : "Save Challan"}
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  if (!validate()) return;
+                  setPreviewOpen(true);
+                }}
+                disabled={loading || hasError}
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FileText size={18} />
+                Preview Challan
+              </button>
+
+              <button
+                onClick={saveChallan}
+                disabled={loading || hasError}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <FileText size={18} />
+                )}
+                {isEdit ? "Update Challan" : "Create For Approval"}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -651,14 +966,16 @@ export default function ChallanModal({
 function Input({ label, type = "text", name, value, onChange, disabled }) {
   return (
     <div>
-      <label className="block mb-2 font-medium">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-slate-300">
+        {label}
+      </label>
       <input
         type={type}
         name={name}
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="w-full border rounded-xl px-4 py-3 disabled:bg-gray-100"
+        className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-500 disabled:bg-slate-800 disabled:text-slate-400"
       />
     </div>
   );
@@ -667,13 +984,15 @@ function Input({ label, type = "text", name, value, onChange, disabled }) {
 function SelectBox({ label, name, value, onChange, disabled, children }) {
   return (
     <div>
-      <label className="block mb-2 font-medium">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-slate-300">
+        {label}
+      </label>
       <select
         name={name}
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="w-full border rounded-xl px-4 py-3 disabled:bg-gray-100"
+        className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-cyan-500 disabled:bg-slate-800 disabled:text-slate-400"
       >
         {children}
       </select>
@@ -686,10 +1005,10 @@ function TdInput({ type = "text", value, onChange, disabled }) {
     <td className="p-3">
       <input
         type={type}
-        value={value}
+        value={value || ""}
         onChange={onChange}
         disabled={disabled}
-        className="w-full border rounded-lg px-3 py-2 disabled:bg-gray-100"
+        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-cyan-500 disabled:bg-slate-800 disabled:text-slate-400"
       />
     </td>
   );

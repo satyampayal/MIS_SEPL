@@ -10,7 +10,7 @@ const mainStoreStockSchema = new mongoose.Schema(
 
     itemRef: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ItemMaster",
+      ref: "ItemIdentity",
       required: true,
     },
 
@@ -25,7 +25,7 @@ const mainStoreStockSchema = new mongoose.Schema(
       min: 0,
     },
 
-    availableStock: {
+    availableStock: {// currentStock-reservedStock
       type: Number,
       default: 0,
     },
@@ -71,6 +71,7 @@ const mainStoreStockSchema = new mongoose.Schema(
       default: "OUT_OF_STOCK",
     },
 
+
     lastMovementDate: {
       type: Date,
       default: null,
@@ -101,7 +102,7 @@ mainStoreStockSchema.pre("save", function (next) {
     this.stockStatus = "AVAILABLE";
   }
 
-  next();
+  // next();
 });
 
 mainStoreStockSchema.index(
@@ -109,4 +110,6 @@ mainStoreStockSchema.index(
   { unique: true }
 );
 
-module.exports = mongoose.model("MainStoreStock", mainStoreStockSchema);s
+module.exports =
+  mongoose.models.MainStoreStock ||
+  mongoose.model("MainStoreStock", mainStoreStockSchema);

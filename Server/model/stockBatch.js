@@ -10,7 +10,7 @@ const stockBatchSchema = new mongoose.Schema(
 
     itemRef: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ItemMaster",
+      ref: "ItemIdentity",
       required: true,
     },
 
@@ -113,7 +113,7 @@ stockBatchSchema.pre("save", function (next) {
     this.status = "CONSUMED";
   }
 
-  next();
+  // next();
 });
 
 stockBatchSchema.index({

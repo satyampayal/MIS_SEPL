@@ -10,7 +10,7 @@ const dotenv = require('dotenv').config();
 const Site = require('./model/Project');
 const upload = require('./config/multer')
 const checkCloudinaryConnection =require('./config/cloudinaryCheck');
-const challanRouter = require("./Routes/challanRoutes");
+const ChallanRouter = require("./routes/challanRoutes");
 const sroreItemRouter = require("./Routes/sroreItemRoutes");
 const storeMasterRouter = require("./Routes/storeMasterRoutes");
 const projectMasterRouter = require("./Routes/projectMasterRoutes");
@@ -24,6 +24,9 @@ const materialMovementRouter=require('./Routes/materialMovementRoutes')
 const analyticalRouter=require('./Routes/analyticsRoutes')
 const headStoreItemRoutes = require("./Routes/headStoreItemRoutes");
 const projectMaterialPlanningRouter=require('./Routes/projectMaterialPlanningRoutes')
+const MainStoreStockRouter = require("./routes/mainStoreStockRoutes");
+const SiteStoreStockRouter = require("./routes/siteStoreStockRoutes");
+const ItemIdentityRouter = require("./routes/itemIdentityRoutes");
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -54,7 +57,7 @@ app.use('/project-master',projectMasterRouter);
 
 
 /*  Challan start */
-app.use('/challan',challanRouter)
+app.use('/challan',ChallanRouter)
 
 /*  Store Routes  */
 app.use('/api/store-items',sroreItemRouter)
@@ -66,11 +69,17 @@ app.use('/store-master',storeMasterRouter)
 app.use('/dpr',dprRouter);
 // Boq Routes
 app.use('/boq',boqRouter);
+// Item Identity Routes
+app.use("/item-identity", ItemIdentityRouter);
 
 // Material Movement Routes
 app.use("/material-movement", materialMovementRouter);
 //Project MaterialPlanning Routes
 app.use("/project-material-planning",projectMaterialPlanningRouter)
+//Main Store  stockRoutes
+app.use("/main-store-stock", MainStoreStockRouter);
+// Site SToreStock
+app.use("/site-store-stock", SiteStoreStockRouter);
 // All ANalytics
 app.use("/analytics", analyticalRouter);
 app.use("/head-store", headStoreItemRoutes);

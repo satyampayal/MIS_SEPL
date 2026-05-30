@@ -40,4 +40,5 @@ const masterStoreSchema = new mongoose.Schema({
     }
 });
 
-module.exports = mongoose.model('MasterStore', masterStoreSchema);
+module.exports =
+  mongoose.models.MasterStore || mongoose.model("MasterStore", masterStoreSchema);

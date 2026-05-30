@@ -40,6 +40,7 @@ import HeadStoreLiveStockReport from './pages/Reports/HeadStoreLiveStockReport'
 import AddTaskModal from './AddTaskModal'
 import TaskListModal from './TaskListModal'
 import ProjectMaterialPlanningPage from './pages/ProjectMaterialPlanning/ProjectMaterialPlanningPage'
+import ItemIdentityPage from './Store/ItemIdentityPage'
 
 function App() {
   const { taxInvoiceId } = useParams();
@@ -109,6 +110,23 @@ path="/reports/material-history/projects"
   path="/reports/material-history/head-store-stock"
   element={<HeadStoreLiveStockReport />}
 />
+
+{/* Item Identity Routes */}
+<Route path="/item-identity" element={
+       <ProtectedRoute
+            allowedRoles={[
+              "MIS User",
+              "Store Manager",
+              "Project Manager",
+              "Super Admin",
+              "Admin"
+            ]}
+          >
+            <ItemIdentityPage />
+          </ProtectedRoute>
+ 
+  
+  } />
 
 
  {/* TAX INVOICE */}

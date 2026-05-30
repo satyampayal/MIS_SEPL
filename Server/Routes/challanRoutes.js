@@ -1,18 +1,21 @@
 const express = require("express");
-const chllanRouter = express.Router();
+const ChallanRouter = express.Router();
 
 const {
   createChallan,
+  approveChallan,
+  rejectChallan,
   getAllChallans,
-  updateChallan,
 } = require("../controllers/challanController");
 
 const upload = require("../config/multer");
 
-chllanRouter.post("/add", createChallan);
+ChallanRouter.post("/create", upload.single("challanFile"), createChallan);
 
-chllanRouter.get("/all", getAllChallans);
+ChallanRouter.put("/approve/:id", approveChallan);
 
-chllanRouter.put("/update/:id", upload.single("signedChallanFile"), updateChallan);
+ChallanRouter.put("/reject/:id", rejectChallan);
 
-module.exports = chllanRouter;
+ChallanRouter.get("/all", getAllChallans);
+
+module.exports = ChallanRouter;

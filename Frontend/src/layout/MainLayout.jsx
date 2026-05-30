@@ -11,7 +11,8 @@ import {
     Menu,
     Clipboard,
     ClipboardList,
-    BarChart3
+    BarChart3,
+    PackageSearch
 } from "lucide-react";
 import { Outlet, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -68,6 +69,8 @@ export default function MainLayout() {
         { title: "Party Master", icon: FileText, path: "/party", roles: ["MIS User", "Site Engineer", "Store Manager", "Accountant", "Project Manager"] },
         { title: "Users", icon: UserCircle, path: "/user/mang", roles: ["Super Admin", "Admin"] },
         { title: "Task  Management", icon: ClipboardList, path: null, roles: ["Super Admin", "Admin", "Project Manager"] },
+        { title: "Item Management", icon: PackageSearch, path: "/item-identity", roles: ["Super Admin", "Admin", "Project Manager"] },
+
     ];
 
     const navBar = [
