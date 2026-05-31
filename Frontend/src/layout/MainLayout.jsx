@@ -57,7 +57,7 @@ export default function MainLayout() {
     };
 
     const navItems = [
-        { title: "Dashboard", icon: LayoutDashboard, path: "/new-dashboard", roles: [] },
+        { title: "Dashboard", icon: LayoutDashboard, path: "/", roles: [] },
         { title: "Projects", icon: Building2, path: "/projects", roles: ["MIS User", "Project Manager", "Site Engineer"] },
         { title: "Stores", icon: Warehouse, path: "/store", roles: ["Store Manager", "MIS User"] },
         { title: "Tax Invoice", icon: FileText, path: "/TaxInvoiceListPage", roles: ["MIS User", "Accountant"] },
@@ -70,6 +70,11 @@ export default function MainLayout() {
         { title: "Users", icon: UserCircle, path: "/user/mang", roles: ["Super Admin", "Admin"] },
         { title: "Task  Management", icon: ClipboardList, path: null, roles: ["Super Admin", "Admin", "Project Manager"] },
         { title: "Item Management", icon: PackageSearch, path: "/item-identity", roles: ["Super Admin", "Admin", "Project Manager"] },
+        { title: "Main Store Live Stock", icon: Warehouse, path: "/main-store-stock", roles: ["Super Admin", "Admin", "Project Manager"] },
+        { title: "Site Store Live Stock", icon: Warehouse, path: "/site-store-stock", roles: ["Super Admin", "Admin", "Project Manager"] },
+        { title: "Approval Challan ", icon: FileText, path: "/challan-approval", roles: ["Super Admin", "Admin", "Project Manager"] },
+        { title: "Stock Transaction ", icon: FileText, path: "/stock-transactions", roles: [""] },
+        
 
     ];
 

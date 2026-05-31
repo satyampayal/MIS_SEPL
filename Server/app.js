@@ -27,6 +27,9 @@ const projectMaterialPlanningRouter=require('./Routes/projectMaterialPlanningRou
 const MainStoreStockRouter = require("./routes/mainStoreStockRoutes");
 const SiteStoreStockRouter = require("./routes/siteStoreStockRoutes");
 const ItemIdentityRouter = require("./routes/itemIdentityRoutes");
+const StockTransactionRouter = require("./routes/stockTransactionRoutes");
+
+
 // alllow  other Port use server Resources
 app.use(
   cors({
@@ -80,6 +83,8 @@ app.use("/project-material-planning",projectMaterialPlanningRouter)
 app.use("/main-store-stock", MainStoreStockRouter);
 // Site SToreStock
 app.use("/site-store-stock", SiteStoreStockRouter);
+// Stock Transation Routes
+app.use("/stock-transactions", StockTransactionRouter);
 // All ANalytics
 app.use("/analytics", analyticalRouter);
 app.use("/head-store", headStoreItemRoutes);

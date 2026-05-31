@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import BASE_URL from "../../config/api";
 import ChallanPreview from "./ChallanPreview";
+import ChallanItemPickerModal from "./ChallanItemPickerModal";
 
 const CHALLAN_API = `${BASE_URL}/challan`;
 const PROJECT_API = `${BASE_URL}/project-master/all`;
@@ -108,6 +109,8 @@ export default function ChallanModal({
   const needsVendor = ["DDC", "LPN", "MRN", "CN"].includes(form.documentType);
 
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerRowIndex, setPickerRowIndex] = useState(null);
 
   const title = isView ? "View Challan" : isEdit ? "Edit Challan" : "Create Challan";
 
@@ -201,19 +204,19 @@ export default function ChallanModal({
     }
   }, [challan, isOpen]);
 
- useEffect(() => {
-  if (!isOpen) return;
+  useEffect(() => {
+    if (!isOpen) return;
 
-  if (["DC", "CN"].includes(form.documentType) && form.fromMainStoreRef) {
-    fetchItemsByMainStore(form.fromMainStoreRef);
-    return;
-  }
+    if (["DC", "CN"].includes(form.documentType) && form.fromMainStoreRef) {
+      fetchItemsByMainStore(form.fromMainStoreRef);
+      return;
+    }
 
-  if (["ISTN", "MRS"].includes(form.documentType) && form.fromSiteRef) {
-    fetchItemsBySite(form.fromSiteRef);
-    return;
-  }
-}, [isOpen, form.fromMainStoreRef, form.fromSiteRef, form.documentType]);
+    if (["ISTN", "MRS"].includes(form.documentType) && form.fromSiteRef) {
+      fetchItemsBySite(form.fromSiteRef);
+      return;
+    }
+  }, [isOpen, form.fromMainStoreRef, form.fromSiteRef, form.documentType]);
 
   if (!isOpen) return null;
 
@@ -248,18 +251,18 @@ export default function ChallanModal({
   };
 
   const fetchItemsBySite = async (siteRef) => {
-  try {
-    setItemLoading(true);
+    try {
+      setItemLoading(true);
 
-    const res = await axios.get(`${SITE_STOCK_API}?siteRef=${siteRef}`);
+      const res = await axios.get(`${SITE_STOCK_API}?siteRef=${siteRef}`);
 
-    setStockItems(res.data.data || []);
-  } catch (error) {
-    toast.error("Failed to load site stock items");
-  } finally {
-    setItemLoading(false);
-  }
-};
+      setStockItems(res.data.data || []);
+    } catch (error) {
+      toast.error("Failed to load site stock items");
+    } finally {
+      setItemLoading(false);
+    }
+  };
 
   const totalAmount = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.amount || 0), 0),
@@ -282,30 +285,30 @@ export default function ChallanModal({
     }
 
     if (name === "toSiteRef" || name === "fromSiteRef" || name === "projectRef") {
-  const selectedProject = projects.find((p) => p._id === value);
+      const selectedProject = projects.find((p) => p._id === value);
 
-  setForm((prev) => ({
-    ...prev,
-    [name]: value,
-    projectRef:
-      name === "toSiteRef" || name === "fromSiteRef"
-        ? value
-        : prev.projectRef,
-    projectName:
-      selectedProject?.projectName ||
-      selectedProject?.name ||
-      prev.projectName,
-  }));
+      setForm((prev) => ({
+        ...prev,
+        [name]: value,
+        projectRef:
+          name === "toSiteRef" || name === "fromSiteRef"
+            ? value
+            : prev.projectRef,
+        projectName:
+          selectedProject?.projectName ||
+          selectedProject?.name ||
+          prev.projectName,
+      }));
 
-  setItems([{ ...emptyItem }]);
-  setStockItems([]);
+      setItems([{ ...emptyItem }]);
+      setStockItems([]);
 
-  if (name === "fromSiteRef" && ["ISTN", "MRS"].includes(form.documentType)) {
-    fetchItemsBySite(value);
-  }
+      if (name === "fromSiteRef" && ["ISTN", "MRS"].includes(form.documentType)) {
+        fetchItemsBySite(value);
+      }
 
-  return;
-}
+      return;
+    }
 
     if (name === "fromMainStoreRef") {
       setForm((prev) => ({ ...prev, fromMainStoreRef: value }));
@@ -549,6 +552,12 @@ export default function ChallanModal({
     }
   };
 
+  //  For Picker Modal
+  const openItemPicker = (index) => {
+    setPickerRowIndex(index);
+    setPickerOpen(true);
+  };
+
   const hasError = items.some((item) => item.stockError);
 
   return (
@@ -762,7 +771,7 @@ export default function ChallanModal({
                         </select>
                       </td>
 
-                      <td className="p-3">
+                      {/* <td className="p-3">
                         <select
                           value={item.itemRef}
                           disabled={
@@ -803,6 +812,25 @@ export default function ChallanModal({
                             {item.stockError}
                           </p>
                         )}
+                      </td> */}
+                      {/* Select item use ItemPicker */}
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => openItemPicker(index)}
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-left text-white hover:border-cyan-500"
+                        >
+                          {item.itemName ? (
+                            <div>
+                              <div>{item.itemName}</div>
+                              <div className="text-xs text-cyan-300">
+                                {item.itemCode}
+                              </div>
+                            </div>
+                          ) : (
+                            "🔍 Search / Select Item"
+                          )}
+                        </button>
                       </td>
 
                       <TdInput
@@ -951,14 +979,38 @@ export default function ChallanModal({
         </div>
       </div>
       {previewOpen && (
-  <ChallanPreview
-    formData={form}
-    items={items}
-    totalAmount={totalAmount}
-    onBack={() => setPreviewOpen(false)}
-    onConfirm={saveChallan}
-  />
-)}
+        <ChallanPreview
+          formData={form}
+          items={items}
+          totalAmount={totalAmount}
+          onBack={() => setPreviewOpen(false)}
+          onConfirm={saveChallan}
+        />
+      )}
+
+      {pickerOpen && (
+        <ChallanItemPickerModal
+          isOpen={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          documentType={form.documentType}
+          fromMainStoreRef={form.fromMainStoreRef}
+          fromSiteRef={form.fromSiteRef}
+          onSelect={(selected) => {
+            if (pickerRowIndex === null) return;
+
+            const updated = [...items];
+
+            updated[pickerRowIndex] = {
+              ...updated[pickerRowIndex],
+              ...selected,
+              stockError: "",
+            };
+
+            setItems(updated);
+            setPickerOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

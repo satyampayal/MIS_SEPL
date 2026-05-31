@@ -1,3 +1,4 @@
+const XLSX = require("xlsx");
 const MainStoreStock = require("../model/mainStoreStock");
 const ItemIdentity = require("../model/ItemIdentity");
 const MasterStore = require("../model/MasterStore");
@@ -368,6 +369,210 @@ exports.getNegativeStock = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch negative stock",
+      error: error.message,
+    });
+  }
+};
+
+/* ---------------- ADD BULK OPENING STOCK ---------------- */
+
+exports.bulkMainOpeningStockUpload = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Excel file is required",
+      });
+    }
+
+    const workbook = XLSX.readFile(req.file.path);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    const skippedRows = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+
+      const storeCode = String(row.storeCode || row["Store Code"] || "").trim();
+      const itemCode = String(row.itemCode || row["Item Code"] || "")
+        .trim()
+        .toUpperCase();
+
+      const openingQty = Number(row.openingQty || row["Opening Qty"] || 0);
+      const rate = Number(row.rate || row["Rate"] || 0);
+
+      if (!storeCode || !itemCode) {
+        skippedRows.push({
+          row: i + 2,
+          reason: "Store Code and Item Code are required",
+          data: row,
+        });
+        continue;
+      }
+
+      if (openingQty <= 0) {
+        skippedRows.push({
+          row: i + 2,
+          reason: "Opening Qty must be greater than 0",
+          data: row,
+        });
+        continue;
+      }
+
+      const store = await MasterStore.findOne({ storeCode });
+
+      if (!store) {
+        skippedRows.push({
+          row: i + 2,
+          reason: `Store not found for storeCode: ${storeCode}`,
+          data: row,
+        });
+        continue;
+      }
+
+      const item = await ItemIdentity.findOne({ itemCode });
+
+      if (!item) {
+        skippedRows.push({
+          row: i + 2,
+          reason: `Item not found for itemCode: ${itemCode}`,
+          data: row,
+        });
+        continue;
+      }
+
+      let stock = await MainStoreStock.findOne({
+        mainStoreRef: store._id,
+        itemRef: item._id,
+      });
+
+      if (stock) {
+        const oldQty = Number(stock.currentStock || 0);
+        const oldRate = Number(stock.averageRate || 0);
+        const newQty = oldQty + openingQty;
+
+        stock.currentStock = newQty;
+        stock.averageRate =
+          newQty > 0 ? (oldQty * oldRate + openingQty * rate) / newQty : rate;
+
+        stock.minimumStockLevel = item.minimumStockLevel || stock.minimumStockLevel || 0;
+        stock.reorderLevel = item.reorderLevel || stock.reorderLevel || 0;
+        stock.location = row.location || row["Location"] || stock.location;
+        stock.rackNumber = row.rackNumber || row["Rack Number"] || stock.rackNumber;
+
+        await stock.save();
+        updatedCount++;
+      } else {
+        await MainStoreStock.create({
+          mainStoreRef: store._id,
+          itemRef: item._id,
+          currentStock: openingQty,
+          reservedStock: 0,
+          averageRate: rate,
+          minimumStockLevel: item.minimumStockLevel || 0,
+          reorderLevel: item.reorderLevel || 0,
+          location: row.location || row["Location"] || "",
+          rackNumber: row.rackNumber || row["Rack Number"] || "",
+        });
+
+        createdCount++;
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Main store opening stock uploaded successfully",
+      createdCount,
+      updatedCount,
+      skippedCount: skippedRows.length,
+      skippedRows,
+    });
+  } catch (error) {
+    console.error("Bulk Main Opening Stock Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload main store opening stock",
+      error: error.message,
+    });
+  }
+};
+
+/* ---------------- Update single STOCK ---------------- */
+
+exports.updateMainStoreStock = async (req, res) => {
+  try {
+    const {
+      currentStock,
+      reservedStock,
+      averageRate,
+      minimumStockLevel,
+      reorderLevel,
+      location,
+      rackNumber,
+    } = req.body;
+
+    const stock = await MainStoreStock.findById(req.params.id);
+
+    if (!stock) {
+      return res.status(404).json({
+        success: false,
+        message: "Stock record not found",
+      });
+    }
+
+    stock.currentStock = Number(currentStock || 0);
+    stock.reservedStock = Number(reservedStock || 0);
+    stock.averageRate = Number(averageRate || 0);
+    stock.minimumStockLevel = Number(minimumStockLevel || 0);
+    stock.reorderLevel = Number(reorderLevel || 0);
+    stock.location = location || "";
+    stock.rackNumber = rackNumber || "";
+
+    await stock.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Main store stock updated successfully",
+      data: stock,
+    });
+  } catch (error) {
+    console.error("Update Main Store Stock Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update main store stock",
+      error: error.message,
+    });
+  }
+};
+
+/* ---------------- Soft Delete OPENING STOCK ---------------- */
+
+exports.deleteMainStoreStock = async (req, res) => {
+  try {
+    const stock = await MainStoreStock.findById(req.params.id);
+
+    if (!stock) {
+      return res.status(404).json({
+        success: false,
+        message: "Stock record not found",
+      });
+    }
+
+    stock.isActive = false;
+    await stock.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Main store stock deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Main Store Stock Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete main store stock",
       error: error.message,
     });
   }

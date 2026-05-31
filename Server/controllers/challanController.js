@@ -6,6 +6,8 @@ const SiteStoreStock = require("../model/SiteStoreStock");
 const StockBatch = require("../model/stockBatch");
 const ProjectBoqItem = require("../model/projectBoqItem");
 const BOQMaster = require("../model/boqMaster");
+
+const createStockTransaction = require("../utils/createStockTransaction");
 const cleanNumber = (value = 0) => {
   const num = Number(value);
   return Number.isNaN(num) ? 0 : num;
@@ -96,20 +98,21 @@ exports.createChallan = async (req, res) => {
     }
 
     const exists = await Challan.findOne({ documentNumber }).session(session);
-
-    if (exists) {
-      throw new Error("Document number already exists");
-    }
+    if (exists) throw new Error("Document number already exists");
 
     const finalItems = [];
 
     for (const row of items) {
-      const item = await ItemIdentity.findById(row.itemRef).session(session);
+      const qty = cleanNumber(row.quantity);
+      const rate = cleanNumber(row.rate);
 
-      if (!item) {
-        throw new Error("Invalid item selected");
+      if (qty <= 0) {
+        throw new Error("Quantity must be greater than 0");
       }
-      //  If purpose of challan creted is Installtion 
+
+      const item = await ItemIdentity.findById(row.itemRef).session(session);
+      if (!item) throw new Error("Invalid item selected");
+
       if (row.itemPurpose === "BOQ_INSTALLATION") {
         if (!row.boqItemRef || !row.boqRef) {
           throw new Error(`${item.itemName}: BOQ item reference is required`);
@@ -120,9 +123,7 @@ exports.createChallan = async (req, res) => {
           boqRef: row.boqRef,
         }).session(session);
 
-        if (!boqItem) {
-          throw new Error(`${item.itemName}: BOQ item not found`);
-        }
+        if (!boqItem) throw new Error(`${item.itemName}: BOQ item not found`);
 
         const boq = await BOQMaster.findOne({
           _id: row.boqRef,
@@ -138,9 +139,7 @@ exports.createChallan = async (req, res) => {
         const remainingBoqQty = boqQty - alreadyIssuedQty;
 
         if (qty > remainingBoqQty) {
-          throw new Error(
-            `${item.itemName}: BOQ remaining qty is only ${remainingBoqQty}`
-          );
+          throw new Error(`${item.itemName}: BOQ remaining qty is only ${remainingBoqQty}`);
         }
 
         row.boqQty = boqQty;
@@ -148,39 +147,42 @@ exports.createChallan = async (req, res) => {
         row.remainingBoqQty = remainingBoqQty;
       }
 
-      //  End of Boq Related Validations
-
-      const qty = cleanNumber(row.quantity);
-      const rate = cleanNumber(row.rate);
-
-      if (qty <= 0) {
-        throw new Error(`Quantity must be greater than 0 for ${item.itemName}`);
-      }
-
       let fromStockRef = null;
-      let toStockRef = null;
+      let stockModel = null;
+      let stockQuery = null;
 
       if (documentType === "DC") {
-        const stock = await MainStoreStock.findOne({
+        stockModel = MainStoreStock;
+        stockQuery = {
           mainStoreRef: fromMainStoreRef,
           itemRef: item._id,
-        }).session(session);
-
-        if (!stock) throw new Error(`${item.itemName} stock not found in main store`);
-
-        await reserveStock({ stock, qty });
-        fromStockRef = stock._id;
+        };
       }
 
       if (documentType === "MRS" || documentType === "ISTN") {
-        const stock = await SiteStoreStock.findOne({
+        stockModel = SiteStoreStock;
+        stockQuery = {
           siteRef: fromSiteRef,
           itemRef: item._id,
-        }).session(session);
+        };
+      }
 
-        if (!stock) throw new Error(`${item.itemName} stock not found in source site`);
+      if (stockModel && stockQuery) {
+        const stock = await stockModel.findOne(stockQuery).session(session);
 
-        await reserveStock({ stock, qty });
+        if (!stock) {
+          throw new Error(`${item.itemName} stock not found`);
+        }
+
+        const availableStock =
+          cleanNumber(stock.currentStock) - cleanNumber(stock.reservedStock);
+
+        if (qty > availableStock) {
+          throw new Error(
+            `${item.itemName}: only ${availableStock} qty available`
+          );
+        }
+
         fromStockRef = stock._id;
       }
 
@@ -191,15 +193,19 @@ exports.createChallan = async (req, res) => {
         boqQty: cleanNumber(row.boqQty),
         alreadyIssuedQty: cleanNumber(row.alreadyIssuedQty),
         remainingBoqQty: cleanNumber(row.remainingBoqQty),
+
         isReturnable: row.itemPurpose === "TOOL" ? true : Boolean(row.isReturnable),
         expectedReturnDate: row.expectedReturnDate || null,
+
         itemRef: item._id,
         fromStockRef,
-        toStockRef,
+        toStockRef: null,
+
         itemName: item.itemName,
         itemCode: item.itemCode,
         unit: item.unit,
         hsnCode: item.hsnCode,
+
         quantity: qty,
         rate,
         amount: qty * rate,
@@ -207,24 +213,33 @@ exports.createChallan = async (req, res) => {
       });
     }
 
-    const challan = await Challan.create(
+    const [challan] = await Challan.create(
       [
         {
           documentNumber,
           documentDate: documentDate || new Date(),
           documentType,
+
           fromMainStoreRef: fromMainStoreRef || null,
           toMainStoreRef: toMainStoreRef || null,
           fromSiteRef: fromSiteRef || null,
           toSiteRef: toSiteRef || null,
+
           vendorRef: vendorRef || null,
           vendorName: vendorName || "",
+
           projectRef: projectRef || toSiteRef || fromSiteRef || null,
           projectName: projectName || "",
+
           items: finalItems,
+
           approvalStatus: "PENDING_SITE_APPROVAL",
+
           stockStatus:
-            ["DC", "MRS", "ISTN"].includes(documentType) ? "RESERVED" : "NOT_APPLIED",
+            ["DC", "MRS", "ISTN"].includes(documentType)
+              ? "RESERVED"
+              : "NOT_APPLIED",
+
           deliveryStatus: "PENDING",
           remarks: remarks || "",
           challanFile: req.file ? req.file.path : "",
@@ -234,12 +249,64 @@ exports.createChallan = async (req, res) => {
       { session }
     );
 
+    for (const item of challan.items) {
+      const qty = cleanNumber(item.quantity);
+
+      if (!["DC", "MRS", "ISTN"].includes(challan.documentType)) continue;
+      if (!item.fromStockRef) continue;
+
+      const StockModel =
+        challan.documentType === "DC" ? MainStoreStock : SiteStoreStock;
+
+      const stock = await StockModel.findById(item.fromStockRef).session(session);
+
+      if (!stock) {
+        throw new Error(`${item.itemName} stock not found while reserving`);
+      }
+
+      const oldCurrentStock = stock.currentStock || 0;
+      const oldReservedStock = stock.reservedStock || 0;
+
+      await reserveStock({ stock, qty });
+
+      await createStockTransaction({
+        itemRef: item.itemRef,
+
+        mainStoreRef:
+          challan.documentType === "DC" ? challan.fromMainStoreRef : null,
+
+        siteRef:
+          challan.documentType !== "DC" ? challan.fromSiteRef : null,
+
+        transactionType: "CHALLAN_RESERVED",
+        direction: "RESERVE",
+
+        quantity: qty,
+
+        beforeStock: oldCurrentStock,
+        afterStock: stock.currentStock,
+
+        beforeReservedStock: oldReservedStock,
+        afterReservedStock: stock.reservedStock,
+
+        rate: stock.averageRate || item.rate || 0,
+
+        referenceType: "CHALLAN",
+        referenceId: challan._id,
+        referenceNumber: challan.documentNumber,
+
+        remarks: "Stock reserved during challan creation",
+        createdBy: req.user?._id || null,
+        session,
+      });
+    }
+
     await session.commitTransaction();
 
     return res.status(201).json({
       success: true,
       message: "Challan created and sent for site approval",
-      data: challan[0],
+      data: challan,
     });
   } catch (error) {
     await session.abortTransaction();
@@ -253,6 +320,7 @@ exports.createChallan = async (req, res) => {
   }
 };
 
+/* APPROVE CHALLAN */
 /* APPROVE CHALLAN */
 exports.approveChallan = async (req, res) => {
   const session = await mongoose.startSession();
@@ -272,12 +340,46 @@ exports.approveChallan = async (req, res) => {
       const qty = cleanNumber(item.quantity);
       const rate = cleanNumber(item.rate);
 
+      /* DC: Main Store -> Site Store */
       if (challan.documentType === "DC") {
         const mainStock = await MainStoreStock.findById(item.fromStockRef).session(session);
         if (!mainStock) throw new Error(`${item.itemName} main stock not found`);
 
+        const oldMainStock = mainStock.currentStock || 0;
+        const oldMainReserved = mainStock.reservedStock || 0;
+
         await deductReservedStock({ stock: mainStock, qty });
 
+        await createStockTransaction({
+          itemRef: item.itemRef,
+          mainStoreRef: challan.fromMainStoreRef,
+          transactionType: "CHALLAN_APPROVED_OUT",
+          direction: "OUT",
+          quantity: qty,
+          beforeStock: oldMainStock,
+          afterStock: mainStock.currentStock,
+          beforeReservedStock: oldMainReserved,
+          afterReservedStock: mainStock.reservedStock,
+          rate: mainStock.averageRate || rate || 0,
+          referenceType: "CHALLAN",
+          referenceId: challan._id,
+          referenceNumber: challan.documentNumber,
+          remarks: "Main store stock deducted after challan approval",
+          createdBy: req.user?._id || null,
+          session,
+        });
+
+        let oldSiteStock = 0;
+
+        const existingSiteStock = await SiteStoreStock.findOne({
+          siteRef: challan.toSiteRef,
+          itemRef: item.itemRef,
+        }).session(session);
+
+        if (existingSiteStock) {
+          oldSiteStock = existingSiteStock.currentStock || 0;
+        }
+
         const siteStock = await increaseStock({
           Model: SiteStoreStock,
           findQuery: {
@@ -286,12 +388,42 @@ exports.approveChallan = async (req, res) => {
           },
           qty,
           rate,
+          session,
+        });
+
+        await createStockTransaction({
+          itemRef: item.itemRef,
+          siteRef: challan.toSiteRef,
+          transactionType: "CHALLAN_RECEIVED_SITE",
+          direction: "IN",
+          quantity: qty,
+          beforeStock: oldSiteStock,
+          afterStock: siteStock.currentStock,
+          rate,
+          referenceType: "CHALLAN",
+          referenceId: challan._id,
+          referenceNumber: challan.documentNumber,
+          remarks: "Stock added to site store after challan approval",
+          createdBy: req.user?._id || null,
+          session,
         });
 
         item.toStockRef = siteStock._id;
       }
 
+      /* DDC / LPN: Direct Vendor -> Site Store */
       if (challan.documentType === "DDC" || challan.documentType === "LPN") {
+        let oldSiteStock = 0;
+
+        const existingSiteStock = await SiteStoreStock.findOne({
+          siteRef: challan.toSiteRef,
+          itemRef: item.itemRef,
+        }).session(session);
+
+        if (existingSiteStock) {
+          oldSiteStock = existingSiteStock.currentStock || 0;
+        }
+
         const siteStock = await increaseStock({
           Model: SiteStoreStock,
           findQuery: {
@@ -300,16 +432,68 @@ exports.approveChallan = async (req, res) => {
           },
           qty,
           rate,
+          session,
+        });
+
+        await createStockTransaction({
+          itemRef: item.itemRef,
+          siteRef: challan.toSiteRef,
+          transactionType: "CHALLAN_RECEIVED_SITE",
+          direction: "IN",
+          quantity: qty,
+          beforeStock: oldSiteStock,
+          afterStock: siteStock.currentStock,
+          rate,
+          referenceType: "CHALLAN",
+          referenceId: challan._id,
+          referenceNumber: challan.documentNumber,
+          remarks: "Direct challan stock added to site store",
+          createdBy: req.user?._id || null,
+          session,
         });
 
         item.toStockRef = siteStock._id;
       }
 
+      /* MRS: Site Store -> Main Store Return */
       if (challan.documentType === "MRS") {
         const siteStock = await SiteStoreStock.findById(item.fromStockRef).session(session);
         if (!siteStock) throw new Error(`${item.itemName} site stock not found`);
 
+        const oldSiteStock = siteStock.currentStock || 0;
+        const oldSiteReserved = siteStock.reservedStock || 0;
+
         await deductReservedStock({ stock: siteStock, qty });
+
+        await createStockTransaction({
+          itemRef: item.itemRef,
+          siteRef: challan.fromSiteRef,
+          transactionType: "CHALLAN_APPROVED_OUT",
+          direction: "OUT",
+          quantity: qty,
+          beforeStock: oldSiteStock,
+          afterStock: siteStock.currentStock,
+          beforeReservedStock: oldSiteReserved,
+          afterReservedStock: siteStock.reservedStock,
+          rate,
+          referenceType: "CHALLAN",
+          referenceId: challan._id,
+          referenceNumber: challan.documentNumber,
+          remarks: "Site stock returned after MRS approval",
+          createdBy: req.user?._id || null,
+          session,
+        });
+
+        let oldMainStock = 0;
+
+        const existingMainStock = await MainStoreStock.findOne({
+          mainStoreRef: challan.toMainStoreRef,
+          itemRef: item.itemRef,
+        }).session(session);
+
+        if (existingMainStock) {
+          oldMainStock = existingMainStock.currentStock || 0;
+        }
 
         const mainStock = await increaseStock({
           Model: MainStoreStock,
@@ -319,6 +503,24 @@ exports.approveChallan = async (req, res) => {
           },
           qty,
           rate,
+          session,
+        });
+
+        await createStockTransaction({
+          itemRef: item.itemRef,
+          mainStoreRef: challan.toMainStoreRef,
+          transactionType: "CHALLAN_RECEIVED_SITE",
+          direction: "IN",
+          quantity: qty,
+          beforeStock: oldMainStock,
+          afterStock: mainStock.currentStock,
+          rate,
+          referenceType: "CHALLAN",
+          referenceId: challan._id,
+          referenceNumber: challan.documentNumber,
+          remarks: "Returned stock added to main store after MRS approval",
+          createdBy: req.user?._id || null,
+          session,
         });
 
         item.toStockRef = mainStock._id;
@@ -344,11 +546,45 @@ exports.approveChallan = async (req, res) => {
         );
       }
 
+      /* ISTN: Site Store -> Site Store */
       if (challan.documentType === "ISTN") {
         const fromSiteStock = await SiteStoreStock.findById(item.fromStockRef).session(session);
         if (!fromSiteStock) throw new Error(`${item.itemName} source site stock not found`);
 
+        const oldFromSiteStock = fromSiteStock.currentStock || 0;
+        const oldFromSiteReserved = fromSiteStock.reservedStock || 0;
+
         await deductReservedStock({ stock: fromSiteStock, qty });
+
+        await createStockTransaction({
+          itemRef: item.itemRef,
+          siteRef: challan.fromSiteRef,
+          transactionType: "CHALLAN_APPROVED_OUT",
+          direction: "OUT",
+          quantity: qty,
+          beforeStock: oldFromSiteStock,
+          afterStock: fromSiteStock.currentStock,
+          beforeReservedStock: oldFromSiteReserved,
+          afterReservedStock: fromSiteStock.reservedStock,
+          rate,
+          referenceType: "CHALLAN",
+          referenceId: challan._id,
+          referenceNumber: challan.documentNumber,
+          remarks: "Stock deducted from source site after ISTN approval",
+          createdBy: req.user?._id || null,
+          session,
+        });
+
+        let oldToSiteStock = 0;
+
+        const existingToSiteStock = await SiteStoreStock.findOne({
+          siteRef: challan.toSiteRef,
+          itemRef: item.itemRef,
+        }).session(session);
+
+        if (existingToSiteStock) {
+          oldToSiteStock = existingToSiteStock.currentStock || 0;
+        }
 
         const toSiteStock = await increaseStock({
           Model: SiteStoreStock,
@@ -358,6 +594,24 @@ exports.approveChallan = async (req, res) => {
           },
           qty,
           rate,
+          session,
+        });
+
+        await createStockTransaction({
+          itemRef: item.itemRef,
+          siteRef: challan.toSiteRef,
+          transactionType: "CHALLAN_RECEIVED_SITE",
+          direction: "IN",
+          quantity: qty,
+          beforeStock: oldToSiteStock,
+          afterStock: toSiteStock.currentStock,
+          rate,
+          referenceType: "CHALLAN",
+          referenceId: challan._id,
+          referenceNumber: challan.documentNumber,
+          remarks: "Stock added to destination site after ISTN approval",
+          createdBy: req.user?._id || null,
+          session,
         });
 
         item.toStockRef = toSiteStock._id;
@@ -415,17 +669,53 @@ exports.rejectChallan = async (req, res) => {
     for (const item of challan.items) {
       if (!item.fromStockRef) continue;
 
+      const qty = cleanNumber(item.quantity);
+
       const StockModel =
         challan.documentType === "DC" ? MainStoreStock : SiteStoreStock;
 
       const stock = await StockModel.findById(item.fromStockRef).session(session);
 
-      if (stock) {
-        await releaseReservedStock({
-          stock,
-          qty: item.quantity,
-        });
-      }
+      if (!stock) continue;
+
+      const oldCurrentStock = stock.currentStock || 0;
+      const oldReservedStock = stock.reservedStock || 0;
+
+      await releaseReservedStock({
+        stock,
+        qty,
+      });
+
+      await createStockTransaction({
+        itemRef: item.itemRef,
+
+        mainStoreRef:
+          challan.documentType === "DC" ? challan.fromMainStoreRef : null,
+
+        siteRef:
+          challan.documentType !== "DC" ? challan.fromSiteRef : null,
+
+        transactionType: "CHALLAN_REJECT_RELEASE",
+        direction: "RELEASE",
+
+        quantity: qty,
+
+        beforeStock: oldCurrentStock,
+        afterStock: stock.currentStock,
+
+        beforeReservedStock: oldReservedStock,
+        afterReservedStock: stock.reservedStock,
+
+        rate: stock.averageRate || item.rate || 0,
+
+        referenceType: "CHALLAN",
+        referenceId: challan._id,
+        referenceNumber: challan.documentNumber,
+
+        remarks: rejectionReason || "Reserved stock released after challan rejection",
+        createdBy: req.user?._id || null,
+        session,
+      });
     }
 
     challan.approvalStatus = "REJECTED_BY_SITE";
@@ -487,6 +777,143 @@ exports.getAllChallans = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch challans",
+      error: error.message,
+    });
+  }
+};
+
+/*  Item Picker  */
+exports.getChallanPickerItems = async (req, res) => {
+  try {
+    const {
+      documentType,
+      fromMainStoreRef,
+      fromSiteRef,
+      search = "",
+      category = "All",
+      page = 1,
+      limit = 20,
+    } = req.query;
+
+    if (!documentType) {
+      return res.status(400).json({
+        success: false,
+        message: "Document type is required",
+      });
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const itemMatch = {};
+
+    if (search) {
+      itemMatch.$or = [
+        { itemName: { $regex: search, $options: "i" } },
+        { itemCode: { $regex: search, $options: "i" } },
+        { hsnCode: { $regex: search, $options: "i" } },
+        { brand: { $regex: search, $options: "i" } },
+        { make: { $regex: search, $options: "i" } },
+        { specification: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (category && category !== "All") {
+      itemMatch.category = category;
+    }
+
+    let data = [];
+    let total = 0;
+
+    // DC / CN = source is main store stock
+    if (["DC", "CN"].includes(documentType)) {
+      if (!fromMainStoreRef) {
+        return res.status(400).json({
+          success: false,
+          message: "From main store is required",
+        });
+      }
+
+      const stocks = await MainStoreStock.find({
+        mainStoreRef: fromMainStoreRef,
+        isActive: true,
+        availableStock: { $gt: 0 },
+      })
+        .populate({
+          path: "itemRef",
+          match: itemMatch,
+          select:
+            "itemName itemCode category subCategory unit hsnCode brand make specification description",
+        })
+        .sort({ updatedAt: -1 });
+
+      const filtered = stocks.filter((s) => s.itemRef);
+      total = filtered.length;
+      data = filtered.slice(skip, skip + Number(limit));
+    }
+
+    // ISTN / MRS = source is site store stock
+    else if (["ISTN", "MRS"].includes(documentType)) {
+      if (!fromSiteRef) {
+        return res.status(400).json({
+          success: false,
+          message: "From site is required",
+        });
+      }
+
+      const stocks = await SiteStoreStock.find({
+        siteRef: fromSiteRef,
+        isActive: true,
+        availableStock: { $gt: 0 },
+      })
+        .populate({
+          path: "itemRef",
+          match: itemMatch,
+          select:
+            "itemName itemCode category subCategory unit hsnCode brand make specification description",
+        })
+        .sort({ updatedAt: -1 });
+
+      const filtered = stocks.filter((s) => s.itemRef);
+      total = filtered.length;
+      data = filtered.slice(skip, skip + Number(limit));
+    }
+
+    // DDC / LPN / MRN = no source stock, select item master
+    else if (["DDC", "LPN", "MRN"].includes(documentType)) {
+      const query = {
+        isActive: true,
+        ...itemMatch,
+      };
+
+      total = await ItemIdentity.countDocuments(query);
+
+      data = await ItemIdentity.find(query)
+        .sort({ itemName: 1 })
+        .skip(skip)
+        .limit(Number(limit));
+    }
+
+    else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid document type",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: data.length,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit)),
+      data,
+    });
+  } catch (error) {
+    console.error("Challan Picker Items Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch picker items",
       error: error.message,
     });
   }

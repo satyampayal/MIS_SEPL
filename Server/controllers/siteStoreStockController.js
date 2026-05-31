@@ -1,5 +1,7 @@
+const XLSX = require("xlsx");
 const SiteStoreStock = require("../model/SiteStoreStock");
-
+const ItemIdentity = require("../model/ItemIdentity");
+const ProjectMaster = require("../model/Project");
 exports.getSiteLiveStock = async (req, res) => {
   try {
     const { siteRef, search, status, category } = req.query;
@@ -187,6 +189,298 @@ exports.getLowSiteStock = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch low site stock",
+      error: error.message,
+    });
+  }
+};
+
+exports.addSiteOpeningStock = async (req, res) => {
+  try {
+    const {
+      siteRef,
+      itemRef,
+      receivedTillDate,
+      consumedTillDate,
+      returnedTillDate,
+      damagedTillDate,
+      rate,
+      location,
+      remarks,
+    } = req.body;
+
+    if (!siteRef || !itemRef) {
+      return res.status(400).json({
+        success: false,
+        message: "Site and item are required",
+      });
+    }
+
+    const received = Number(receivedTillDate || 0);
+    const consumed = Number(consumedTillDate || 0);
+    const returned = Number(returnedTillDate || 0);
+    const damaged = Number(damagedTillDate || 0);
+
+    const currentStock = received - consumed - returned - damaged;
+
+    if (received <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Received till date must be greater than 0",
+      });
+    }
+
+    if (currentStock < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Consumed + Returned + Damaged cannot be greater than received quantity",
+      });
+    }
+
+    const item = await ItemIdentity.findById(itemRef);
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Item identity not found",
+      });
+    }
+
+    let stock = await SiteStoreStock.findOne({ siteRef, itemRef });
+
+    if (!stock) {
+      stock = new SiteStoreStock({
+        siteRef,
+        itemRef,
+        currentStock,
+        consumedQty: consumed,
+        returnedQty: returned,
+        damagedQty: damaged,
+        averageRate: Number(rate || 0),
+        minimumStockLevel: item.minimumStockLevel || 0,
+        location: location || "",
+      });
+    } else {
+      stock.currentStock = Number(stock.currentStock || 0) + currentStock;
+      stock.consumedQty = Number(stock.consumedQty || 0) + consumed;
+      stock.returnedQty = Number(stock.returnedQty || 0) + returned;
+      stock.damagedQty = Number(stock.damagedQty || 0) + damaged;
+      stock.averageRate = Number(rate || stock.averageRate || 0);
+      stock.location = location || stock.location;
+    }
+
+    await stock.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Site opening stock added successfully",
+      data: stock,
+    });
+  } catch (error) {
+    console.error("Add Site Opening Stock Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to add site opening stock",
+      error: error.message,
+    });
+  }
+};
+
+exports.bulkSiteOpeningStockUpload = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Excel file is required",
+      });
+    }
+
+    const workbook = XLSX.readFile(req.file.path);
+
+    const sheet =
+      workbook.Sheets[workbook.SheetNames[0]];
+
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      defval: "",
+    });
+
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    const skippedRows = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      try {
+        const row = rows[i];
+
+        const projectCode = String(
+          row.projectCode || row["Project Code"] || ""
+        ).trim();
+
+        const itemCode = String(
+          row.itemCode || row["Item Code"] || ""
+        ).trim().toUpperCase();
+
+        if (!projectCode || !itemCode) {
+          skippedRows.push({
+            row: i + 2,
+            reason: "Project Code and Item Code required",
+          });
+          continue;
+        }
+
+        const project = await ProjectMaster.findOne({
+          projectCode,
+        });
+
+        if (!project) {
+          skippedRows.push({
+            row: i + 2,
+            reason: `Project not found : ${projectCode}`,
+          });
+          continue;
+        }
+
+        const item = await ItemIdentity.findOne({
+          itemCode,
+        });
+
+        if (!item) {
+          skippedRows.push({
+            row: i + 2,
+            reason: `Item not found : ${itemCode}`,
+          });
+          continue;
+        }
+
+        const receivedQty = Number(
+          row.receivedTillDate ||
+            row["Received Till Date"] ||
+            0
+        );
+
+        const consumedQty = Number(
+          row.consumedTillDate ||
+            row["Consumed Till Date"] ||
+            0
+        );
+
+        const returnedQty = Number(
+          row.returnedTillDate ||
+            row["Returned Till Date"] ||
+            0
+        );
+
+        const damagedQty = Number(
+          row.damagedTillDate ||
+            row["Damaged Till Date"] ||
+            0
+        );
+
+        const currentStock =
+          receivedQty -
+          consumedQty -
+          returnedQty -
+          damagedQty;
+
+        if (currentStock < 0) {
+          skippedRows.push({
+            row: i + 2,
+            reason:
+              "Calculated stock cannot be negative",
+          });
+          continue;
+        }
+
+        let stock =
+          await SiteStoreStock.findOne({
+            siteRef: project._id,
+            itemRef: item._id,
+          });
+
+        if (stock) {
+          stock.currentStock += currentStock;
+          stock.consumedQty += consumedQty;
+          stock.returnedQty += returnedQty;
+          stock.damagedQty += damagedQty;
+
+          stock.averageRate =
+            Number(
+              row.rate || row["Rate"] || 0
+            ) || stock.averageRate;
+
+          stock.location =
+            row.location ||
+            row["Location"] ||
+            stock.location;
+
+          await stock.save();
+
+          updatedCount++;
+        } else {
+          stock =
+            await SiteStoreStock.create({
+              siteRef: project._id,
+              itemRef: item._id,
+
+              currentStock,
+
+              consumedQty,
+              returnedQty,
+              damagedQty,
+
+              averageRate: Number(
+                row.rate || row["Rate"] || 0
+              ),
+
+              minimumStockLevel:
+                item.minimumStockLevel || 0,
+
+              reorderLevel:
+                item.reorderLevel || 0,
+
+              location:
+                row.location ||
+                row["Location"] ||
+                "",
+
+              remarks:
+                row.remarks ||
+                row["Remarks"] ||
+                "",
+            });
+
+          createdCount++;
+        }
+      } catch (err) {
+        skippedRows.push({
+          row: i + 2,
+          reason: err.message,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Site opening stock uploaded successfully",
+
+      createdCount,
+      updatedCount,
+
+      skippedCount: skippedRows.length,
+
+      skippedRows,
+    });
+  } catch (error) {
+    console.error(
+      "Bulk Site Opening Stock Error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to upload site opening stock",
       error: error.message,
     });
   }

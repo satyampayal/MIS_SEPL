@@ -4,7 +4,7 @@ const siteStoreStockSchema = new mongoose.Schema(
   {
     siteRef: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ProjectMaster",
+      ref: "Project",
       required: true,
     },
 
@@ -81,7 +81,10 @@ const siteStoreStockSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-
+    openingReceivedQty: {
+      type: Number,
+      default: 0,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -109,7 +112,7 @@ siteStoreStockSchema.pre("save", function (next) {
 
   this.lastMovementDate = new Date();
 
-//   next();
+  //   next();
 });
 
 siteStoreStockSchema.index(
