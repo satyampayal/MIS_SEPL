@@ -1,5 +1,5 @@
 const ItemIdentity = require("../model/ItemIdentity");
-const MainStoreStock = require("../model/MainStoreStock");
+const MainStoreStock = require("../model/mainStoreStock");
 const XLSX = require("xlsx");
 
 /* ---------------- HELPERS ---------------- */
