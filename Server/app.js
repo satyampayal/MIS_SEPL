@@ -10,7 +10,7 @@ const dotenv = require('dotenv').config();
 const Site = require('./model/Project');
 const upload = require('./config/multer')
 const checkCloudinaryConnection =require('./config/cloudinaryCheck');
-const ChallanRouter = require("./routes/challanRoutes");
+const ChallanRouter = require("./Routes/challanRoutes");
 const sroreItemRouter = require("./Routes/sroreItemRoutes");
 const storeMasterRouter = require("./Routes/storeMasterRoutes");
 const projectMasterRouter = require("./Routes/projectMasterRoutes");
@@ -24,10 +24,10 @@ const materialMovementRouter=require('./Routes/materialMovementRoutes')
 const analyticalRouter=require('./Routes/analyticsRoutes')
 const headStoreItemRoutes = require("./Routes/headStoreItemRoutes");
 const projectMaterialPlanningRouter=require('./Routes/projectMaterialPlanningRoutes')
-const MainStoreStockRouter = require("./routes/mainStoreStockRoutes");
-const SiteStoreStockRouter = require("./routes/siteStoreStockRoutes");
-const ItemIdentityRouter = require("./routes/itemIdentityRoutes");
-const StockTransactionRouter = require("./routes/stockTransactionRoutes");
+const MainStoreStockRouter = require("./Routes/mainStoreStockRoutes");
+const SiteStoreStockRouter = require("./Routes/siteStoreStockRoutes");
+const ItemIdentityRouter = require("./Routes/itemIdentityRoutes");
+const StockTransactionRouter = require("./Routes/stockTransactionRoutes");
 
 
 // alllow  other Port use server Resources
