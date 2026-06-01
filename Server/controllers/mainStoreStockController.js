@@ -1,7 +1,7 @@
 const XLSX = require("xlsx");
 const MainStoreStock = require("../model/mainStoreStock");
 const ItemIdentity = require("../model/ItemIdentity");
-const MasterStore = require("../model/MasterStore");
+const MasterStore = require("../model/masterStore");
 const StockBatch = require("../model/stockBatch");
 
 /* ---------------- HELPERS ---------------- */
