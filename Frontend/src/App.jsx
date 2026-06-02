@@ -1,538 +1,521 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
-import MultiItemExcelEntryUI from './MultipleItemExcelEntryUI'
-import ModernDashboardLandingPage from './ModernDashboardLandingPage'
+import React, { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
-import TaxInvoiceRegisterPage from './TaxInvoiceRegisterPage'
-import TaxInvoiceListPage from './TaxInvoicePage/TaxInvoiceListPage'
-import { useParams } from "react-router-dom";
-import EditTaxInvoicePage from './TaxInvoicePage/EditTaxInvoicePage'
-import ChallanManagement from './challan/ChallanManagement'
-import StoreManagementPage from './Store/StoreManagementPage'
-import StoreInventoryPage from './Store/StoreInventoryPage'
-import ProjectMasterManagementWithProgress from '../ProjectMasterManagement/ProjectMasterManagementWithProgress'
-import ProjectBillingProgressPage from '../ProjectMasterManagement/ProjectBillingProgressPage'
-import ProjectDetailPage from '../ProjectMasterManagement/ProjectDetailPage'
-import EditProjectPage from '../ProjectMasterManagement/EditProjectPage'
-import DailyProgressReportPage from './DPR/DailyProgressReportPage'
-import LoginPage from './User/LoginPage'
-import UserManagementPage from './User/UserManagementPage'
-import ProtectedRoute from './components/ProtectedRoute'
-import BOQManagementPage from './boq/BOQManagementPage'
-import BOQDetailPage from './boq/BOQDetailPage'
-import PartyListPage from './Party/PartyListPage'
-import ProjectSpendingSurveillancePage from './TaxInvoicePage/ProjectSpendingSurveillancePage'
-import MaterialMovementHistoryPage from './MaterialHistory/MaterialMovementHistoryPag'
-import MaterialMovementAnalyticsPage from './MaterialHistory/MaterialMovementAnalyticsPage'
-import TaxInvoiceAnalyticsPage from './pages/Analytics/TaxInvoiceAnalyticsPage'
+import { Loader2 } from "lucide-react";
 
-import MainLayout from './layout/MainLayout'
-import SuperAdminDashboard from './pages/Dashboard/SuperAdminDashboard'
-import MaterialAnalyticsCenter from './reports/MaterialAnalyticsCenter'
-import MaterialSummaryReport from './pages/Reports/MaterialSummaryReport'
-import ProjectWiseMaterialHistory from './pages/Reports/ProjectWiseMaterialHistory'
-import ProjectMaterialDetail from './pages/Reports/ProjectMaterialDetail'
-import ProjectLiveStockReport from './pages/Reports/ProjectLiveStockReport'
-import HeadStoreLiveStockReport from './pages/Reports/HeadStoreLiveStockReport'
-import AddTaskModal from './AddTaskModal'
-import TaskListModal from './TaskListModal'
-import ProjectMaterialPlanningPage from './pages/ProjectMaterialPlanning/ProjectMaterialPlanningPage'
-import ItemIdentityPage from './Store/ItemIdentityPage'
-import MainStoreLiveStockPage from './Store/MainStoreLiveStockPage'
-import SiteStoreLiveStockPage from './Store/SiteStoreLiveStockPage'
-import ChallanApprovalPage from './challan/ChallanApprovalPage'
-import StockTransactionPage from './pages/StockTransaction/StockTransactionPage'
+import "./App.css";
 
-function App() {
-  const { taxInvoiceId } = useParams();
+import ProtectedRoute from "./components/ProtectedRoute";
+import MainLayout from "./layout/MainLayout";
+import LoginPage from "./User/LoginPage";
+import SuperAdminDashboard from "./pages/Dashboard/SuperAdminDashboard";
 
+// Lazy loaded pages
+const MultiItemExcelEntryUI = lazy(() => import("./MultipleItemExcelEntryUI"));
+const TaxInvoiceRegisterPage = lazy(() => import("./TaxInvoiceRegisterPage"));
+const TaxInvoiceListPage = lazy(() =>
+  import("./TaxInvoicePage/TaxInvoiceListPage")
+);
+const EditTaxInvoicePage = lazy(() =>
+  import("./TaxInvoicePage/EditTaxInvoicePage")
+);
+const ChallanManagement = lazy(() => import("./challan/ChallanManagement"));
+const ChallanApprovalPage = lazy(() =>
+  import("./challan/ChallanApprovalPage")
+);
+
+const StoreManagementPage = lazy(() => import("./Store/StoreManagementPage"));
+const StoreInventoryPage = lazy(() => import("./Store/StoreInventoryPage"));
+const ItemIdentityPage = lazy(() => import("./Store/ItemIdentityPage"));
+const MainStoreLiveStockPage = lazy(() =>
+  import("./Store/MainStoreLiveStockPage")
+);
+const SiteStoreLiveStockPage = lazy(() =>
+  import("./Store/SiteStoreLiveStockPage")
+);
+
+const ProjectMasterManagementWithProgress = lazy(() =>
+  import("../ProjectMasterManagement/ProjectMasterManagementWithProgress")
+);
+const ProjectDetailPage = lazy(() =>
+  import("../ProjectMasterManagement/ProjectDetailPage")
+);
+const EditProjectPage = lazy(() =>
+  import("../ProjectMasterManagement/EditProjectPage")
+);
+
+const DailyProgressReportPage = lazy(() =>
+  import("./DPR/DailyProgressReportPage")
+);
+
+const UserManagementPage = lazy(() => import("./User/UserManagementPage"));
+
+const BOQManagementPage = lazy(() => import("./boq/BOQManagementPage"));
+const BOQDetailPage = lazy(() => import("./boq/BOQDetailPage"));
+
+const PartyListPage = lazy(() => import("./Party/PartyListPage"));
+
+const ProjectSpendingSurveillancePage = lazy(() =>
+  import("./TaxInvoicePage/ProjectSpendingSurveillancePage")
+);
+
+const MaterialMovementHistoryPage = lazy(() =>
+  import("./MaterialHistory/MaterialMovementHistoryPag")
+);
+
+const MaterialMovementAnalyticsPage = lazy(() =>
+  import("./MaterialHistory/MaterialMovementAnalyticsPage")
+);
+
+const TaxInvoiceAnalyticsPage = lazy(() =>
+  import("./pages/Analytics/TaxInvoiceAnalyticsPage")
+);
+
+const MaterialAnalyticsCenter = lazy(() =>
+  import("./reports/MaterialAnalyticsCenter")
+);
+const MaterialSummaryReport = lazy(() =>
+  import("./pages/Reports/MaterialSummaryReport")
+);
+const ProjectWiseMaterialHistory = lazy(() =>
+  import("./pages/Reports/ProjectWiseMaterialHistory")
+);
+const ProjectMaterialDetail = lazy(() =>
+  import("./pages/Reports/ProjectMaterialDetail")
+);
+const ProjectLiveStockReport = lazy(() =>
+  import("./pages/Reports/ProjectLiveStockReport")
+);
+const HeadStoreLiveStockReport = lazy(() =>
+  import("./pages/Reports/HeadStoreLiveStockReport")
+);
+
+const ProjectMaterialPlanningPage = lazy(() =>
+  import("./pages/ProjectMaterialPlanning/ProjectMaterialPlanningPage")
+);
+
+const StockTransactionPage = lazy(() =>
+  import("./pages/StockTransaction/StockTransactionPage")
+);
+const LowStockDashboardPage=lazy(()=>
+import("./Store/LowStockDashboardPage")
+);
+
+function PageLoader() {
   return (
-
-    <Routes>
-
-      {/* Public Routes */}
-      <Route path="/login" element={<LoginPage />} />
-
-      {/* Try New Layout */}
-      <Route
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
-              <SuperAdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports/material-analytics"
-          element={
-            <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
-              <MaterialAnalyticsCenter />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/reports/material-summary"
-          element={
-            <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
-              <MaterialSummaryReport />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports/material-history/projects"
-          element={
-            <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
-              <ProjectWiseMaterialHistory />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports/material-history/projects/:projectName"
-          element={
-            <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
-              <ProjectMaterialDetail />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/reports/material-history/project-stock"
-          element={<ProjectLiveStockReport />}
-        />
-        <Route
-          path="/reports/material-history/head-store-stock"
-          element={<HeadStoreLiveStockReport />}
-        />
-
-        {/* Item Identity Routes */}
-        <Route path="/item-identity" element={
-          <ProtectedRoute
-            allowedRoles={[
-              "MIS User",
-              "Store Manager",
-              "Project Manager",
-              "Super Admin",
-              "Admin"
-            ]}
-          >
-            <ItemIdentityPage />
-          </ProtectedRoute> }
-           />
-           {/* MainStore StockLive Page */}
-               <Route path="/main-store-stock" element={
-          <ProtectedRoute
-            allowedRoles={[
-              "MIS User",
-              "Store Manager",
-              "Project Manager",
-              "Super Admin",
-              "Admin"
-            ]}
-          >
-            <MainStoreLiveStockPage />
-          </ProtectedRoute> }
-           />
-              {/* Site Store StockLive Page */}
-               <Route path="/site-store-stock" element={
-          <ProtectedRoute
-            allowedRoles={[
-              "MIS User",
-              "Store Manager",
-              "Project Manager",
-              "Super Admin",
-              "Admin"
-            ]}
-          >
-            <SiteStoreLiveStockPage />
-          </ProtectedRoute> }
-           />
-
-
-        {/* TAX INVOICE */}
-
-        <Route
-          path="/add-tax-invoice"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Accountant"
-              ]}
-            >
-              <TaxInvoiceRegisterPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        <Route
-          path="/TaxInvoiceListPage"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Accountant"
-              ]}
-            >
-              <TaxInvoiceListPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        <Route
-          path="/edit-tax-invoice/:taxInvoiceId"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Accountant"
-              ]}
-            >
-              <EditTaxInvoicePage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tax-invoice/project-surveillance"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Accountant"
-              ]}
-            >
-              <ProjectSpendingSurveillancePage />
-            </ProtectedRoute>
-          }
-        />
-        {/* ANALYTICAL  */}
-        <Route
-          path="/analytics/tax-invoice"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Accountant"
-              ]}
-            >
-              <TaxInvoiceAnalyticsPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-        {/* STORE */}
-
-        <Route
-          path="/store"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "Store Manager",
-                "MIS User"
-              ]}
-            >
-              <StoreManagementPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        <Route
-          path="/store/:storeId"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "Store Manager",
-                "MIS User"
-              ]}
-            >
-              <StoreInventoryPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/material-movement/history"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "Store Manager",
-                "MIS User"
-              ]}
-            >
-              <MaterialMovementHistoryPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/material-movement/analytics"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "Store Manager",
-                "MIS User"
-              ]}
-            >
-              <MaterialMovementAnalyticsPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-        {/* DPR */}
-
-        <Route
-          path="/dpr"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Site Engineer",
-                "Project Manager"
-              ]}
-            >
-              <DailyProgressReportPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        {/* PROJECTS */}
-
-        <Route
-          path="/projects"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Project Manager",
-                "Site Engineer"
-              ]}
-            >
-              <ProjectMasterManagementWithProgress />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        <Route
-          path="/project/:projectId"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Project Manager",
-                "Site Engineer"
-              ]}
-            >
-              <ProjectDetailPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        <Route
-          path="/project/update/:projectId"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Project Manager"
-              ]}
-            >
-              <EditProjectPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        {/* CHALLAN */}
-
-        <Route
-          path="/challan"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Store Manager",
-                
-              ]}
-            >
-              <ChallanManagement />
-            </ProtectedRoute>
-          }
-        />
-         {/* Approved  CHALLAN */}
-
-        <Route
-          path="/challan-approval"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Store Manager",
-                "Project Manager",
-                
-              ]}
-            >
-              <ChallanApprovalPage />
-            </ProtectedRoute>
-          }
-        />
-        {/* PARTY/VENDOR MASTER */}
-
-        <Route
-          path="/party"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "MIS User",
-                "Site Engineer",
-                "Store Manager",
-                "Accountant",
-                "Project Manager"
-              ]}
-            >
-              <PartyListPage />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        {/* ITEM ENTRY */}
-
-        <Route
-          path="/add-item-at-site"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "Store Manager",
-                "MIS User"
-              ]}
-            >
-              <MultiItemExcelEntryUI />
-            </ProtectedRoute>
-          }
-        />
-
-
-
-        {/* USER MANAGEMENT */}
-
-        <Route
-          path="/user/mang"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "Super Admin",
-                "Admin"
-              ]}
-            >
-              <UserManagementPage />
-            </ProtectedRoute>
-          }
-        />
-        {/* Boq  */}
-        <Route
-          path="/project/:projectId/boq"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "Super Admin",
-                "Admin"
-              ]}
-            >
-              <BOQManagementPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/boq/:boqId"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "Super Admin",
-                "Admin"
-              ]}
-            >
-              <BOQDetailPage />
-            </ProtectedRoute>
-          }
-
-        />
-        {/* Project Material Planning */}
-
-        <Route
-          path="/project-material-planning"
-          element={
-            <ProtectedRoute allowedRoles={["Super Admin", "Admin", "Manager", "MIS"]}>
-              <ProjectMaterialPlanningPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/*  Stock Tarnsaction */}
-        <Route
-  path="/stock-transactions"
-  element={
-    <ProtectedRoute allowedRoles={[""]}>
-      <StockTransactionPage />
-    </ProtectedRoute>
-  }
-/>
-
-
-        {/* TAsk  */}
-        {/* <Route
-  path="/task/mng"
-  element={
-    <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
-      <TaskListModal />
-    </ProtectedRoute>
-  }
-/> */}
-
-      </Route>
-
-      {/* Dashboard
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <ModernDashboardLandingPage />
-          </ProtectedRoute>
-        }
-      /> */}
-
-
-
-
-
-    </Routes>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="mx-auto animate-spin text-cyan-400" size={42} />
+        <p className="mt-3 text-slate-400 text-sm">Loading module...</p>
+      </div>
+    </div>
   );
 }
 
-export default App
+function App() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Public Route */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Protected Main Layout */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          {/* Dashboard */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+                <SuperAdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Reports */}
+          <Route
+            path="/reports/material-analytics"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+                <MaterialAnalyticsCenter />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports/material-summary"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+                <MaterialSummaryReport />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports/material-history/projects"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+                <ProjectWiseMaterialHistory />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports/material-history/projects/:projectName"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+                <ProjectMaterialDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports/material-history/project-stock"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "Super Admin",
+                  "Admin",
+                  "MIS User",
+                  "Store Manager",
+                  "Project Manager",
+                ]}
+              >
+                <ProjectLiveStockReport />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports/material-history/head-store-stock"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "Super Admin",
+                  "Admin",
+                  "MIS User",
+                  "Store Manager",
+                  "Project Manager",
+                ]}
+              >
+                <HeadStoreLiveStockReport />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Item Identity */}
+          <Route
+            path="/item-identity"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "MIS User",
+                  "Store Manager",
+                  "Project Manager",
+                  "Super Admin",
+                  "Admin",
+                ]}
+              >
+                <ItemIdentityPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Main Store Stock */}
+          <Route
+            path="/main-store-stock"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "MIS User",
+                  "Store Manager",
+                  "Project Manager",
+                  "Super Admin",
+                  "Admin",
+                ]}
+              >
+                <MainStoreLiveStockPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Site Store Stock */}
+          <Route
+            path="/site-store-stock"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "MIS User",
+                  "Store Manager",
+                  "Project Manager",
+                  "Super Admin",
+                  "Admin",
+                ]}
+              >
+                <SiteStoreLiveStockPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Tax Invoice */}
+          <Route
+            path="/add-tax-invoice"
+            element={
+              <ProtectedRoute allowedRoles={["MIS User", "Accountant"]}>
+                <TaxInvoiceRegisterPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/TaxInvoiceListPage"
+            element={
+              <ProtectedRoute allowedRoles={["MIS User", "Accountant"]}>
+                <TaxInvoiceListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/edit-tax-invoice/:taxInvoiceId"
+            element={
+              <ProtectedRoute allowedRoles={["MIS User", "Accountant"]}>
+                <EditTaxInvoicePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tax-invoice/project-surveillance"
+            element={
+              <ProtectedRoute allowedRoles={["MIS User", "Accountant"]}>
+                <ProjectSpendingSurveillancePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/analytics/tax-invoice"
+            element={
+              <ProtectedRoute allowedRoles={["MIS User", "Accountant"]}>
+                <TaxInvoiceAnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Store */}
+          <Route
+            path="/store"
+            element={
+              <ProtectedRoute allowedRoles={["Store Manager", "MIS User"]}>
+                <StoreManagementPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/store/:storeId"
+            element={
+              <ProtectedRoute allowedRoles={["Store Manager", "MIS User"]}>
+                <StoreInventoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/material-movement/history"
+            element={
+              <ProtectedRoute allowedRoles={["Store Manager", "MIS User"]}>
+                <MaterialMovementHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/material-movement/analytics"
+            element={
+              <ProtectedRoute allowedRoles={["Store Manager", "MIS User"]}>
+                <MaterialMovementAnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* DPR */}
+          <Route
+            path="/dpr"
+            element={
+              <ProtectedRoute
+                allowedRoles={["MIS User", "Site Engineer", "Project Manager"]}
+              >
+                <DailyProgressReportPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Projects */}
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute
+                allowedRoles={["MIS User", "Project Manager", "Site Engineer"]}
+              >
+                <ProjectMasterManagementWithProgress />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/project/:projectId"
+            element={
+              <ProtectedRoute
+                allowedRoles={["MIS User", "Project Manager", "Site Engineer"]}
+              >
+                <ProjectDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/project/update/:projectId"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "Super Admin",
+                  "Admin",
+                  "Manager",
+                  "Project Manager",
+                ]}
+              >
+                <EditProjectPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Challan */}
+          <Route
+            path="/challan"
+            element={
+              <ProtectedRoute allowedRoles={["MIS User", "Store Manager"]}>
+                <ChallanManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/challan-approval"
+            element={
+              <ProtectedRoute
+                allowedRoles={["MIS User", "Store Manager", "Project Manager"]}
+              >
+                <ChallanApprovalPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Party / Vendor */}
+          <Route
+            path="/party"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "MIS User",
+                  "Site Engineer",
+                  "Store Manager",
+                  "Accountant",
+                  "Project Manager",
+                ]}
+              >
+                <PartyListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Item Entry */}
+          <Route
+            path="/add-item-at-site"
+            element={
+              <ProtectedRoute allowedRoles={["Store Manager", "MIS User"]}>
+                <MultiItemExcelEntryUI />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* User Management */}
+          <Route
+            path="/user/mang"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+                <UserManagementPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* BOQ */}
+          <Route
+            path="/project/:projectId/boq"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+                <BOQManagementPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/boq/:boqId"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
+                <BOQDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Project Material Planning */}
+          <Route
+            path="/project-material-planning"
+            element={
+              <ProtectedRoute
+                allowedRoles={["Super Admin", "Admin", "Manager", "MIS"]}
+              >
+                <ProjectMaterialPlanningPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Stock Transaction */}
+          <Route
+            path="/stock-transactions"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "Super Admin",
+                  "Admin",
+                  "MIS User",
+                  "Store Manager",
+                  "Project Manager",
+                ]}
+              >
+                <StockTransactionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Low Stock Dashboard */}
+          <Route
+            path="/low-stock-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["Super Admin", "Admin", "Manager"]}>
+                <LowStockDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+      </Routes>
+    </Suspense>
+  );
+}
+
+export default App;

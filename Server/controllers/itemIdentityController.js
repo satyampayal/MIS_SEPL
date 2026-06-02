@@ -43,14 +43,29 @@ exports.createItemIdentity = async (req, res) => {
 
 exports.getAllItemIdentities = async (req, res) => {
   try {
-    const { search, category, status } = req.query;
+    const {
+      search,
+      category,
+      status,
+      page = 1,
+      limit = 20,
+    } = req.query;
+
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
 
     const query = {};
 
-    if (status === "Inactive") query.isActive = false;
-    else query.isActive = true;
+    if (status === "Inactive") {
+      query.isActive = false;
+    } else {
+      query.isActive = true;
+    }
 
-    if (category && category !== "All") query.category = category;
+    if (category && category !== "All") {
+      query.category = category;
+    }
 
     if (search) {
       query.$or = [
@@ -63,11 +78,26 @@ exports.getAllItemIdentities = async (req, res) => {
       ];
     }
 
-    const items = await ItemIdentity.find(query).sort({ createdAt: -1 });
+    const totalItems=(await ItemIdentity.find()).length;
+    const totalRecords = await ItemIdentity.countDocuments(query);
+
+    const items = await ItemIdentity.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNumber);
 
     res.status(200).json({
       success: true,
       count: items.length,
+   
+
+      pagination: {
+        currentPage: pageNumber,
+        totalPages: Math.ceil(totalRecords / limitNumber),
+        totalRecords,
+        limit: limitNumber,
+      },
+
       data: items,
     });
   } catch (error) {
@@ -195,7 +225,7 @@ exports.bulkUploadItemIdentities = async (req, res) => {
       });
     }
 
-    const workbook = XLSX.readFile(req.file.path);
+   const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 

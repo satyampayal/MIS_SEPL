@@ -198,12 +198,12 @@ export default function PartyListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
+   <div className="min-h-screen bg-slate-950 p-4 text-slate-100 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
               Party Master
             </h1>
             <p className="text-slate-500 text-sm mt-1">
@@ -221,7 +221,7 @@ export default function PartyListPage() {
         </div>
 
         {/* Search Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="bg-slate-950 rounded-2xl shadow-sm border border-slate-200 p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-3">
             <div className="relative">
               <Search
@@ -240,7 +240,7 @@ export default function PartyListPage() {
             <select
               value={partyType}
               onChange={(e) => setPartyType(e.target.value)}
-              className="border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900"
+              className=" bg-slate-950 border border-slate-300 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900"
             >
               <option value="">All Types</option>
               <option value="Vendor">Vendor</option>
@@ -254,7 +254,7 @@ export default function PartyListPage() {
         </div>
 
         {/* Count */}
-        <div className="mb-4 text-sm text-slate-600">
+        <div className="mb-4 text-sm text-white">
           Total Result: <span className="font-semibold">{parties.length}</span>
         </div>
 
@@ -265,7 +265,7 @@ export default function PartyListPage() {
             Loading parties...
           </div>
         ) : parties.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-500">
+          <div className=" rounded-2xl border border-slate-200 p-10 text-center text-white">
             No party found.
           </div>
         ) : (
@@ -273,7 +273,7 @@ export default function PartyListPage() {
             {parties.map((party) => (
               <div
                 key={party._id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition"
+                className="bg-slate-950 rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex gap-3">
@@ -282,17 +282,17 @@ export default function PartyListPage() {
                     </div>
 
                     <div>
-                      <h2 className="font-bold text-slate-900 text-lg leading-tight">
+                      <h2 className="font-bold text-white text-lg leading-tight">
                         {party.partyName}
                       </h2>
-                      <span className="inline-block mt-1 text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
+                      <span className="inline-block mt-1 text-xs bg-blue-200 text-slate-700 px-2 py-1 rounded-full">
                         {party.partyType}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 space-y-2 text-sm text-slate-600">
+                <div className="mt-5 space-y-2 text-sm text-white">
                   {party.gstNumber && (
                     <p className="flex items-center gap-2">
                       <BadgeIndianRupee size={15} />
@@ -356,9 +356,9 @@ export default function PartyListPage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-950 w-full max-w-3xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b">
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-white">
                 {mode === "add" && "Add Party"}
                 {mode === "edit" && "Edit Party"}
                 {mode === "view" && "View Party"}
@@ -366,7 +366,7 @@ export default function PartyListPage() {
 
               <button
                 onClick={closeModal}
-                className="p-2 rounded-lg hover:bg-slate-100"
+                className="p-2 rounded-lg hover:bg-slate-100 hover:text-black"
               >
                 <X size={20} />
               </button>
@@ -451,7 +451,7 @@ export default function PartyListPage() {
               />
 
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">
+                <label className="text-sm font-medium text-white">
                   Address
                 </label>
                 <textarea
@@ -460,7 +460,7 @@ export default function PartyListPage() {
                   onChange={handleChange}
                   disabled={isView}
                   rows={3}
-                  className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100"
+                  className=" text-slate-800 mt-1 w-full border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100"
                 />
               </div>
             </div>
@@ -492,7 +492,7 @@ export default function PartyListPage() {
 function Input({ label, name, value, onChange, disabled, required }) {
   return (
     <div>
-      <label className="text-sm font-medium text-slate-700">
+      <label className="text-sm font-medium text-white">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
 
@@ -501,7 +501,7 @@ function Input({ label, name, value, onChange, disabled, required }) {
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100"
+        className="mt-1 w-full border border-slate-300 text-slate-800 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100"
       />
     </div>
   );

@@ -16,6 +16,8 @@ import BASE_URL from "../../config/api";
 
 const API_URL = `${BASE_URL}/item-identity`;
 
+const pageSize = 10;
+
 const emptyForm = {
   itemName: "",
   itemCode: "",
@@ -49,13 +51,42 @@ export default function ItemIdentityPage() {
   const [excelFile, setExcelFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  // const [totalItems,setTotalItems]=useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+
   const fetchItems = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/all`);
+
+      const res = await axios.get(`${API_URL}/all`, {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          search,
+          category:
+            categoryFilter === "All"
+              ? ""
+              : categoryFilter,
+        },
+      });
+
       setItems(res.data.data || []);
+      setTotalRecords(res.data.pagination?.totalRecords || 0);
+
+      // setTotalItems(res.data.data.totalItems ||0);
+
+      setTotalPages(
+        res.data.pagination?.totalPages || 1
+      );
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load items");
+      toast.error(
+        error?.response?.data?.message ||
+        "Failed to load items"
+      );
     } finally {
       setLoading(false);
     }
@@ -63,7 +94,7 @@ export default function ItemIdentityPage() {
 
   useEffect(() => {
     fetchItems();
-  }, []);
+  }, [currentPage, search, categoryFilter, itemsPerPage]);
 
   const categories = useMemo(() => {
     return ["All", ...new Set(items.map((i) => i.category).filter(Boolean))];
@@ -93,6 +124,20 @@ export default function ItemIdentityPage() {
       return matchSearch && matchCategory;
     });
   }, [items, search, categoryFilter]);
+
+  // const totalPages = Math.max(
+  //   1,
+  //   Math.ceil(filteredItems.length / itemsPerPage)
+  // );
+
+  // const paginatedItems = useMemo(() => {
+  //   const startIndex = (currentPage - 1) * itemsPerPage;
+  //   return filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  // }, [filteredItems, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, categoryFilter]);
 
   const openAdd = () => {
     setMode("add");
@@ -173,11 +218,11 @@ export default function ItemIdentityPage() {
       const data = new FormData();
       data.append("excelFile", excelFile);
 
+      //  console.log(data.get('excelFile'));
       const res = await axios.post(`${API_URL}/bulk-upload`, data);
 
       toast.success(
-        `Uploaded: ${res.data.insertedCount || 0}, Skipped: ${
-          res.data.skippedCount || 0
+        `Uploaded: ${res.data.insertedCount || 0}, Skipped: ${res.data.skippedCount || 0
         }`
       );
 
@@ -300,14 +345,14 @@ export default function ItemIdentityPage() {
                       Loading item identities...
                     </td>
                   </tr>
-                ) : filteredItems.length === 0 ? (
+                ) : items.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="py-14 text-center text-slate-400">
                       No item identity found
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map((item) => (
+                  items.map((item) => (
                     <tr key={item._id} className="hover:bg-slate-800/60">
                       <td className="px-5 py-4">
                         <div className="font-semibold text-white">
@@ -367,6 +412,63 @@ export default function ItemIdentityPage() {
                 )}
               </tbody>
             </table>
+            {filteredItems.length > 0 && (
+              <div className="flex flex-col gap-3 border-t border-slate-800 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                <div className="text-sm text-slate-400">
+                  Showing{" "}
+                  <span className="font-semibold text-slate-200">
+                    {(currentPage - 1) * itemsPerPage + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-semibold text-slate-200">
+                    {Math.min(currentPage * itemsPerPage, totalRecords)}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-200">
+                    {totalRecords}
+                  </span>{" "}
+                  items
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                  >
+                    <option value={10}>10 / page</option>
+                    <option value={20}>20 / page</option>
+                    <option value={50}>50 / page</option>
+                    <option value={100}>100 / page</option>
+                  </select>
+
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+
+                  <span className="text-sm text-slate-400">
+                    Page{" "}
+                    <span className="font-semibold text-cyan-400">{currentPage}</span>{" "}
+                    of {totalPages}
+                  </span>
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

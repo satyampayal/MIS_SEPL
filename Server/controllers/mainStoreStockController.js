@@ -577,3 +577,130 @@ exports.deleteMainStoreStock = async (req, res) => {
     });
   }
 };
+
+/* LOW STOCK DASHBOARD */
+exports.getLowStockDashboard = async (req, res) => {
+  try {
+    const { search, status, mainStoreRef } = req.query;
+
+    const match = {};
+
+    if (mainStoreRef) {
+      match.mainStoreRef = mainStoreRef;
+    }
+
+    const stocks = await MainStoreStock.find(match)
+      .populate("itemRef", "itemName itemCode unit category minimumStockLevel reorderLevel")
+      .populate("mainStoreRef", "storeName storeCode location")
+      .sort({ availableStock: 1 });
+
+    let lowStockItems = [];
+    let outOfStockItems = [];
+    let reservedStockItems = [];
+    let healthyItems = [];
+
+    for (const stock of stocks) {
+      const item = stock.itemRef;
+
+      const currentStock = Number(stock.currentStock || 0);
+      const reservedStock = Number(stock.reservedStock || 0);
+      const availableStock = Number(stock.availableStock || currentStock - reservedStock);
+
+      const minimumStockLevel = Number(
+        stock.minimumStockLevel ||
+          item?.minimumStockLevel ||
+          0
+      );
+
+      const reorderLevel = Number(
+        stock.reorderLevel ||
+          item?.reorderLevel ||
+          minimumStockLevel ||
+          0
+      );
+
+      let stockStatus = "HEALTHY";
+
+      if (availableStock <= 0) {
+        stockStatus = "OUT_OF_STOCK";
+      } else if (reorderLevel > 0 && availableStock <= reorderLevel) {
+        stockStatus = "LOW_STOCK";
+      }
+
+      if (reservedStock > 0) {
+        reservedStockItems.push(stock);
+      }
+
+      const row = {
+        _id: stock._id,
+        itemRef: item?._id,
+        itemName: item?.itemName || "",
+        itemCode: item?.itemCode || "",
+        unit: item?.unit || stock.unit || "",
+        category: item?.category || "",
+        mainStoreRef: stock.mainStoreRef?._id,
+        storeName: stock.mainStoreRef?.storeName || "",
+        storeCode: stock.mainStoreRef?.storeCode || "",
+        location: stock.mainStoreRef?.location || "",
+        currentStock,
+        reservedStock,
+        availableStock,
+        minimumStockLevel,
+        reorderLevel,
+        averageRate: Number(stock.averageRate || 0),
+        stockValue: Number(stock.stockValue || availableStock * Number(stock.averageRate || 0)),
+        stockStatus,
+      };
+
+      if (stockStatus === "OUT_OF_STOCK") {
+        outOfStockItems.push(row);
+      } else if (stockStatus === "LOW_STOCK") {
+        lowStockItems.push(row);
+      } else {
+        healthyItems.push(row);
+      }
+    }
+
+    let finalData = [...outOfStockItems, ...lowStockItems, ...healthyItems];
+
+    if (status) {
+      finalData = finalData.filter((item) => item.stockStatus === status);
+    }
+
+    if (search) {
+      const regex = new RegExp(search, "i");
+
+      finalData = finalData.filter(
+        (item) =>
+          regex.test(item.itemName) ||
+          regex.test(item.itemCode) ||
+          regex.test(item.category) ||
+          regex.test(item.storeName)
+      );
+    }
+
+    const totalStockValue = finalData.reduce(
+      (sum, item) => sum + Number(item.stockValue || 0),
+      0
+    );
+
+    return res.status(200).json({
+      success: true,
+      summary: {
+        totalItems: stocks.length,
+        lowStockItems: lowStockItems.length,
+        outOfStockItems: outOfStockItems.length,
+        reservedStockItems: reservedStockItems.length,
+        healthyItems: healthyItems.length,
+        totalStockValue,
+      },
+      count: finalData.length,
+      data: finalData,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
