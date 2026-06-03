@@ -32,11 +32,11 @@ export default function TaxInvoiceAnalyticsPage() {
     const [deliveryStatus, setDeliveryStatus] = useState([]);
     const [differenceAlerts, setDifferenceAlerts] = useState([]);
     const [loading, setLoading] = useState(false);
-  
+
 
     const formatAmount = (value) => {
         if (!value) return "₹0";
-        return `₹${Number(value).toLocaleString("en-IN")}`;
+        return `₹${Number(value).toLocaleString("en-IN",{maximumFractionDigits:0})}`;
     };
 
     const fetchAnalytics = async () => {
@@ -170,9 +170,9 @@ export default function TaxInvoiceAnalyticsPage() {
                                         mt-2
                                         "
                                     >
-                                      
-                                        {    card.value}
-                                        
+
+                                        {card.value}
+
                                     </h2>
                                 </div>
 
@@ -194,7 +194,7 @@ export default function TaxInvoiceAnalyticsPage() {
             </div>
 
             {/* Monthly Trend */}
-            <div className="mb-6 rounded-2xl bg-white p-5 shadow-sm border text-white">
+            <div className="mb-6 rounded-2xl bg-slate-800 p-5 shadow-sm border text-white">
                 <h2 className="mb-4 text-xl font-bold text-slate-800">
                     Monthly Invoice Trend
                 </h2>
@@ -209,9 +209,27 @@ export default function TaxInvoiceAnalyticsPage() {
                             <XAxis
                                 dataKey="month"
                                 stroke="#CBD5E1"
+                                tick={{ fill: "#CBD5E1", fontSize: 12 }}
+
                             />
-                            <YAxis stroke="#CBD5E1" />
-                            <Tooltip formatter={(value) => formatAmount(value)} />
+                            <YAxis stroke="#CBD5E1" tick={{ fill: "#CBD5E1", fontSize: 12 }} />
+                            <Tooltip formatter={(value) => formatAmount(value)}
+                                contentStyle={{
+                                    backgroundColor: "#0F172A",
+                                    border: "1px solid rgba(255,255,255,0.15)",
+                                    borderRadius: "14px",
+                                    color: "#fff",
+                                }}
+                                labelStyle={{
+                                    color: "#E2E8F0",
+                                    fontWeight: "bold",
+                                }}
+                                itemStyle={{
+                                    color: "#67E8F9",
+                                }}
+
+
+                            />
                             <Line
                                 type="monotone"
                                 dataKey="totalAmount"
@@ -348,8 +366,8 @@ export default function TaxInvoiceAnalyticsPage() {
 
             {/* Delivery + Alerts */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                    <h2 className="mb-4 text-xl font-bold text-slate-900">
+                <div className="rounded-2xl bg-slate-800 p-5 shadow-sm border border-slate-200">
+                    <h2 className="mb-4 text-xl font-bold text-white">
                         Delivery Status
                     </h2>
 
@@ -379,15 +397,15 @@ export default function TaxInvoiceAnalyticsPage() {
                     </div>
                 </div>
 
-                <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                    <h2 className="mb-4 text-xl font-bold text-slate-900">
+                <div className="rounded-2xl bg-slate-800  p-5 shadow-sm border border-slate-200">
+                    <h2 className="mb-4 text-xl font-bold text-white">
                         Difference Alerts
                     </h2>
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="border-b text-slate-500">
+                                <tr className="border-b text-white/80">
                                     <th className="py-3">Invoice</th>
                                     <th>Vendor</th>
                                     <th>Project</th>

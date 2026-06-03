@@ -320,6 +320,14 @@ export default function MainLayout() {
     }
   }, []);
 
+const refreshTasks = async () => {
+  await fetchMyTasks();
+
+  if (canAssignTask) {
+    await fetchAssignedByMeTasks();
+  }
+};
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -548,6 +556,8 @@ export default function MainLayout() {
                 : taskModalType
             }
             currentUser={user}
+            onRefreshTasks={refreshTasks}
+
           />
 
           <AddTaskModal
@@ -556,6 +566,7 @@ export default function MainLayout() {
             mode={canAssignTask ? "assign" : "personal"}
             users={canAssignTask ? users : null}
             projects={projects}
+            onRefreshTasks={refreshTasks}
           />
         </main>
       </div>

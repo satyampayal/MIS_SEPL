@@ -62,8 +62,9 @@ export default function AddTaskModal({
       dueDate: ""
     });
 
-    onClose();
+    
     onRefreshTasks();
+    onClose();
   };
 
   return (

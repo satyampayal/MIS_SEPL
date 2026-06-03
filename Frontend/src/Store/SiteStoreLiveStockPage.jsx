@@ -13,8 +13,10 @@ import {
     RotateCcw,
     Hammer,
     ShieldAlert,
-     X,
-      Plus 
+    X,
+    Plus,
+    Eye,
+    Pencil
 } from "lucide-react";
 import BASE_URL from "../../config/api";
 
@@ -50,8 +52,14 @@ export default function SiteStoreLiveStockPage() {
     const [openingForm, setOpeningForm] = useState(emptySiteOpeningStock);
     const [savingOpening, setSavingOpening] = useState(false);
 
+    const [modalMode, setModalMode] = useState("add"); // add | view | edit
+    const [selectedStockId, setSelectedStockId] = useState(null);
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
     const [excelFile, setExcelFile] = useState(null);
-const [uploadingExcel, setUploadingExcel] = useState(false);
+    const [uploadingExcel, setUploadingExcel] = useState(false);
 
     const fetchProjects = async () => {
         try {
@@ -174,6 +182,20 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
         });
     }, [stocks, search, statusFilter, categoryFilter, siteFilter]);
 
+    const totalPages = Math.max(
+        1,
+        Math.ceil(filteredStocks.length / itemsPerPage)
+    );
+
+    const paginatedStocks = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredStocks.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredStocks, currentPage, itemsPerPage]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, siteFilter, statusFilter, categoryFilter, itemsPerPage]);
+
     const stats = useMemo(() => {
         const totalValue = filteredStocks.reduce(
             (sum, s) => sum + Number(s.stockValue || 0),
@@ -218,47 +240,96 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
     };
 
     const uploadSiteOpeningExcel = async () => {
-  if (!excelFile) return toast.error("Select Excel file first");
+        if (!excelFile) return toast.error("Select Excel file first");
 
-  try {
-    setUploadingExcel(true);
+        try {
+            setUploadingExcel(true);
 
-    const formData = new FormData();
-    formData.append("excelFile", excelFile);
+            const formData = new FormData();
+            formData.append("excelFile", excelFile);
 
-    const res = await axios.post(
-      `${API_URL}/bulk-opening-stock`,
-      formData
-    );
+            const res = await axios.post(
+                `${API_URL}/bulk-opening-stock`,
+                formData
+            );
 
-    toast.success(
-      `Created ${res.data.createdCount || 0}, Updated ${
-        res.data.updatedCount || 0
-      }, Skipped ${res.data.skippedCount || 0}`
-    );
+            toast.success(
+                `Created ${res.data.createdCount || 0}, Updated ${res.data.updatedCount || 0
+                }, Skipped ${res.data.skippedCount || 0}`
+            );
 
-    setExcelFile(null);
-    fetchStock();
-  } catch (error) {
-    toast.error(error?.response?.data?.message || "Excel upload failed");
-  } finally {
-    setUploadingExcel(false);
-  }
-};
+            setExcelFile(null);
+            fetchStock();
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Excel upload failed");
+        } finally {
+            setUploadingExcel(false);
+        }
+    };
+
+    const openAddModal = () => {
+        setModalMode("add");
+        setSelectedStockId(null);
+        setOpeningForm(emptySiteOpeningStock);
+        setOpeningModal(true);
+    };
+
+    const fillStockForm = (stock, mode) => {
+        setModalMode(mode);
+        setSelectedStockId(stock._id);
+
+        const itemObj = stock.itemRef || {};
+        const siteObj = stock.siteRef || {};
+
+        if (itemObj?._id) {
+            setItems((prev) => {
+                const exists = prev.some((item) => item._id === itemObj._id);
+                return exists ? prev : [itemObj, ...prev];
+            });
+        }
+
+        if (siteObj?._id) {
+            setProjects((prev) => {
+                const exists = prev.some((project) => project._id === siteObj._id);
+                return exists ? prev : [siteObj, ...prev];
+            });
+        }
+
+
+        setOpeningForm({
+            siteRef: stock.siteRef?._id || stock.siteRef || "",
+            itemRef: stock.itemRef?._id || stock.itemRef || "",
+            receivedTillDate:
+                stock.currentStock + stock.availableStock + stock.consumedQty + stock.returnedQty + stock.damagedQty || "",
+            consumedTillDate: stock.consumedQty || "",
+            returnedTillDate: stock.returnedQty || "",
+            damagedTillDate: stock.damagedQty || "",
+            rate: stock.averageRate || stock.rate || "",
+            location: stock.location || "",
+            remarks: stock.remarks || "",
+        });
+
+        setOpeningModal(true);
+    };
+
+    const openViewModal = (stock) => fillStockForm(stock, "view");
+    const openEditModal = (stock) => fillStockForm(stock, "edit");
 
     const StatCard = ({ title, value, icon: Icon, tone }) => (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg shadow-slate-950/30">
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-sm text-slate-400">{title}</p>
-                    <h2 className={`mt-2 text-2xl font-bold ${tone}`}>{value}</h2>
+                    <h2 className={`mt-2 text-1xl font-bold ${tone}`}>{value}</h2>
                 </div>
                 <div className="rounded-2xl bg-slate-800 p-3">
-                    <Icon size={22} className={tone} />
+                    <Icon size={16} className={tone} />
                 </div>
             </div>
         </div>
     );
+
+
 
     return (
         <div className="min-h-screen bg-slate-950 p-4 text-slate-100 md:p-6">
@@ -291,7 +362,7 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
                             </button>
 
                             <button
-                                onClick={() => setOpeningModal(true)}
+                                onClick={openAddModal}
                                 className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 font-semibold text-slate-950 hover:bg-cyan-400"
                             >
                                 <Plus size={18} />
@@ -310,9 +381,10 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
                     />
                     <StatCard
                         title="Stock Value"
-                        value={`₹${stats.totalValue.toLocaleString("en-IN")}`}
+                        value={`${stats.totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
                         icon={IndianRupee}
                         tone="text-cyan-300"
+
                     />
                     <StatCard
                         title="Consumed"
@@ -347,32 +419,32 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
                 </div>
 
                 <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
-  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-    <div>
-      <h3 className="font-bold text-white">Bulk Site Opening Stock || This Setion Remove after all site stock Uploads</h3>
-      <p className="text-sm text-slate-400">
-        Upload old site stock using projectCode and itemCode.
-      </p>
-    </div>
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h3 className="font-bold text-white">Bulk Site Opening Stock || This Setion Remove after all site stock Uploads</h3>
+                            <p className="text-sm text-slate-400">
+                                Upload old site stock using projectCode and itemCode.
+                            </p>
+                        </div>
 
-    <div className="flex flex-col gap-2 md:flex-row">
-      <input
-        type="file"
-        accept=".xlsx,.xls"
-        onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-        className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300"
-      />
+                        <div className="flex flex-col gap-2 md:flex-row">
+                            <input
+                                type="file"
+                                accept=".xlsx,.xls"
+                                onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+                                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300"
+                            />
 
-      <button
-        onClick={uploadSiteOpeningExcel}
-        disabled={uploadingExcel}
-        className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50"
-      >
-        {uploadingExcel ? "Uploading..." : "Upload Excel"}
-      </button>
-    </div>
-  </div>
-</div>
+                            <button
+                                onClick={uploadSiteOpeningExcel}
+                                disabled={uploadingExcel}
+                                className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50"
+                            >
+                                {uploadingExcel ? "Uploading..." : "Upload Excel"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -443,25 +515,26 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
                                     <th className="px-5 py-4 text-left">Value</th>
                                     <th className="px-5 py-4 text-left">Location</th>
                                     <th className="px-5 py-4 text-left">Status</th>
+                                    <th className="px-5 py-4 text-center">Action</th>
                                 </tr>
                             </thead>
 
                             <tbody className="divide-y divide-slate-800">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="12" className="py-14 text-center text-slate-400">
+                                        <td colSpan="13" className="py-14 text-center text-slate-400">
                                             <Loader2 className="mx-auto mb-2 animate-spin" />
                                             Loading site stock...
                                         </td>
                                     </tr>
                                 ) : filteredStocks.length === 0 ? (
                                     <tr>
-                                        <td colSpan="12" className="py-14 text-center text-slate-400">
+                                        <td colSpan="13" className="py-14 text-center text-slate-400">
                                             No site stock found
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredStocks.map((stock) => {
+                                    paginatedStocks.map((stock) => {
                                         const item = stock.itemRef || {};
                                         const site = stock.siteRef || {};
 
@@ -533,12 +606,75 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
                                                         {stock.stockStatus || "-"}
                                                     </span>
                                                 </td>
+                                                <td className="px-5 py-4">
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            onClick={() => openViewModal(stock)}
+                                                            className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-2 text-blue-300 hover:bg-blue-500/20"
+                                                            title="View"
+                                                        >
+                                                            <Eye size={17} />
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => openEditModal(stock)}
+                                                            className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-amber-300 hover:bg-amber-500/20"
+                                                            title="Edit"
+                                                        >
+                                                            <Pencil size={17} />
+                                                        </button>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         );
                                     })
                                 )}
                             </tbody>
                         </table>
+                        {filteredStocks.length > 0 && (
+                            <div className="flex flex-col gap-3 border-t border-slate-800 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                                <div className="text-sm text-slate-400">
+                                    Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                                    {Math.min(currentPage * itemsPerPage, filteredStocks.length)} of{" "}
+                                    {filteredStocks.length} records
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <select
+                                        value={itemsPerPage}
+                                        onChange={(e) => {
+                                            setItemsPerPage(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                        className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                    >
+                                        <option value={10}>10 / page</option>
+                                        <option value={20}>20 / page</option>
+                                        <option value={50}>50 / page</option>
+                                    </select>
+
+                                    <button
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage((p) => p - 1)}
+                                        className="rounded-xl border border-slate-700 px-4 py-2 disabled:opacity-40"
+                                    >
+                                        Previous
+                                    </button>
+
+                                    <span className="text-sm text-slate-400">
+                                        Page {currentPage} of {totalPages}
+                                    </span>
+
+                                    <button
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage((p) => p + 1)}
+                                        className="rounded-xl border border-slate-700 px-4 py-2 disabled:opacity-40"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -551,6 +687,7 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
                     onClose={() => setOpeningModal(false)}
                     onSave={saveSiteOpeningStock}
                     saving={savingOpening}
+                    mode={modalMode}
                 />
             )}
         </div>
@@ -565,6 +702,7 @@ function SiteOpeningStockModal({
     onClose,
     onSave,
     saving,
+    mode,
 }) {
     const update = (e) => {
         const { name, value } = e.target;
@@ -577,6 +715,9 @@ function SiteOpeningStockModal({
     const damaged = Number(form.damagedTillDate || 0);
     const liveStock = received - consumed - returned - damaged;
 
+    const isView = mode === "view";
+    const isEdit = mode === "edit";
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
             <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
@@ -586,7 +727,11 @@ function SiteOpeningStockModal({
                             Site Store Opening
                         </p>
                         <h2 className="text-xl font-bold text-white">
-                            Add Site Opening Stock
+                            {isView
+                                ? "View Site Stock"
+                                : isEdit
+                                    ? "Edit Site Stock"
+                                    : "Add Site Opening Stock"}
                         </h2>
                     </div>
 
@@ -604,6 +749,7 @@ function SiteOpeningStockModal({
                         name="siteRef"
                         value={form.siteRef}
                         onChange={update}
+                        disabled={isView || isEdit}
                     >
                         <option value="">Select Site</option>
                         {projects.map((project) => (
@@ -618,6 +764,7 @@ function SiteOpeningStockModal({
                         name="itemRef"
                         value={form.itemRef}
                         onChange={update}
+                        disabled={isView || isEdit}
                     >
                         <option value="">Select Item</option>
                         {items.map((item) => (
@@ -633,6 +780,7 @@ function SiteOpeningStockModal({
                         type="number"
                         value={form.receivedTillDate}
                         onChange={update}
+                        disabled={isView}
                     />
 
                     <FieldInput
@@ -641,6 +789,7 @@ function SiteOpeningStockModal({
                         type="number"
                         value={form.consumedTillDate}
                         onChange={update}
+                        disabled={isView}
                     />
 
                     <FieldInput
@@ -649,6 +798,7 @@ function SiteOpeningStockModal({
                         type="number"
                         value={form.returnedTillDate}
                         onChange={update}
+                        disabled={isView}
                     />
 
                     <FieldInput
@@ -657,6 +807,7 @@ function SiteOpeningStockModal({
                         type="number"
                         value={form.damagedTillDate}
                         onChange={update}
+                        disabled={isView}
                     />
 
                     <FieldInput
@@ -665,6 +816,7 @@ function SiteOpeningStockModal({
                         type="number"
                         value={form.rate}
                         onChange={update}
+                        disabled={isView}
                     />
 
                     <FieldInput
@@ -672,6 +824,7 @@ function SiteOpeningStockModal({
                         name="location"
                         value={form.location}
                         onChange={update}
+                        disabled={isView}
                     />
 
                     <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 md:col-span-2">
@@ -696,7 +849,8 @@ function SiteOpeningStockModal({
                             value={form.remarks}
                             onChange={update}
                             rows={2}
-                            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
+                            disabled={isView}
+                            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500 disabled:bg-slate-800 disabled:text-slate-500"
                         />
                     </div>
                 </div>
@@ -706,24 +860,26 @@ function SiteOpeningStockModal({
                         onClick={onClose}
                         className="rounded-xl border border-slate-700 px-5 py-3 text-slate-300 hover:bg-slate-800"
                     >
-                        Cancel
+                        {isView ? "Close" : "Cancel"}
                     </button>
 
-                    <button
-                        onClick={onSave}
-                        disabled={saving || liveStock < 0}
-                        className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
-                    >
-                        {saving && <Loader2 size={18} className="animate-spin" />}
-                        Add Site Stock
-                    </button>
+                    {!isView && (
+                        <button
+                            onClick={onSave}
+                            disabled={saving || liveStock < 0}
+                            className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
+                        >
+                            {saving && <Loader2 size={18} className="animate-spin" />}
+                            {isEdit ? "Update Site Stock" : "Add Site Stock"}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
 
-function FieldInput({ label, name, type = "text", value, onChange }) {
+function FieldInput({ label, name, type = "text", value, onChange, disabled = false, }) {
     return (
         <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
@@ -734,13 +890,23 @@ function FieldInput({ label, name, type = "text", value, onChange }) {
                 type={type}
                 value={value}
                 onChange={onChange}
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
+                disabled={disabled}
+                className="
+    w-full rounded-xl border border-slate-700
+    bg-slate-900 px-4 py-3 text-white
+    outline-none focus:border-cyan-500
+    disabled:bg-slate-800
+    disabled:text-slate-500
+    disabled:border-slate-700
+    disabled:cursor-not-allowed
+    disabled:opacity-80
+  "
             />
         </div>
     );
 }
 
-function FieldSelect({ label, name, value, onChange, children }) {
+function FieldSelect({ label, name, value, onChange, children, disabled = false, }) {
     return (
         <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
@@ -750,7 +916,17 @@ function FieldSelect({ label, name, value, onChange, children }) {
                 name={name}
                 value={value}
                 onChange={onChange}
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
+                disabled={disabled}
+                className="
+    w-full rounded-xl border border-slate-700
+    bg-slate-900 px-4 py-3 text-white
+    outline-none focus:border-cyan-500
+    disabled:bg-slate-800
+    disabled:text-slate-500
+    disabled:border-slate-700
+    disabled:cursor-not-allowed
+    disabled:opacity-80
+  "
             >
                 {children}
             </select>
