@@ -61,6 +61,9 @@ export default function MainStoreLiveStockPage() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStage, setUploadStage] = useState("");
 
+    const [currentPage, setCurrentPage] = useState(1);
+const [itemsPerPage, setItemsPerPage] = useState(10);
+
     const fetchStock = async () => {
         try {
             setLoading(true);
@@ -280,6 +283,17 @@ export default function MainStoreLiveStockPage() {
         };
     }, [stocks]);
 
+    const totalPages = Math.max(1, Math.ceil(filteredStocks.length / itemsPerPage));
+
+const paginatedStocks = useMemo(() => {
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  return filteredStocks.slice(startIndex, startIndex + itemsPerPage);
+}, [filteredStocks, currentPage, itemsPerPage]);
+
+useEffect(() => {
+  setCurrentPage(1);
+}, [search, statusFilter, categoryFilter, itemsPerPage]);
+
     const statusClass = (status) => {
         switch (status) {
             case "AVAILABLE":
@@ -296,14 +310,17 @@ export default function MainStoreLiveStockPage() {
     };
 
     const StatCard = ({ title, value, icon: Icon, tone, onClick }) => (
-        <div onClick={onClick} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg shadow-slate-950/30">
+        <div onClick={onClick}   className={`rounded-2xl border border-slate-800 bg-slate-900/80 p-5 text-left shadow-lg shadow-slate-950/30 transition ${
+      onClick ? "cursor-pointer hover:-translate-y-1 hover:border-cyan-500/40 hover:bg-slate-900" : ""
+    }`}
+    >
             <div className="flex items-center justify-between" >
                 <div>
                     <p className="text-sm text-slate-400">{title}</p>
-                    <h2 className={`mt-2 text-2xl font-bold ${tone}`}>{value}</h2>
+                    <h2 className={`mt-2 text-1xl font-bold ${tone}`}>{value}</h2>
                 </div>
                 <div className="rounded-2xl bg-slate-800 p-3">
-                    <Icon size={22} className={tone} />
+                    <Icon size={16} className={tone} />
                 </div>
             </div>
         </div>
@@ -544,7 +561,7 @@ export default function MainStoreLiveStockPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredStocks.map((stock) => {
+                                    paginatedStocks.map((stock) => {
                                         const item = stock.itemRef || {};
                                         const store = stock.mainStoreRef || {};
 
@@ -632,6 +649,51 @@ export default function MainStoreLiveStockPage() {
                                 )}
                             </tbody>
                         </table>
+                        {filteredStocks.length > 0 && (
+  <div className="flex flex-col gap-3 border-t border-slate-800 px-5 py-4 md:flex-row md:items-center md:justify-between">
+    <div className="text-sm text-slate-400">
+      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+      {Math.min(currentPage * itemsPerPage, filteredStocks.length)} of{" "}
+      {filteredStocks.length} records
+    </div>
+
+    <div className="flex flex-wrap items-center gap-3">
+      <select
+        value={itemsPerPage}
+        onChange={(e) => {
+          setItemsPerPage(Number(e.target.value));
+          setCurrentPage(1);
+        }}
+        className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+      >
+        <option value={10}>10 / page</option>
+        <option value={20}>20 / page</option>
+        <option value={50}>50 / page</option>
+        <option value={100}>100 / page</option>
+      </select>
+
+      <button
+        disabled={currentPage === 1}
+        onClick={() => setCurrentPage((p) => p - 1)}
+        className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 disabled:opacity-40"
+      >
+        Previous
+      </button>
+
+      <span className="text-sm text-slate-400">
+        Page <span className="text-cyan-400 font-semibold">{currentPage}</span> of {totalPages}
+      </span>
+
+      <button
+        disabled={currentPage === totalPages}
+        onClick={() => setCurrentPage((p) => p + 1)}
+        className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 disabled:opacity-40"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+)}
                     </div>
                 </div>
             </div>

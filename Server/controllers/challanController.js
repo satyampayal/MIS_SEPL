@@ -766,6 +766,7 @@ exports.getAllChallans = async (req, res) => {
       .populate("fromSiteRef", "projectName name")
       .populate("toSiteRef", "projectName name")
       .populate("createdBy", "name email")
+      .populate("projectRef","name allotedCompany consigneeAddress consigneeName gstNumber placeOfDelivery")
       .sort({ createdAt: -1 });
 
     return res.status(200).json({

@@ -109,6 +109,7 @@ export default function ChallanPreview({
     pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
     pdf.save(`${formData.documentNumber || "challan"}.pdf`);
   };
+  console.log(formData)
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 text-slate-100">
@@ -207,7 +208,7 @@ export default function ChallanPreview({
                   </p>
                   <p>
                     <b>Consignee Name: </b>
-                    {challanProject.consigneeName || "-"}
+                    {challanProject.consigneeName|| "-"}
                   </p>
                   <p>
                     <b>Consignee Address: </b>
@@ -215,7 +216,7 @@ export default function ChallanPreview({
                   </p>
                   <p>
                     <b>GSTIN: </b>
-                    {challanProject.gstNumber || "-"}
+                    {challanProject.gstNumber ||"-"}
                   </p>
                 </div>
               </div>

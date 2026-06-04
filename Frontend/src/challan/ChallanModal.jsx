@@ -127,6 +127,12 @@ export default function ChallanModal({
     if (!isOpen) return;
 
     if (challan) {
+      // const selectedProject = projects.find(challan?.projectRef );
+      
+  const selectedProject = projects.find((p) => p._id === challan.projectRef );
+
+  setchallanProject(selectedProject || challan.projectRef || challan.toSiteRef || {});
+      
       setForm({
         documentNumber: challan.documentNumber || "",
         documentDate: challan.documentDate
