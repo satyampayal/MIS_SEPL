@@ -1,13 +1,18 @@
 import React from "react";
 import { toWords } from "number-to-words";
 import { X, Printer, CheckCircle2, ArrowLeft } from "lucide-react";
+import spppl from '../assets/SPPPL.jpeg';
+import sepl from '../assets/SEPL.jpeg';
 
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 export default function ChallanPreview({
   formData,
   items = [],
   totalAmount = 0,
   onBack,
   onConfirm,
+  challanProject = {}
 }) {
   const formatDate = (date) => {
     if (!date) {
@@ -41,7 +46,7 @@ export default function ChallanPreview({
       case "CN":
         return "Credit Note / Vendor Return";
       default:
-        return "Material Challan";
+        return "Delivery Challan";
     }
   };
 
@@ -71,6 +76,40 @@ export default function ChallanPreview({
     return "-";
   };
 
+  // console.log(challanProject);
+
+  const downloadPDF = async () => {
+    const element = document.getElementById("challan-print-area");
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      ignoreElements: (el) => {
+        return el.classList?.contains("no-pdf");
+      },
+      onclone: (clonedDoc) => {
+        const clonedElement = clonedDoc.getElementById("challan-print-area");
+
+        clonedElement.querySelectorAll("*").forEach((el) => {
+          el.style.color = el.style.color || "#000000";
+          el.style.backgroundColor = el.style.backgroundColor || "transparent";
+          el.style.borderColor = "#000000";
+          el.style.boxShadow = "none";
+        });
+      },
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${formData.documentNumber || "challan"}.pdf`);
+  };
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 text-slate-100">
       <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black">
@@ -95,19 +134,44 @@ export default function ChallanPreview({
         <div className="p-5">
           <div
             id="challan-print-area"
-            className="mx-auto bg-white p-6 text-[12px] text-black shadow-xl"
+            style={{
+              backgroundColor: "#ffffff",
+              color: "#000000",
+              boxShadow: "none",
+            }}
+            className="mx-auto p-6 text-[12px]"
           >
             <div className="border border-black">
-              <div className="border-b border-black p-4 text-center">
-                <h1 className="text-xl font-bold uppercase text-blue-700">
-                  Sachin Electrical Private Limited
-                </h1>
-                <p>
-                  2B/536, Vasundhara, Sahibabad, Ghaziabad, Uttar Pradesh,
-                  201012 - India
-                </p>
-                <p>Phone : 0120 4155654 / Email : info@sachinelectrical.com</p>
-                <p className="font-semibold">GSTIN:- 09AAKCS1319M1ZZ</p>
+              <div className="relative border-b border-black p-4 text-center">
+                {/* Logo Left */}
+                <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                  <img
+                    src={challanProject?.allotedCompany == "Sachin Electrical Private Limited" ? sepl : spppl}
+                    alt="company logo"
+                    className="h-16 w-24 object-contain"
+                  />
+                </div>
+
+                {/* Company Details Center */}
+                <div className="px-28">
+                  <h1 className="text-xl font-bold uppercase"
+                    style={{ color: "#1d4ed8" }}>
+                    {challanProject?.allotedCompany || "Sachin Electrical Private Limited"}
+                  </h1>
+
+                  <p>
+                    2B/536, Vasundhara, Sahibabad, Ghaziabad, Uttar Pradesh,
+                    201012 - India
+                  </p>
+
+                  <p>
+                    Phone : 0120 4155654 / Email : info@sachinelectrical.com
+                  </p>
+
+                  <p className="font-semibold">
+                    GSTIN:- 09AAKCS1319M1ZZ
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 border-b border-black">
@@ -123,31 +187,35 @@ export default function ChallanPreview({
               <div className="grid grid-cols-2 border-b border-black">
                 <div className="space-y-1 p-3">
                   <p>
-                    <b>Document No: </b>
+                    <b>Document Number: </b>
                     {formData.documentNumber || "-"}
                   </p>
                   <p>
                     <b>Document Type: </b>
                     {formData.documentType || "-"}
                   </p>
-                  <p>
+                  {/* <p>
                     <b>Approval Status: </b>
                     Pending Site Approval
-                  </p>
+                  </p> */}
                 </div>
 
                 <div className="space-y-1 border-l border-black p-3">
                   <p>
-                    <b>From: </b>
-                    {getFromText()}
+                    <b>Place of Supply: </b>
+                    {challanProject.placeOfDelivery || "-"}
                   </p>
                   <p>
-                    <b>To: </b>
-                    {getToText()}
+                    <b>Consignee Name: </b>
+                    {challanProject.consigneeName || "-"}
                   </p>
                   <p>
-                    <b>Vendor: </b>
-                    {formData.vendorName || "-"}
+                    <b>Consignee Address: </b>
+                    {challanProject.consigneeAddress || "-"}
+                  </p>
+                  <p>
+                    <b>GSTIN: </b>
+                    {challanProject.gstNumber || "-"}
                   </p>
                 </div>
               </div>
@@ -176,7 +244,7 @@ export default function ChallanPreview({
                     <th className="border border-black p-1 w-16">UOM</th>
                     <th className="border border-black p-1 w-16">Qty</th>
                     <th className="border border-black p-1 w-24">HSN</th>
-                    <th className="border border-black p-1 w-20">Return</th>
+                    <th className="border border-black p-1 w-20">Return </th>
                     <th className="border border-black p-1 w-20">Rate</th>
                     <th className="border border-black p-1 w-24">Amount</th>
                   </tr>
@@ -229,7 +297,7 @@ export default function ChallanPreview({
                     </tr>
                   ))}
 
-                  {Array.from({ length: Math.max(0, 10 - items.length) }).map(
+                  {Array.from({ length: Math.max(0, 30 - items.length) }).map(
                     (_, index) => (
                       <tr key={`blank-${index}`}>
                         <td className="h-7 border border-black p-1">&nbsp;</td>
@@ -310,11 +378,11 @@ export default function ChallanPreview({
           </button>
 
           <button
-            onClick={() => window.print()}
+            onClick={downloadPDF}
             className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-5 py-3 font-semibold text-cyan-300 transition hover:bg-cyan-500/20"
           >
             <Printer size={18} />
-            Print
+            Download PDF
           </button>
 
           <button

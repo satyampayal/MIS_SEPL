@@ -29,10 +29,12 @@ MainStoreStockRouter.get("/low-stock-dashboard", isAuthenticated, getLowStockDas
 
 MainStoreStockRouter.get("/:id", getSingleStock);
 
-MainStoreStockRouter.put("/adjust/:id", adjustStock);
-
 MainStoreStockRouter.post("/bulk-opening-stock", uploadExcel.single("excelFile"),
   bulkMainOpeningStockUpload);
+  
+MainStoreStockRouter.put("/adjust/:id", adjustStock);
+
+
 
 MainStoreStockRouter.put("/update/:id", updateMainStoreStock);
 

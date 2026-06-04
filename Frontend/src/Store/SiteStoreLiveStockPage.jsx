@@ -91,7 +91,9 @@ export default function SiteStoreLiveStockPage() {
         }
     };
 
-    const saveSiteOpeningStock = async () => {
+    const saveSiteOpeningStock = async (type) => {
+        //type-> add or update
+        // const type=type;
         if (!openingForm.siteRef) return toast.error("Select site");
         if (!openingForm.itemRef) return toast.error("Select item");
 
@@ -111,7 +113,7 @@ export default function SiteStoreLiveStockPage() {
         try {
             setSavingOpening(true);
 
-            await axios.post(`${API_URL}/add-opening-stock`, {
+            await axios.post(`${API_URL}/${type}-opening-stock`, {
                 ...openingForm,
                 receivedTillDate: received,
                 consumedTillDate: consumed,
@@ -300,7 +302,7 @@ export default function SiteStoreLiveStockPage() {
             siteRef: stock.siteRef?._id || stock.siteRef || "",
             itemRef: stock.itemRef?._id || stock.itemRef || "",
             receivedTillDate:
-                stock.currentStock + stock.availableStock + stock.consumedQty + stock.returnedQty + stock.damagedQty || "",
+                stock.currentStock +  stock.consumedQty + stock.returnedQty + stock.damagedQty || "",
             consumedTillDate: stock.consumedQty || "",
             returnedTillDate: stock.returnedQty || "",
             damagedTillDate: stock.damagedQty || "",
@@ -513,7 +515,7 @@ export default function SiteStoreLiveStockPage() {
                                     <th className="px-5 py-4 text-left">Damaged</th>
                                     <th className="px-5 py-4 text-left">Avg Rate</th>
                                     <th className="px-5 py-4 text-left">Value</th>
-                                    <th className="px-5 py-4 text-left">Location</th>
+                                    {/* <th className="px-5 py-4 text-left">Location</th> */}
                                     <th className="px-5 py-4 text-left">Status</th>
                                     <th className="px-5 py-4 text-center">Action</th>
                                 </tr>
@@ -593,9 +595,9 @@ export default function SiteStoreLiveStockPage() {
                                                     ₹{Number(stock.stockValue || 0).toLocaleString("en-IN")}
                                                 </td>
 
-                                                <td className="px-5 py-4 text-slate-300">
+                                                {/* <td className="px-5 py-4 text-slate-300">
                                                     {stock.location || "-"}
-                                                </td>
+                                                </td> */}
 
                                                 <td className="px-5 py-4">
                                                     <span
@@ -685,7 +687,7 @@ export default function SiteStoreLiveStockPage() {
                     projects={projects}
                     items={items}
                     onClose={() => setOpeningModal(false)}
-                    onSave={saveSiteOpeningStock}
+                    onSave={(type)=>saveSiteOpeningStock(type)}
                     saving={savingOpening}
                     mode={modalMode}
                 />
@@ -865,14 +867,27 @@ function SiteOpeningStockModal({
 
                     {!isView && (
                         <button
-                            onClick={onSave}
+                            onClick={isEdit?()=>onSave('update'):()=> onSave('add')}
                             disabled={saving || liveStock < 0}
                             className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
                         >
                             {saving && <Loader2 size={18} className="animate-spin" />}
-                            {isEdit ? "Update Site Stock" : "Add Site Stock"}
+                           {isEdit?"Update Site Stock":" Add Site Stock"}
                         </button>
                     )}
+                    {/* {
+                        isEdit &&(
+                            <button 
+                              onClick={()=>onSave('update')}
+                               disabled={saving || liveStock < 0}
+                            className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
+                            >
+                                {saving && <Loader2 size={18} className="animate-spin" />}
+                                  Update Site Stock
+
+                            </button>
+                        )
+                    } */}
                 </div>
             </div>
         </div>

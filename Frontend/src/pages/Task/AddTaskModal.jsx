@@ -11,8 +11,8 @@ export default function AddTaskModal({
   users,
   projects
 }) {
-    console.log(users)
-    console.log(projects)
+    // console.log(users)
+    // console.log(projects)
   const { createPersonalTask, assignTask, loading } = useTasks();
 
   const [formData, setFormData] = useState({

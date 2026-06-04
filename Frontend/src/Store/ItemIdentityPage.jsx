@@ -57,6 +57,9 @@ export default function ItemIdentityPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStage, setUploadStage] = useState("");
+
 
   const fetchItems = async () => {
     try {
@@ -214,12 +217,33 @@ export default function ItemIdentityPage() {
 
     try {
       setUploading(true);
+      setUploadProgress(0);
+      setUploadStage("Preparing file...");
 
       const data = new FormData();
       data.append("excelFile", excelFile);
 
-      //  console.log(data.get('excelFile'));
-      const res = await axios.post(`${API_URL}/bulk-upload`, data);
+      const res = await axios.post(`${API_URL}/bulk-upload`, data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+
+        onUploadProgress: (progressEvent) => {
+          if (!progressEvent.total) return;
+
+          const percent = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+
+          setUploadProgress(percent);
+
+          if (percent < 100) {
+            setUploadStage("Uploading file...");
+          } else {
+            setUploadStage("Processing Excel on server...");
+          }
+        },
+      });
 
       toast.success(
         `Uploaded: ${res.data.insertedCount || 0}, Skipped: ${res.data.skippedCount || 0
@@ -227,13 +251,38 @@ export default function ItemIdentityPage() {
       );
 
       setExcelFile(null);
-      fetchItems();
+      setUploadStage("Refreshing item list...");
+      await fetchItems();
     } catch (error) {
       toast.error(error?.response?.data?.message || "Excel upload failed");
     } finally {
       setUploading(false);
+
+      setTimeout(() => {
+        setUploadProgress(0);
+        setUploadStage("");
+      }, 800);
     }
   };
+
+  function TableSkeleton({ rows = 8, columns = 9 }) {
+    return (
+      <>
+        {Array.from({ length: rows }).map((_, rowIndex) => (
+          <tr key={rowIndex} className="animate-pulse border-b border-slate-800">
+            {Array.from({ length: columns }).map((_, colIndex) => (
+              <td key={colIndex} className="px-5 py-4">
+                <div
+                  className={`h-4 rounded bg-slate-800 ${colIndex === 0 ? "w-48" : "w-24"
+                    }`}
+                />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 text-slate-100 md:p-6">
@@ -313,10 +362,41 @@ export default function ItemIdentityPage() {
                 disabled={uploading}
                 className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 font-semibold text-slate-950 disabled:opacity-50"
               >
-                {uploading ? <Loader2 className="animate-spin" size={17} /> : <Upload size={17} />}
-                Upload
+                {uploading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={17} />
+                    {uploadProgress < 100 ? `${uploadProgress}%` : "Processing..."}
+                  </>
+                ) : (
+                  <>
+                    <Upload size={17} />
+                    Upload
+                  </>
+                )}
               </button>
+
             </div>
+            {uploading && (
+              <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 md:col-span-3">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium text-cyan-300">{uploadStage}</span>
+                  <span className="font-bold text-cyan-300">{uploadProgress}%</span>
+                </div>
+
+                <div className="h-3 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className="h-full rounded-full bg-cyan-400 transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+
+                {uploadProgress === 100 && (
+                  <p className="mt-2 text-xs text-slate-400">
+                    File uploaded. Server is reading Excel and inserting records...
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -339,12 +419,7 @@ export default function ItemIdentityPage() {
 
               <tbody className="divide-y divide-slate-800">
                 {loading ? (
-                  <tr>
-                    <td colSpan="9" className="py-14 text-center text-slate-400">
-                      <Loader2 className="mx-auto mb-2 animate-spin" />
-                      Loading item identities...
-                    </td>
-                  </tr>
+                  <TableSkeleton rows={8} columns={9} />
                 ) : items.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="py-14 text-center text-slate-400">

@@ -285,6 +285,91 @@ exports.addSiteOpeningStock = async (req, res) => {
   }
 };
 
+// Update Site Stock 
+exports.updateSiteOpeningStock = async (req, res) => {
+  try {
+    const {
+      siteRef,
+      itemRef,
+      receivedTillDate,
+      consumedTillDate,
+      returnedTillDate,
+      damagedTillDate,
+      rate,
+      location,
+      remarks,
+    } = req.body;
+
+    if (!siteRef || !itemRef) {
+      return res.status(400).json({
+        success: false,
+        message: "Site and item are required",
+      });
+    }
+
+    const received = Number(receivedTillDate || 0);
+    const consumed = Number(consumedTillDate || 0);
+    const returned = Number(returnedTillDate || 0);
+    const damaged = Number(damagedTillDate || 0);
+
+    const currentStock = received - consumed - returned - damaged;
+
+    if (received <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Received till date must be greater than 0",
+      });
+    }
+
+    if (currentStock < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Consumed + Returned + Damaged cannot be greater than received quantity",
+      });
+    }
+
+    const item = await ItemIdentity.findById(itemRef);
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Item identity not found",
+      });
+    }
+
+    let stock = await SiteStoreStock.findOne({ siteRef, itemRef });
+
+    if (!stock) {
+      return res.status(404).json({
+      success:false,
+      message:"Site Store item or Site not found"
+      })
+    } else {
+      stock.currentStock = currentStock;
+      stock.consumedQty =  consumed;
+      stock.returnedQty = returned;
+      stock.damagedQty =  damaged;
+      stock.averageRate = Number(rate || stock.averageRate || 0);
+      stock.location = location || stock.location;
+    }
+
+    await stock.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Site opening stock added successfully",
+      data: stock,
+    });
+  } catch (error) {
+    console.error("Add Site Opening Stock Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to add site opening stock",
+      error: error.message,
+    });
+  }
+};
+
 exports.bulkSiteOpeningStockUpload = async (req, res) => {
   try {
     if (!req.file) {

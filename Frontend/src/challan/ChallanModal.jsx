@@ -23,11 +23,11 @@ const SITE_STOCK_API = `${BASE_URL}/site-store-stock/live-stock`;
 const DOCUMENT_TYPES = ["DC", "DDC", "LPN", "ISTN", "MRN", "MRS", "CN"];
 
 const PURPOSES = [
-  { value: "BOQ_INSTALLATION", label: "BOQ Installation" },
   { value: "CONSUMABLE", label: "Consumable" },
   { value: "TOOL", label: "Tool" },
   { value: "SAFETY", label: "Safety" },
   { value: "TEMPORARY_USE", label: "Temporary Use" },
+  { value: "BOQ_INSTALLATION", label: "BOQ Installation" },
   { value: "OTHER", label: "Other" },
 ];
 
@@ -66,7 +66,7 @@ const emptyItem = {
   rate: 0,
   amount: 0,
 
-  itemPurpose: "BOQ_INSTALLATION",
+  itemPurpose: "CONSUMABLE",
   boqItemRef: "",
   boqRef: "",
   boqQty: 0,
@@ -75,6 +75,7 @@ const emptyItem = {
 
   isReturnable: false,
   expectedReturnDate: "",
+
 
   stockError: "",
   remarks: "",
@@ -111,6 +112,8 @@ export default function ChallanModal({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerRowIndex, setPickerRowIndex] = useState(null);
+
+ const [challanProject,setchallanProject]=useState({});
 
   const title = isView ? "View Challan" : isEdit ? "Edit Challan" : "Create Challan";
 
@@ -176,7 +179,7 @@ export default function ChallanModal({
             rate: Number(item.rate || 0),
             amount: Number(item.amount || 0),
 
-            itemPurpose: item.itemPurpose || "BOQ_INSTALLATION",
+            itemPurpose: item.itemPurpose || "CONSUMABLE",
             boqItemRef: item.boqItemRef?._id || item.boqItemRef || "",
             boqRef: item.boqRef?._id || item.boqRef || "",
             boqQty: Number(item.boqQty || 0),
@@ -269,6 +272,8 @@ export default function ChallanModal({
     [items]
   );
 
+
+  
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
@@ -286,6 +291,11 @@ export default function ChallanModal({
 
     if (name === "toSiteRef" || name === "fromSiteRef" || name === "projectRef") {
       const selectedProject = projects.find((p) => p._id === value);
+      setchallanProject(selectedProject)
+
+      // console.log(challanProject);
+        // setSelectedProjectForChallan(selectedProject);
+        // console.log("Selected Project For challan:",selectedProjectForChallan);
 
       setForm((prev) => ({
         ...prev,
@@ -298,6 +308,7 @@ export default function ChallanModal({
           selectedProject?.projectName ||
           selectedProject?.name ||
           prev.projectName,
+        
       }));
 
       setItems([{ ...emptyItem }]);
@@ -843,7 +854,8 @@ export default function ChallanModal({
 
                       <TdInput
                         value={item.hsnCode}
-                        disabled={isView}
+                        // disabled={isView}
+                        disabled
                         onChange={(e) =>
                           handleItemChange(index, "hsnCode", e.target.value)
                         }
@@ -860,7 +872,8 @@ export default function ChallanModal({
 
                       <TdInput
                         value={item.unit}
-                        disabled={isView}
+                        // disabled={isView}
+                        disabled
                         onChange={(e) =>
                           handleItemChange(index, "unit", e.target.value)
                         }
@@ -985,6 +998,8 @@ export default function ChallanModal({
           totalAmount={totalAmount}
           onBack={() => setPreviewOpen(false)}
           onConfirm={saveChallan}
+          challanProject={challanProject}
+          // allotedCompany={projects}
         />
       )}
 

@@ -18,6 +18,8 @@ import {
     Trash2,
 } from "lucide-react";
 import BASE_URL from "../../config/api";
+import { useNavigate } from "react-router-dom";
+
 
 const API_URL = `${BASE_URL}/main-store-stock`;
 const ITEM_API = `${BASE_URL}/item-identity`;
@@ -34,6 +36,7 @@ const emptyOpeningStock = {
 };
 
 export default function MainStoreLiveStockPage() {
+    const navigate = useNavigate();
     const [stocks, setStocks] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -53,6 +56,10 @@ export default function MainStoreLiveStockPage() {
     const [editModal, setEditModal] = useState(null);
     const [editForm, setEditForm] = useState({});
     const [savingEdit, setSavingEdit] = useState(false);
+
+
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadStage, setUploadStage] = useState("");
 
     const fetchStock = async () => {
         try {
@@ -117,11 +124,33 @@ export default function MainStoreLiveStockPage() {
 
         try {
             setUploadingExcel(true);
+            setUploadProgress(0);
+            setUploadStage("Preparing file...");
 
             const formData = new FormData();
             formData.append("excelFile", excelFile);
 
-            const res = await axios.post(`${API_URL}/bulk-opening-stock`, formData);
+            const res = await axios.post(`${API_URL}/bulk-opening-stock`, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+
+                onUploadProgress: (progressEvent) => {
+                    if (!progressEvent.total) return;
+
+                    const percent = Math.round(
+                        (progressEvent.loaded * 100) / progressEvent.total
+                    );
+
+                    setUploadProgress(percent);
+
+                    if (percent < 100) {
+                        setUploadStage("Uploading file...");
+                    } else {
+                        setUploadStage("Processing Excel on server...");
+                    }
+                },
+            });
 
             toast.success(
                 `Created ${res.data.createdCount || 0}, Updated ${res.data.updatedCount || 0
@@ -129,11 +158,16 @@ export default function MainStoreLiveStockPage() {
             );
 
             setExcelFile(null);
-            fetchStock();
+            setUploadStage("Refreshing item list...");
+            await fetchStock();
         } catch (error) {
             toast.error(error?.response?.data?.message || "Excel upload failed");
         } finally {
             setUploadingExcel(false);
+            setTimeout(() => {
+                setUploadProgress(0);
+                setUploadStage("");
+            }, 800);
         }
     };
 
@@ -261,9 +295,9 @@ export default function MainStoreLiveStockPage() {
         }
     };
 
-    const StatCard = ({ title, value, icon: Icon, tone }) => (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg shadow-slate-950/30">
-            <div className="flex items-center justify-between">
+    const StatCard = ({ title, value, icon: Icon, tone, onClick }) => (
+        <div onClick={onClick} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg shadow-slate-950/30">
+            <div className="flex items-center justify-between" >
                 <div>
                     <p className="text-sm text-slate-400">{title}</p>
                     <h2 className={`mt-2 text-2xl font-bold ${tone}`}>{value}</h2>
@@ -274,6 +308,24 @@ export default function MainStoreLiveStockPage() {
             </div>
         </div>
     );
+    function TableSkeleton({ rows = 8, columns = 9 }) {
+        return (
+            <>
+                {Array.from({ length: rows }).map((_, rowIndex) => (
+                    <tr key={rowIndex} className="animate-pulse border-b border-slate-800">
+                        {Array.from({ length: columns }).map((_, colIndex) => (
+                            <td key={colIndex} className="px-5 py-4">
+                                <div
+                                    className={`h-4 rounded bg-slate-800 ${colIndex === 0 ? "w-48" : "w-24"
+                                        }`}
+                                />
+                            </td>
+                        ))}
+                    </tr>
+                ))}
+            </>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 p-4 text-slate-100 md:p-6">
@@ -304,6 +356,12 @@ export default function MainStoreLiveStockPage() {
                                 <RefreshCcw size={17} />
                                 Refresh
                             </button>
+                            {/* <button
+                                onClick={() => navigate('/low-stock-dashboard')}
+                                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 font-semibold text-slate-950 hover:bg-cyan-400"
+                            >
+                                Low Stock Dashboard
+                            </button> */}
 
                             <button
                                 onClick={() => setOpeningModal(true)}
@@ -325,7 +383,7 @@ export default function MainStoreLiveStockPage() {
                     />
                     <StatCard
                         title="Stock Value"
-                        value={`₹${stats.totalValue.toLocaleString("en-IN")}`}
+                        value={`₹${stats.totalValue.toLocaleString("en-IN",{maximumFractionDigits:0})}`}
                         icon={IndianRupee}
                         tone="text-cyan-300"
                     />
@@ -340,6 +398,8 @@ export default function MainStoreLiveStockPage() {
                         value={stats.lowStock}
                         icon={AlertTriangle}
                         tone="text-amber-300"
+                        onClick={() => navigate('/low-stock-dashboard')}
+
                     />
                     <StatCard
                         title="Out Stock"
@@ -352,6 +412,7 @@ export default function MainStoreLiveStockPage() {
                         value={stats.negative}
                         icon={AlertTriangle}
                         tone="text-red-300"
+
                     />
                 </div>
 
@@ -416,13 +477,40 @@ export default function MainStoreLiveStockPage() {
                                 className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50"
                             >
                                 {uploadingExcel ? (
-                                    <Loader2 size={17} className="animate-spin" />
+                                    <>
+                                        <Loader2 className="animate-spin" size={17} />
+                                        {uploadProgress < 100 ? `${uploadProgress}%` : "Processing..."}
+                                    </>
                                 ) : (
-                                    <Upload size={17} />
+                                    <>
+                                        <Upload size={17} />
+                                        Upload
+                                    </>
                                 )}
-                                Upload Excel
+
                             </button>
                         </div>
+                        {uploadingExcel && (
+                            <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 md:col-span-3">
+                                <div className="mb-2 flex items-center justify-between text-sm">
+                                    <span className="font-medium text-cyan-300">{uploadStage}</span>
+                                    <span className="font-bold text-cyan-300">{uploadProgress}%</span>
+                                </div>
+
+                                <div className="h-3 overflow-hidden rounded-full bg-slate-800">
+                                    <div
+                                        className="h-full rounded-full bg-cyan-400 transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                </div>
+
+                                {uploadProgress === 100 && (
+                                    <p className="mt-2 text-xs text-slate-400">
+                                        File uploaded. Server is reading Excel and inserting records...
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -447,12 +535,8 @@ export default function MainStoreLiveStockPage() {
 
                             <tbody className="divide-y divide-slate-800">
                                 {loading ? (
-                                    <tr>
-                                        <td colSpan="10" className="py-14 text-center text-slate-400">
-                                            <Loader2 className="mx-auto mb-2 animate-spin" />
-                                            Loading live stock...
-                                        </td>
-                                    </tr>
+                                    <TableSkeleton rows={8} columns={9} />
+
                                 ) : filteredStocks.length === 0 ? (
                                     <tr>
                                         <td colSpan="10" className="py-14 text-center text-slate-400">
@@ -498,11 +582,11 @@ export default function MainStoreLiveStockPage() {
                                                 </td>
 
                                                 <td className="px-5 py-4 text-slate-300">
-                                                    ₹{Number(stock.averageRate || 0).toLocaleString("en-IN")}
+                                                    ₹{Number(stock.averageRate || 0).toLocaleString("en-IN",{maximumFractionDigits:0})}
                                                 </td>
 
                                                 <td className="px-5 py-4 font-semibold text-cyan-300">
-                                                    ₹{Number(stock.stockValue || 0).toLocaleString("en-IN")}
+                                                    ₹{Number(stock.stockValue || 0).toLocaleString("en-IN",{maximumFractionDigits:0})}
                                                 </td>
 
                                                 <td className="px-5 py-4 text-slate-300">
@@ -563,15 +647,15 @@ export default function MainStoreLiveStockPage() {
                 />
             )}
             {editModal && (
-  <EditMainStockModal
-    stock={editModal}
-    form={editForm}
-    setForm={setEditForm}
-    onClose={() => setEditModal(null)}
-    onSave={saveEditStock}
-    saving={savingEdit}
-  />
-)}
+                <EditMainStockModal
+                    stock={editModal}
+                    form={editForm}
+                    setForm={setEditForm}
+                    onClose={() => setEditModal(null)}
+                    onSave={saveEditStock}
+                    saving={savingEdit}
+                />
+            )}
         </div>
     );
 }
@@ -734,79 +818,79 @@ function Input({ label, name, type = "text", value, onChange }) {
 }
 
 function EditMainStockModal({ stock, form, setForm, onClose, onSave, saving }) {
-  const update = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+    const update = (e) => {
+        const { name, value } = e.target;
+        setForm((prev) => ({ ...prev, [name]: value }));
+    };
 
-  const item = stock.itemRef || {};
+    const item = stock.itemRef || {};
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-4xl rounded-3xl border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
-              Edit Main Store Stock
-            </p>
-            <h2 className="text-xl font-bold text-white">
-              {item.itemName || "Stock Item"}
-            </h2>
-          </div>
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-4xl rounded-3xl border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
+                            Edit Main Store Stock
+                        </p>
+                        <h2 className="text-xl font-bold text-white">
+                            {item.itemName || "Stock Item"}
+                        </h2>
+                    </div>
 
-          <button
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
-          >
-            <X size={22} />
-          </button>
+                    <button
+                        onClick={onClose}
+                        className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+                    >
+                        <X size={22} />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
+                    <StockInput label="Current Stock" name="currentStock" type="number" value={form.currentStock} onChange={update} />
+                    <StockInput label="Reserved Stock" name="reservedStock" type="number" value={form.reservedStock} onChange={update} />
+                    <StockInput label="Average Rate" name="averageRate" type="number" value={form.averageRate} onChange={update} />
+                    <StockInput label="Minimum Stock" name="minimumStockLevel" type="number" value={form.minimumStockLevel} onChange={update} />
+                    <StockInput label="Reorder Level" name="reorderLevel" type="number" value={form.reorderLevel} onChange={update} />
+                    <StockInput label="Location" name="location" value={form.location} onChange={update} />
+                    <StockInput label="Rack Number" name="rackNumber" value={form.rackNumber} onChange={update} />
+                </div>
+
+                <div className="flex justify-end gap-3 border-t border-slate-800 px-6 py-4">
+                    <button
+                        onClick={onClose}
+                        className="rounded-xl border border-slate-700 px-5 py-3 text-slate-300 hover:bg-slate-800"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        onClick={onSave}
+                        disabled={saving}
+                        className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
+                    >
+                        {saving && <Loader2 size={18} className="animate-spin" />}
+                        Save Changes
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
-          <StockInput label="Current Stock" name="currentStock" type="number" value={form.currentStock} onChange={update} />
-          <StockInput label="Reserved Stock" name="reservedStock" type="number" value={form.reservedStock} onChange={update} />
-          <StockInput label="Average Rate" name="averageRate" type="number" value={form.averageRate} onChange={update} />
-          <StockInput label="Minimum Stock" name="minimumStockLevel" type="number" value={form.minimumStockLevel} onChange={update} />
-          <StockInput label="Reorder Level" name="reorderLevel" type="number" value={form.reorderLevel} onChange={update} />
-          <StockInput label="Location" name="location" value={form.location} onChange={update} />
-          <StockInput label="Rack Number" name="rackNumber" value={form.rackNumber} onChange={update} />
-        </div>
-
-        <div className="flex justify-end gap-3 border-t border-slate-800 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-slate-700 px-5 py-3 text-slate-300 hover:bg-slate-800"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={onSave}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
-          >
-            {saving && <Loader2 size={18} className="animate-spin" />}
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 function StockInput({ label, name, type = "text", value, onChange }) {
-  return (
-    <div>
-      <label className="mb-2 block text-sm font-medium text-slate-300">
-        {label}
-      </label>
-      <input
-        name={name}
-        type={type}
-        value={value}
-        onChange={onChange}
-        className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
-      />
-    </div>
-  );
+    return (
+        <div>
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+                {label}
+            </label>
+            <input
+                name={name}
+                type={type}
+                value={value}
+                onChange={onChange}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
+            />
+        </div>
+    );
 }

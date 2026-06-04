@@ -100,12 +100,36 @@ const LowStockDashboardPage=lazy(()=>
 import("./Store/LowStockDashboardPage")
 );
 
-function PageLoader() {
+function PageSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="mx-auto animate-spin text-cyan-400" size={42} />
-        <p className="mt-3 text-slate-400 text-sm">Loading module...</p>
+    <div className="min-h-screen bg-slate-950 p-6 text-slate-100">
+      <div className="mx-auto max-w-7xl space-y-6 animate-pulse">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6">
+          <div className="h-6 w-40 rounded bg-slate-800" />
+          <div className="mt-4 h-9 w-96 rounded bg-slate-800" />
+          <div className="mt-3 h-4 w-[520px] rounded bg-slate-800" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-28 rounded-3xl border border-slate-800 bg-slate-900/80"
+            />
+          ))}
+        </div>
+
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
+          <div className="h-12 rounded-xl bg-slate-800" />
+        </div>
+
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
+          <div className="space-y-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-10 rounded-xl bg-slate-800" />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -113,7 +137,7 @@ function PageLoader() {
 
 function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Routes>
         {/* Public Route */}
         <Route path="/login" element={<LoginPage />} />
