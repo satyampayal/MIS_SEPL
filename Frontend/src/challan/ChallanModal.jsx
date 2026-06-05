@@ -90,6 +90,15 @@ export default function ChallanModal({
 }) {
   const isView = mode === "view";
   const isEdit = mode === "edit";
+  const isReChallan = mode === "rechallan";
+
+  const title = isView
+  ? "View Challan"
+  : isEdit
+  ? "Edit Challan"
+  : isReChallan
+  ? "Re-Challan / Copy Challan"
+  : "Create Challan";
 
   const [form, setForm] = useState(emptyForm);
   const [items, setItems] = useState([{ ...emptyItem }]);
@@ -113,9 +122,15 @@ export default function ChallanModal({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerRowIndex, setPickerRowIndex] = useState(null);
 
- const [challanProject,setchallanProject]=useState({});
+  const [challanProject, setchallanProject] = useState({});
 
-  const title = isView ? "View Challan" : isEdit ? "Edit Challan" : "Create Challan";
+  // const title = isView ? "View Challan" : isEdit ? "Edit Challan" : "Create Challan";
+
+  const authHeader = {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -128,11 +143,11 @@ export default function ChallanModal({
 
     if (challan) {
       // const selectedProject = projects.find(challan?.projectRef );
-      
-  const selectedProject = projects.find((p) => p._id === challan.projectRef );
 
-  setchallanProject(selectedProject || challan.projectRef || challan.toSiteRef || {});
-      
+      const selectedProject = projects.find((p) => p._id === challan.projectRef);
+
+      setchallanProject(selectedProject || challan.projectRef || challan.toSiteRef || {});
+
       setForm({
         documentNumber: challan.documentNumber || "",
         documentDate: challan.documentDate
@@ -279,7 +294,7 @@ export default function ChallanModal({
   );
 
 
-  
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
@@ -300,8 +315,8 @@ export default function ChallanModal({
       setchallanProject(selectedProject)
 
       // console.log(challanProject);
-        // setSelectedProjectForChallan(selectedProject);
-        // console.log("Selected Project For challan:",selectedProjectForChallan);
+      // setSelectedProjectForChallan(selectedProject);
+      // console.log("Selected Project For challan:",selectedProjectForChallan);
 
       setForm((prev) => ({
         ...prev,
@@ -314,7 +329,7 @@ export default function ChallanModal({
           selectedProject?.projectName ||
           selectedProject?.name ||
           prev.projectName,
-        
+
       }));
 
       setItems([{ ...emptyItem }]);
@@ -548,15 +563,17 @@ export default function ChallanModal({
   const saveChallan = async () => {
     if (!validate()) return;
 
+
     try {
       setLoading(true);
       const payload = buildPayload();
 
       if (isEdit) {
-        await axios.put(`${CHALLAN_API}/update/${challan._id}`, payload);
+
+        await axios.put(`${CHALLAN_API}/update/${challan._id}`, payload, authHeader);
         toast.success("Challan updated successfully");
       } else {
-        await axios.post(`${CHALLAN_API}/create`, payload);
+        await axios.post(`${CHALLAN_API}/create`, payload, authHeader);
         toast.success("Challan created for approval");
       }
 
@@ -570,8 +587,8 @@ export default function ChallanModal({
   };
 
   //  For Picker Modal
-  const openItemPicker = (index) => {
-    setPickerRowIndex(index);
+  const openItemPicker = () => {
+    // setPickerRowIndex(index);
     setPickerOpen(true);
   };
 
@@ -739,11 +756,11 @@ export default function ChallanModal({
 
             {!isView && (
               <button
-                onClick={addItemRow}
-                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-400"
+                onClick={openItemPicker}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400"
               >
                 <Plus size={17} />
-                Add Item
+                Select Multiple Items
               </button>
             )}
           </div>
@@ -1005,7 +1022,7 @@ export default function ChallanModal({
           onBack={() => setPreviewOpen(false)}
           onConfirm={saveChallan}
           challanProject={challanProject}
-          // allotedCompany={projects}
+        // allotedCompany={projects}
         />
       )}
 
@@ -1016,18 +1033,20 @@ export default function ChallanModal({
           documentType={form.documentType}
           fromMainStoreRef={form.fromMainStoreRef}
           fromSiteRef={form.fromSiteRef}
-          onSelect={(selected) => {
-            if (pickerRowIndex === null) return;
+          onSelect={(selectedRows) => {
+            setItems((prev) => {
+              const cleanPrev =
+                prev.length === 1 && !prev[0].itemRef ? [] : prev;
 
-            const updated = [...items];
+              const existingIds = new Set(cleanPrev.map((x) => x.itemRef));
 
-            updated[pickerRowIndex] = {
-              ...updated[pickerRowIndex],
-              ...selected,
-              stockError: "",
-            };
+              const uniqueRows = selectedRows.filter(
+                (row) => !existingIds.has(row.itemRef)
+              );
 
-            setItems(updated);
+              return [...cleanPrev, ...uniqueRows];
+            });
+
             setPickerOpen(false);
           }}
         />

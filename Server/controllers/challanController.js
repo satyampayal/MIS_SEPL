@@ -68,6 +68,21 @@ const releaseReservedStock = async ({ stock, qty }) => {
 
 /* CREATE CHALLAN */
 exports.createChallan = async (req, res) => {
+
+const canCreateChallan = [
+  "Super Admin",
+  "Admin",
+  "Project Manager",
+  "Store Manager",
+  "MIS User"
+].includes(req.user.role);
+
+if (!canCreateChallan) {
+  return res.status(403).json({
+    success: false,
+    message: "Access Denied",
+  });
+}
   const session = await mongoose.startSession();
 
   try {
@@ -323,6 +338,23 @@ exports.createChallan = async (req, res) => {
 /* APPROVE CHALLAN */
 /* APPROVE CHALLAN */
 exports.approveChallan = async (req, res) => {
+
+const canApproveChallan = [
+  "Super Admin",
+  "Admin",
+  "Project Manager",
+  "Store Manager",
+  "MIS User"
+].includes(req.user.role);
+
+if (!canApproveChallan) {
+  return res.status(403).json({
+    success: false,
+    message: "Access Denied",
+  });
+}
+
+  
   const session = await mongoose.startSession();
 
   try {
@@ -651,6 +683,22 @@ exports.approveChallan = async (req, res) => {
 
 /* REJECT CHALLAN */
 exports.rejectChallan = async (req, res) => {
+
+
+  const canRejectChallan = [
+  "Super Admin",
+  "Admin",
+  "Project Manager",
+  "Store Manager",
+  "MIS User"
+].includes(req.user.role);
+
+if (!canRejectChallan) {
+  return res.status(403).json({
+    success: false,
+    message: "Access Denied",
+  });
+}
   const session = await mongoose.startSession();
 
   try {
@@ -748,6 +796,21 @@ exports.rejectChallan = async (req, res) => {
 /* GET ALL CHALLANS */
 exports.getAllChallans = async (req, res) => {
   try {
+
+      const canGetsChallan = [
+  "Super Admin",
+  "Admin",
+  "Project Manager",
+  "Store Manager",
+  "MIS User"
+].includes(req.user.role);
+
+if (!canGetsChallan) {
+  return res.status(403).json({
+    success: false,
+    message: "Access Denied",
+  });
+}
     const { documentType, approvalStatus, stockStatus, siteRef } = req.query;
 
     const query = {};

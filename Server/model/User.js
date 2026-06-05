@@ -45,7 +45,9 @@ const userSchema = new mongoose.Schema(
         "Accounts",
         "Store",
         "Admin",
-        "Management"
+        "Management",
+        "Site",
+
       ],
       default: "MIS"
     },
@@ -55,19 +57,54 @@ const userSchema = new mongoose.Schema(
       default: ""
     },
 
-    role: {
-      type: String,
-      enum: [
-        "Super Admin",
-        "Admin",
-        "Project Manager",
-        "Site Engineer",
-        "Store Manager",
-        "MIS User",
-        "Accountant"
-      ],
-      default: "MIS User"
-    },
+  role: {
+  type: String,
+  enum: [
+    // System Roles
+    "Super Admin",
+    "Admin",
+
+    // Management
+    "Director",
+    "DM", // Department Manager
+    "Project Manager",
+
+    // Engineering
+    "Site Incharge",
+    "Site Engineer",
+    "QA/QC Engineer",
+    "Planning Engineer",
+
+    // Store & Inventory
+    "Store Manager",
+    "Store Keeper",
+    "Inventory Controller",
+
+    // Procurement
+    "Purchase Manager",
+    "Purchase Coordinator",
+
+    // Finance
+    "Accountant",
+    "Finance Manager",
+
+    // MIS
+    "MIS Manager",
+    "MIS User",
+
+    // HR
+    "HR Manager",
+    "HR Executive",
+
+    // Operations
+    "Operations Manager",
+
+    // General
+    "Employee",
+    "Viewer"
+  ],
+  default: "MIS User"
+},
 
     assignedProjects: [
       {

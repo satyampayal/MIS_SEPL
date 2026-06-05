@@ -38,7 +38,7 @@ exports.getAllStockTransactions = async (req, res) => {
       .populate("itemRef", "itemName itemCode unit")
       .populate("mainStoreRef", "storeName storeCode")
       .populate("siteRef", "projectName name projectCode")
-      .populate("createdBy", "name email")
+      .populate("createdBy", "fullName email")
       .sort({ createdAt: -1 });
 
     const summary = await StockTransaction.aggregate([
@@ -101,7 +101,7 @@ exports.getItemStockTimeline = async (req, res) => {
       .populate("itemRef", "itemName itemCode unit")
       .populate("mainStoreRef", "storeName storeCode")
       .populate("siteRef", "projectName name projectCode")
-      .populate("createdBy", "name email")
+      .populate("createdBy", "fullName email")
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -113,6 +113,49 @@ exports.getItemStockTimeline = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+
+exports.getItemTimeline = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+
+    const transactions = await StockTransaction.find({ itemRef: itemId })
+      .populate("itemRef", "itemName itemCode unit category")
+      .populate("mainStoreRef", "storeName storeCode")
+      .populate("siteRef", "projectName name")
+      .populate("createdBy", "fullName email role")
+      .sort({ createdAt: 1 });
+
+    const summary = transactions.reduce(
+      (acc, txn) => {
+        if (txn.direction === "IN") acc.totalIn += txn.quantity;
+        if (txn.direction === "OUT") acc.totalOut += txn.quantity;
+        if (txn.direction === "RESERVE") acc.totalReserved += txn.quantity;
+        if (txn.direction === "RELEASE") acc.totalReleased += txn.quantity;
+        return acc;
+      },
+      {
+        totalIn: 0,
+        totalOut: 0,
+        totalReserved: 0,
+        totalReleased: 0,
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      item: transactions[0]?.itemRef || null,
+      summary,
+      data: transactions,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch item timeline",
+      error: error.message,
     });
   }
 };

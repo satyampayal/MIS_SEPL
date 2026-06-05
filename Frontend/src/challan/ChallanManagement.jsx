@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   XCircle,
   IndianRupee,
+  Copy,
 } from "lucide-react";
 import ChallanModal from "./ChallanModal";
 import BASE_URL from "../../config/api";
@@ -33,10 +34,21 @@ export default function ChallanManagement() {
   const [modalMode, setModalMode] = useState("add");
   const [selectedChallan, setSelectedChallan] = useState(null);
 
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+
+
   const fetchChallans = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/all`);
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get(`${BASE_URL}/challan/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setChallans(res.data.data || []);
     } catch (error) {
       console.error(error);
@@ -49,6 +61,9 @@ export default function ChallanManagement() {
   useEffect(() => {
     fetchChallans();
   }, []);
+  useEffect(() => {
+    setPage(1);
+  }, [search, documentTypeFilter, approvalFilter, stockFilter]);
 
   const openAddModal = () => {
     setSelectedChallan(null);
@@ -146,6 +161,13 @@ export default function ChallanManagement() {
     });
   }, [challans, search, documentTypeFilter, approvalFilter, stockFilter]);
 
+  const totalPages = Math.ceil(filteredChallans.length / limit) || 1;
+
+  const paginatedChallans = useMemo(() => {
+    const start = (page - 1) * limit;
+    return filteredChallans.slice(start, start + limit);
+  }, [filteredChallans, page, limit]);
+
   const stats = useMemo(() => {
     return {
       total: challans.length,
@@ -191,6 +213,31 @@ export default function ChallanManagement() {
       default:
         return "bg-slate-500/15 text-slate-300 border-slate-500/30";
     }
+  };
+
+  const openReChallanModal = (challan) => {
+    const copiedChallan = {
+      ...challan,
+
+      _id: undefined,
+      documentNumber: "",
+      documentDate: new Date().toISOString().slice(0, 10),
+
+      approvalStatus: undefined,
+      stockStatus: undefined,
+      stockImpact: undefined,
+
+      items: challan.items?.map((item) => ({
+        ...item,
+        _id: undefined,
+        quantity: item.quantity || 1,
+        amount: Number(item.quantity || 1) * Number(item.rate || 0),
+      })),
+    };
+
+    setSelectedChallan(copiedChallan);
+    setModalMode("rechallan");
+    setModalOpen(true);
   };
 
   const StatCard = ({ title, value, icon: Icon, tone }) => (
@@ -367,14 +414,14 @@ export default function ChallanManagement() {
                         </div>
                       </td>
                     </tr>
-                  ) : filteredChallans.length === 0 ? (
+                  ) : paginatedChallans.length === 0 ? (
                     <tr>
                       <td colSpan="11" className="py-14 text-center text-slate-400">
                         No challans found
                       </td>
                     </tr>
                   ) : (
-                    filteredChallans.map((item) => (
+                    paginatedChallans.map((item) => (
                       <tr
                         key={item._id}
                         className="bg-slate-900/40 transition hover:bg-slate-800/70"
@@ -455,6 +502,13 @@ export default function ChallanManagement() {
                             >
                               <Pencil size={18} />
                             </button>
+                            <button
+                              onClick={() => openReChallanModal(item)}
+                              className="rounded-lg p-2 text-purple-400 transition hover:bg-purple-500/10 hover:text-purple-300"
+                              title="Re-Challan / Copy"
+                            >
+                              <Copy size={18} />
+                            </button>
 
                             {item.challanFile && (
                               <a
@@ -474,6 +528,48 @@ export default function ChallanManagement() {
                   )}
                 </tbody>
               </table>
+              <div className="flex flex-col gap-3 border-t border-slate-800 px-4 py-4 md:flex-row md:items-center md:justify-between">
+                <p className="text-sm text-slate-400">
+                  Showing {(page - 1) * limit + 1} to{" "}
+                  {Math.min(page * limit, filteredChallans.length)} of{" "}
+                  {filteredChallans.length} challans
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                  >
+                    <option value={10}>10 / page</option>
+                    <option value={20}>20 / page</option>
+                    <option value={50}>50 / page</option>
+                  </select>
+
+                  <button
+                    disabled={page === 1}
+                    onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                    className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+
+                  <span className="text-sm text-slate-300">
+                    {page} / {totalPages}
+                  </span>
+
+                  <button
+                    disabled={page === totalPages}
+                    onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                    className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

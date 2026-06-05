@@ -10,14 +10,17 @@ const {
 } = require("../controllers/challanController");
 
 const upload = require("../config/multer");
+const { isAuthenticated} =require('../middleware/auth.midlleware')
 
-ChallanRouter.post("/create", upload.single("challanFile"), createChallan);
+ChallanRouter.get("/all",isAuthenticated, getAllChallans);
 
-ChallanRouter.put("/approve/:id", approveChallan);
 
-ChallanRouter.put("/reject/:id", rejectChallan);
+ChallanRouter.post("/create",isAuthenticated, createChallan);
 
-ChallanRouter.get("/all", getAllChallans);
+ChallanRouter.put("/approve/:id",isAuthenticated, approveChallan);
+
+ChallanRouter.put("/reject/:id",isAuthenticated, rejectChallan);
+
 
 ChallanRouter.get("/picker-items", getChallanPickerItems);
 

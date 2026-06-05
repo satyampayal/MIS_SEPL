@@ -28,11 +28,17 @@ export default function ChallanApprovalPage() {
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
+       const authHeader = {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+};
+
   const fetchPendingChallans = async () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `${API_URL}/all?approvalStatus=PENDING_SITE_APPROVAL`
+        `${API_URL}/all?approvalStatus=PENDING_SITE_APPROVAL`,authHeader
       );
       setChallans(res.data.data || []);
     } catch (error) {
@@ -97,7 +103,7 @@ export default function ChallanApprovalPage() {
 
     try {
       setActionLoading(id);
-      await axios.put(`${API_URL}/approve/${id}`);
+      await axios.put(`${API_URL}/approve/${id}`,{},authHeader);
       toast.success("Challan approved and stock updated");
       fetchPendingChallans();
     } catch (error) {
@@ -115,7 +121,9 @@ export default function ChallanApprovalPage() {
 
       await axios.put(`${API_URL}/reject/${rejectModal._id}`, {
         rejectionReason: rejectionReason || "Rejected by site",
-      });
+      }, authHeader
+    
+    );
 
       toast.success("Challan rejected and reserved stock released");
       setRejectModal(null);

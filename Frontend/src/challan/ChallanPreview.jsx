@@ -77,39 +77,52 @@ export default function ChallanPreview({
   };
 
   // console.log(challanProject);
+  const rateShow = ["LPN"].includes(formData.documentType) ? true : false;
+  // console.log(rateShow);
 
-  const downloadPDF = async () => {
-    const element = document.getElementById("challan-print-area");
 
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      ignoreElements: (el) => {
-        return el.classList?.contains("no-pdf");
-      },
-      onclone: (clonedDoc) => {
-        const clonedElement = clonedDoc.getElementById("challan-print-area");
+const downloadPDF = async () => {
+  const element = document.getElementById("challan-print-area");
 
-        clonedElement.querySelectorAll("*").forEach((el) => {
-          el.style.color = el.style.color || "#000000";
-          el.style.backgroundColor = el.style.backgroundColor || "transparent";
-          el.style.borderColor = "#000000";
-          el.style.boxShadow = "none";
-        });
-      },
-    });
+  if (!element) {
+    toast.error("Print area not found");
+    return;
+  }
 
-    const imgData = canvas.toDataURL("image/png");
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    windowWidth: element.scrollWidth,
+    windowHeight: element.scrollHeight,
+  });
 
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+  const imgData = canvas.toDataURL("image/png");
 
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${formData.documentNumber || "challan"}.pdf`);
-  };
-  console.log(formData)
+  const pdf = new jsPDF("p", "mm", "a4");
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  const imgWidth = pageWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  let heightLeft = imgHeight;
+  let position = 0;
+
+  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
+
+  while (heightLeft > 0) {
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+  }
+
+  pdf.save(formData.documentNumber ? `${formData.documentNumber}.pdf` : "challan.pdf");
+};
+  // console.log(formData)
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 text-slate-100">
@@ -149,7 +162,7 @@ export default function ChallanPreview({
                   <img
                     src={challanProject?.allotedCompany == "Sachin Electrical Private Limited" ? sepl : spppl}
                     alt="company logo"
-                    className="h-16 w-24 object-contain"
+                    className="h-32 w-40 object-contain"
                   />
                 </div>
 
@@ -160,16 +173,16 @@ export default function ChallanPreview({
                     {challanProject?.allotedCompany || "Sachin Electrical Private Limited"}
                   </h1>
 
-                  <p>
+                  <p className='text-[16px] font-semibold  '>
                     2B/536, Vasundhara, Sahibabad, Ghaziabad, Uttar Pradesh,
                     201012 - India
                   </p>
 
-                  <p>
+                  <p className='text-[16px] font-semibold'>
                     Phone : 0120 4155654 / Email : info@sachinelectrical.com
                   </p>
 
-                  <p className="font-semibold">
+                  <p className='text-[16px] font-semibold'>
                     GSTIN:- 09AAKCS1319M1ZZ
                   </p>
                 </div>
@@ -180,18 +193,18 @@ export default function ChallanPreview({
                 <div className="border-x border-black p-2 text-center text-lg font-bold">
                   {getDocumentTitle()}
                 </div>
-                <div className="p-2 text-right">
+                <div className="p-2 text-right text-[16px] font-semibold">
                   Date: {formatDate(formData.documentDate)}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 border-b border-black">
-                <div className="space-y-1 p-3">
-                  <p>
+              <div className="grid grid-cols-2 border-b border-black text-[16px]">
+                <div className="space-y-3 p-b-3">
+                  <p className='border-b border-black p-1'>
                     <b>Document Number: </b>
                     {formData.documentNumber || "-"}
                   </p>
-                  <p>
+                   <p className='border-b border-black p-1'>
                     <b>Document Type: </b>
                     {formData.documentType || "-"}
                   </p>
@@ -201,53 +214,54 @@ export default function ChallanPreview({
                   </p> */}
                 </div>
 
-                <div className="space-y-1 border-l border-black p-3">
-                  <p>
+                <div className="space-y-1 border-l border-black p-b-3">
+                   <p className='border-b border-black p-1'>
                     <b>Place of Supply: </b>
                     {challanProject.placeOfDelivery || "-"}
                   </p>
-                  <p>
+                   <p className='border-b border-black p-2'>
                     <b>Consignee Name: </b>
-                    {challanProject.consigneeName|| "-"}
+                    {challanProject.consigneeName || "-"}
                   </p>
-                  <p>
+                  <p className='border-b border-black p-1'>
                     <b>Consignee Address: </b>
                     {challanProject.consigneeAddress || "-"}
                   </p>
-                  <p>
+                  <p className='border-b border-black p-1'>
                     <b>GSTIN: </b>
-                    {challanProject.gstNumber ||"-"}
+                    {challanProject.gstNumber || "-"}
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-1 border-b border-black p-3">
-                <p>
+              <div className="space-y-1 border-b border-black  p-b-3">
+                <p className='text-[14px] font-semibold border-b border-black p-1'>
                   <b>Name of Project / Site: </b>
                   {formData.projectName || "-"}
                 </p>
-                <p>
+                {/* <p>
                   <b>Purpose: </b>
                   Approval based digital material movement
-                </p>
-                <p>
+                </p> */}
+                <p className='text-[16px] font-semibold border-b border-black p-1'>
                   <b>Remarks: </b>
                   {formData.remarks || "-"}
                 </p>
               </div>
 
-              <table className="w-full border-collapse text-[11px]">
+              <table className="w-full border-collapse text-[14px]">
                 <thead>
                   <tr>
                     <th className="border border-black p-1 w-10">Sr.</th>
                     <th className="border border-black p-1">Material</th>
-                    <th className="border border-black p-1 w-24">Purpose</th>
+                    <th className="border border-black p-1 w-24">Type</th>
                     <th className="border border-black p-1 w-16">UOM</th>
-                    <th className="border border-black p-1 w-16">Qty</th>
                     <th className="border border-black p-1 w-24">HSN</th>
-                    <th className="border border-black p-1 w-20">Return </th>
+                    <th className="border border-black p-1 w-16">Qty</th>
                     <th className="border border-black p-1 w-20">Rate</th>
                     <th className="border border-black p-1 w-24">Amount</th>
+                    <th className="border border-black p-1 w-20">Return </th>
+                    <th className="border border-black p-1 w-24">Remarks</th>
                   </tr>
                 </thead>
 
@@ -260,7 +274,7 @@ export default function ChallanPreview({
 
                       <td className="border border-black p-1">
                         <b>{item.itemName || "-"}</b>
-                        {item.itemCode ? ` (${item.itemCode})` : ""}
+                        {/* {item.itemCode ? ` (${item.itemCode})` : ""} */}
                         {item.remarks ? (
                           <div className="text-[10px]">Note: {item.remarks}</div>
                         ) : null}
@@ -274,34 +288,42 @@ export default function ChallanPreview({
                         {item.unit || "-"}
                       </td>
 
-                      <td className="border border-black p-1 text-center">
-                        {item.quantity || 0}
-                      </td>
+                     
 
                       <td className="border border-black p-1 text-center">
                         {item.hsnCode || "-"}
                       </td>
 
-                      <td className="border border-black p-1 text-center">
+                   
+                       <td className="border border-black p-1 text-center">
+                       <b> {item.quantity || 0}</b>
+                      </td>
+
+                     
+                        <td className="border border-black p-1 text-right ">
+                        <b>  {rateShow ? Number(item.rate).toFixed(0):''}</b>
+                        </td>
+                      
+
+                       <td className="border border-black p-1 text-right">
+                         <b>  {rateShow ? Number(item.amount).toFixed(0):''}</b>
+                      </td>
+                         <td className="border border-black p-1 text-center">
                         {item.isReturnable
                           ? `Yes ${item.expectedReturnDate ? `(${formatDate(item.expectedReturnDate)})` : ""}`
-                          : "No"}
+                          : ""}
                       </td>
-
                       <td className="border border-black p-1 text-right">
-                        {Number(item.rate || 0).toFixed(2)}
-                      </td>
 
-                      <td className="border border-black p-1 text-right">
-                        {Number(item.amount || 0).toFixed(2)}
                       </td>
                     </tr>
                   ))}
 
-                  {Array.from({ length: Math.max(0, 30 - items.length) }).map(
+                  {Array.from({ length: Math.max(0, 20 - items.length) }).map(
                     (_, index) => (
                       <tr key={`blank-${index}`}>
                         <td className="h-7 border border-black p-1">&nbsp;</td>
+                        <td className="border border-black p-1"></td>
                         <td className="border border-black p-1"></td>
                         <td className="border border-black p-1"></td>
                         <td className="border border-black p-1"></td>
@@ -316,22 +338,26 @@ export default function ChallanPreview({
 
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="7"
                       className="border border-black p-2 text-right font-bold"
                     >
                       Total
                     </td>
                     <td className="border border-black p-2 text-right font-bold">
-                      ₹ {Number(totalAmount || 0).toFixed(2)}
+                       { rateShow ?Number(totalAmount).toFixed(2):''}
                     </td>
+                    <td className="border border-black p-1"></td>
+                    <td className="border border-black p-1"></td>
+
                   </tr>
+
                 </tbody>
               </table>
 
-              <div className="space-y-2 border-b border-black p-3">
+              <div className="space-y-2 border-b border-black p-3 text-[14px]">
                 <p>
                   <b>Challan Total in Words: </b>
-                  {amountInWords(totalAmount)}
+                   { rateShow ? amountInWords(totalAmount):''}
                 </p>
 
                 <p className="font-semibold">
@@ -365,7 +391,7 @@ export default function ChallanPreview({
               </div>
             </div>
 
-            <div className="mt-2 text-right text-xs">Page 1 of 1</div>
+            {/* <div className="mt-2 text-right text-xs">Page 1 of 1</div> */}
           </div>
         </div>
 
