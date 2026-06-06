@@ -48,7 +48,7 @@ exports.getAllItemIdentities = async (req, res) => {
       category,
       status,
       page = 1,
-      limit = 20,
+      limit ,
     } = req.query;
 
     const pageNumber = Number(page);

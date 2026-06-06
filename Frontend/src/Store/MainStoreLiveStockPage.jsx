@@ -47,7 +47,10 @@ export default function MainStoreLiveStockPage() {
     const [stores, setStores] = useState([]);
     const [items, setItems] = useState([]);
     const [openingModal, setOpeningModal] = useState(false);
+
+
     const [openingForm, setOpeningForm] = useState(emptyOpeningStock);
+    const [openingRows, setOpeningRows] = useState([]);
     const [savingOpening, setSavingOpening] = useState(false);
 
     const [excelFile, setExcelFile] = useState(null);
@@ -62,7 +65,7 @@ export default function MainStoreLiveStockPage() {
     const [uploadStage, setUploadStage] = useState("");
 
     const [currentPage, setCurrentPage] = useState(1);
-const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const fetchStock = async () => {
         try {
@@ -89,37 +92,51 @@ const [itemsPerPage, setItemsPerPage] = useState(10);
         try {
             const res = await axios.get(`${ITEM_API}/all`);
             setItems(res.data.data || []);
+            console.log(items)
         } catch {
             toast.error("Failed to load items");
         }
     };
 
-    const saveOpeningStock = async () => {
-        if (!openingForm.mainStoreRef) return toast.error("Select main store");
-        if (!openingForm.itemRef) return toast.error("Select item");
-        if (Number(openingForm.openingQty) <= 0) {
-            return toast.error("Opening qty must be greater than 0");
-        }
+ const saveOpeningStock = async () => {
+  if (!openingForm.mainStoreRef) return toast.error("Select main store");
 
-        try {
-            setSavingOpening(true);
+  if (openingRows.length === 0) {
+    return toast.error("Select at least one item");
+  }
 
-            await axios.post(`${API_URL}/add-opening-stock`, {
-                ...openingForm,
-                openingQty: Number(openingForm.openingQty),
-                rate: Number(openingForm.rate || 0),
-            });
+  const invalidRow = openingRows.find((row) => Number(row.openingQty) <= 0);
 
-            toast.success("Opening stock added");
-            setOpeningModal(false);
-            setOpeningForm(emptyOpeningStock);
-            fetchStock();
-        } catch (error) {
-            toast.error(error?.response?.data?.message || "Failed to add opening stock");
-        } finally {
-            setSavingOpening(false);
-        }
-    };
+  if (invalidRow) {
+    return toast.error(`Enter valid qty for ${invalidRow.itemName}`);
+  }
+
+  try {
+    setSavingOpening(true);
+
+    await axios.post(`${API_URL}/bulk-add-opening-stock`, {
+      mainStoreRef: openingForm.mainStoreRef,
+      items: openingRows.map((row) => ({
+        itemRef: row.itemRef,
+        openingQty: Number(row.openingQty),
+        rate: Number(row.rate || 0),
+        location: row.location || openingForm.location || "",
+        rackNumber: row.rackNumber || openingForm.rackNumber || "",
+        remarks: row.remarks || openingForm.remarks || "",
+      })),
+    });
+
+    toast.success("Bulk opening stock added");
+    setOpeningModal(false);
+    setOpeningForm(emptyOpeningStock);
+    setOpeningRows([]);
+    fetchStock();
+  } catch (error) {
+    toast.error(error?.response?.data?.message || "Failed to add opening stock");
+  } finally {
+    setSavingOpening(false);
+  }
+};
 
     // Excel UploadFunction
     const uploadMainStockExcel = async () => {
@@ -285,14 +302,14 @@ const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const totalPages = Math.max(1, Math.ceil(filteredStocks.length / itemsPerPage));
 
-const paginatedStocks = useMemo(() => {
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  return filteredStocks.slice(startIndex, startIndex + itemsPerPage);
-}, [filteredStocks, currentPage, itemsPerPage]);
+    const paginatedStocks = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredStocks.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredStocks, currentPage, itemsPerPage]);
 
-useEffect(() => {
-  setCurrentPage(1);
-}, [search, statusFilter, categoryFilter, itemsPerPage]);
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, statusFilter, categoryFilter, itemsPerPage]);
 
     const statusClass = (status) => {
         switch (status) {
@@ -309,11 +326,46 @@ useEffect(() => {
         }
     };
 
+    // Add manually Bulk Opening Stock
+    const addSelectedOpeningItems = (selectedItems) => {
+        const existingIds = new Set(openingRows.map((row) => row.itemRef));
+
+        const rows = selectedItems
+            .filter((item) => !existingIds.has(item._id))
+            .map((item) => ({
+                itemRef: item._id,
+                itemName: item.itemName,
+                itemCode: item.itemCode,
+                unit: item.unit || "Nos",
+                openingQty: "",
+                rate: "",
+                location: openingForm.location || "",
+                rackNumber: openingForm.rackNumber || "",
+                remarks: "",
+            }));
+
+        setOpeningRows((prev) => [...prev, ...rows]);
+    };
+
+    const updateOpeningRow = (index, field, value) => {
+        setOpeningRows((prev) => {
+            const updated = [...prev];
+            updated[index] = {
+                ...updated[index],
+                [field]: value,
+            };
+            return updated;
+        });
+    };
+
+    const removeOpeningRow = (index) => {
+        setOpeningRows((prev) => prev.filter((_, i) => i !== index));
+    };
+
     const StatCard = ({ title, value, icon: Icon, tone, onClick }) => (
-        <div onClick={onClick}   className={`rounded-2xl border border-slate-800 bg-slate-900/80 p-5 text-left shadow-lg shadow-slate-950/30 transition ${
-      onClick ? "cursor-pointer hover:-translate-y-1 hover:border-cyan-500/40 hover:bg-slate-900" : ""
-    }`}
-    >
+        <div onClick={onClick} className={`rounded-2xl border border-slate-800 bg-slate-900/80 p-5 text-left shadow-lg shadow-slate-950/30 transition ${onClick ? "cursor-pointer hover:-translate-y-1 hover:border-cyan-500/40 hover:bg-slate-900" : ""
+            }`}
+        >
             <div className="flex items-center justify-between" >
                 <div>
                     <p className="text-sm text-slate-400">{title}</p>
@@ -400,7 +452,7 @@ useEffect(() => {
                     />
                     <StatCard
                         title="Stock Value"
-                        value={`₹${stats.totalValue.toLocaleString("en-IN",{maximumFractionDigits:0})}`}
+                        value={`₹${stats.totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
                         icon={IndianRupee}
                         tone="text-cyan-300"
                     />
@@ -599,11 +651,11 @@ useEffect(() => {
                                                 </td>
 
                                                 <td className="px-5 py-4 text-slate-300">
-                                                    ₹{Number(stock.averageRate || 0).toLocaleString("en-IN",{maximumFractionDigits:0})}
+                                                    ₹{Number(stock.averageRate || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                                                 </td>
 
                                                 <td className="px-5 py-4 font-semibold text-cyan-300">
-                                                    ₹{Number(stock.stockValue || 0).toLocaleString("en-IN",{maximumFractionDigits:0})}
+                                                    ₹{Number(stock.stockValue || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                                                 </td>
 
                                                 <td className="px-5 py-4 text-slate-300">
@@ -650,50 +702,50 @@ useEffect(() => {
                             </tbody>
                         </table>
                         {filteredStocks.length > 0 && (
-  <div className="flex flex-col gap-3 border-t border-slate-800 px-5 py-4 md:flex-row md:items-center md:justify-between">
-    <div className="text-sm text-slate-400">
-      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-      {Math.min(currentPage * itemsPerPage, filteredStocks.length)} of{" "}
-      {filteredStocks.length} records
-    </div>
+                            <div className="flex flex-col gap-3 border-t border-slate-800 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                                <div className="text-sm text-slate-400">
+                                    Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                                    {Math.min(currentPage * itemsPerPage, filteredStocks.length)} of{" "}
+                                    {filteredStocks.length} records
+                                </div>
 
-    <div className="flex flex-wrap items-center gap-3">
-      <select
-        value={itemsPerPage}
-        onChange={(e) => {
-          setItemsPerPage(Number(e.target.value));
-          setCurrentPage(1);
-        }}
-        className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-      >
-        <option value={10}>10 / page</option>
-        <option value={20}>20 / page</option>
-        <option value={50}>50 / page</option>
-        <option value={100}>100 / page</option>
-      </select>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <select
+                                        value={itemsPerPage}
+                                        onChange={(e) => {
+                                            setItemsPerPage(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                        className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                                    >
+                                        <option value={10}>10 / page</option>
+                                        <option value={20}>20 / page</option>
+                                        <option value={50}>50 / page</option>
+                                        <option value={100}>100 / page</option>
+                                    </select>
 
-      <button
-        disabled={currentPage === 1}
-        onClick={() => setCurrentPage((p) => p - 1)}
-        className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 disabled:opacity-40"
-      >
-        Previous
-      </button>
+                                    <button
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage((p) => p - 1)}
+                                        className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 disabled:opacity-40"
+                                    >
+                                        Previous
+                                    </button>
 
-      <span className="text-sm text-slate-400">
-        Page <span className="text-cyan-400 font-semibold">{currentPage}</span> of {totalPages}
-      </span>
+                                    <span className="text-sm text-slate-400">
+                                        Page <span className="text-cyan-400 font-semibold">{currentPage}</span> of {totalPages}
+                                    </span>
 
-      <button
-        disabled={currentPage === totalPages}
-        onClick={() => setCurrentPage((p) => p + 1)}
-        className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 disabled:opacity-40"
-      >
-        Next
-      </button>
-    </div>
-  </div>
-)}
+                                    <button
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage((p) => p + 1)}
+                                        className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 disabled:opacity-40"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -703,6 +755,8 @@ useEffect(() => {
                     setForm={setOpeningForm}
                     stores={stores}
                     items={items}
+                    openingRows={openingRows}
+                    setOpeningRows={setOpeningRows}
                     onClose={() => setOpeningModal(false)}
                     onSave={saveOpeningStock}
                     saving={savingOpening}
@@ -725,141 +779,380 @@ useEffect(() => {
 
 
 function OpeningStockModal({
-    form,
-    setForm,
-    stores,
-    items,
-    onClose,
-    onSave,
-    saving,
+  form,
+  setForm,
+  stores,
+  items,
+  openingRows,
+  setOpeningRows,
+  onClose,
+  onSave,
+  saving,
 }) {
-    const update = (e) => {
-        const { name, value } = e.target;
-        setForm((prev) => ({ ...prev, [name]: value }));
-    };
+  const [itemPickerOpen, setItemPickerOpen] = useState(false);
+  const [itemSearch, setItemSearch] = useState("");
+  const [selectedItems, setSelectedItems] = useState([]);
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-            <div className="w-full max-w-4xl rounded-3xl border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
-                            Main Store Stock
-                        </p>
-                        <h2 className="text-xl font-bold text-white">Add Opening Stock</h2>
-                    </div>
+  const update = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
-                    <button
-                        onClick={onClose}
-                        className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
-                    >
-                        <X size={22} />
-                    </button>
-                </div>
+  const filteredItems = items.filter((item) => {
+    const text = `${item?.itemName} ${item.itemCode} ${item?.category} ${item?.brand}`
+      .toLowerCase();
 
-                <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
-                    <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-300">
-                            Main Store *
-                        </label>
-                        <select
-                            name="mainStoreRef"
-                            value={form.mainStoreRef}
-                            onChange={update}
-                            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
-                        >
-                            <option value="">Select Main Store</option>
-                            {stores.map((store) => (
-                                <option key={store._id} value={store._id}>
-                                    {store.storeName} {store.storeCode ? `- ${store.storeCode}` : ""}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+    return text.includes(itemSearch.toLowerCase());
+  });
 
-                    <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-300">
-                            Item *
-                        </label>
-                        <select
-                            name="itemRef"
-                            value={form.itemRef}
-                            onChange={update}
-                            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
-                        >
-                            <option value="">Select Item</option>
-                            {items.map((item) => (
-                                <option key={item._id} value={item._id}>
-                                    {item.itemName} - {item.itemCode}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+  const toggleItem = (item) => {
+    setSelectedItems((prev) => {
+      const exists = prev.some((x) => x._id === item._id);
 
-                    <Input
-                        label="Opening Qty *"
-                        name="openingQty"
-                        type="number"
-                        value={form.openingQty}
-                        onChange={update}
-                    />
+      if (exists) {
+        return prev.filter((x) => x._id !== item._id);
+      }
 
-                    <Input
-                        label="Rate"
-                        name="rate"
-                        type="number"
-                        value={form.rate}
-                        onChange={update}
-                    />
+      return [...prev, item];
+    });
+  };
 
-                    <Input
-                        label="Location"
-                        name="location"
-                        value={form.location}
-                        onChange={update}
-                    />
+  const addSelectedItems = () => {
+    if (selectedItems.length === 0) {
+      toast.error("Select at least one item");
+      return;
+    }
 
-                    <Input
-                        label="Rack Number"
-                        name="rackNumber"
-                        value={form.rackNumber}
-                        onChange={update}
-                    />
+    const existingIds = new Set(openingRows.map((row) => row.itemRef));
 
-                    <div className="md:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-slate-300">
-                            Remarks
-                        </label>
-                        <textarea
-                            name="remarks"
-                            value={form.remarks}
-                            onChange={update}
-                            rows={2}
-                            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
-                        />
-                    </div>
-                </div>
+    const newRows = selectedItems
+      .filter((item) => !existingIds.has(item._id))
+      .map((item) => ({
+        itemRef: item._id,
+        itemName: item.itemName,
+        itemCode: item.itemCode,
+        unit: item.unit || "Nos",
+        openingQty: "",
+        rate: "",
+        location: form.location || "",
+        rackNumber: form.rackNumber || "",
+        remarks: form.remarks || "",
+      }));
 
-                <div className="flex justify-end gap-3 border-t border-slate-800 px-6 py-4">
-                    <button
-                        onClick={onClose}
-                        className="rounded-xl border border-slate-700 px-5 py-3 text-slate-300 hover:bg-slate-800"
-                    >
-                        Cancel
-                    </button>
+    setOpeningRows((prev) => [...prev, ...newRows]);
+    setSelectedItems([]);
+    setItemPickerOpen(false);
+  };
 
-                    <button
-                        onClick={onSave}
-                        disabled={saving}
-                        className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
-                    >
-                        {saving && <Loader2 size={18} className="animate-spin" />}
-                        Add Stock
-                    </button>
-                </div>
-            </div>
+  const updateRow = (index, field, value) => {
+    setOpeningRows((prev) => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        [field]: value,
+      };
+      return updated;
+    });
+  };
+
+  const removeRow = (index) => {
+    setOpeningRows((prev) => prev.filter((_, i) => i !== index));
+  };
+//   console.log(items[0]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
+              Main Store Stock
+            </p>
+            <h2 className="text-xl font-bold text-white">
+              Bulk Opening Stock
+            </h2>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+          >
+            <X size={22} />
+          </button>
         </div>
-    );
+
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Main Store *
+              </label>
+              <select
+                name="mainStoreRef"
+                value={form.mainStoreRef}
+                onChange={update}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
+              >
+                <option value="">Select Main Store</option>
+                {stores.map((store) => (
+                  <option key={store._id} value={store._id}>
+                    {store.storeName} {store.storeCode ? `- ${store.storeCode}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={() => setItemPickerOpen(true)}
+                className="w-full rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+              >
+                + Select Multiple Items
+              </button>
+            </div>
+
+            <Input
+              label="Default Location"
+              name="location"
+              value={form.location}
+              onChange={update}
+            />
+
+            <Input
+              label="Default Rack Number"
+              name="rackNumber"
+              value={form.rackNumber}
+              onChange={update}
+            />
+
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Default Remarks
+              </label>
+              <textarea
+                name="remarks"
+                value={form.remarks}
+                onChange={update}
+                rows={2}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-800">
+            <div className="border-b border-slate-800 bg-slate-900 px-4 py-3">
+              <p className="font-semibold text-white">
+                Selected Items ({openingRows.length})
+              </p>
+            </div>
+
+            {openingRows.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">
+                No items selected
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1000px] text-sm">
+                  <thead className="bg-slate-950 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="p-3 text-left">Item</th>
+                      <th className="p-3 text-left">Code</th>
+                      <th className="p-3 text-left">Qty *</th>
+                      <th className="p-3 text-left">Rate</th>
+                      <th className="p-3 text-left">Location</th>
+                      <th className="p-3 text-left">Rack</th>
+                      <th className="p-3 text-left">Remarks</th>
+                      <th className="p-3 text-center">Action</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-800">
+                    {openingRows.map((row, index) => (
+                      <tr key={row.itemRef}>
+                        <td className="p-3 font-semibold text-white">
+                          {row.itemName}
+                          <div className="text-xs text-slate-500">{row.unit}</div>
+                        </td>
+
+                        <td className="p-3 text-cyan-300">{row.itemCode}</td>
+
+                        <td className="p-3">
+                          <input
+                            type="number"
+                            value={row.openingQty}
+                            onChange={(e) =>
+                              updateRow(index, "openingQty", e.target.value)
+                            }
+                            className="w-28 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-cyan-500"
+                          />
+                        </td>
+
+                        <td className="p-3">
+                          <input
+                            type="number"
+                            value={row.rate}
+                            onChange={(e) =>
+                              updateRow(index, "rate", e.target.value)
+                            }
+                            className="w-28 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-cyan-500"
+                          />
+                        </td>
+
+                        <td className="p-3">
+                          <input
+                            value={row.location}
+                            onChange={(e) =>
+                              updateRow(index, "location", e.target.value)
+                            }
+                            className="w-36 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-cyan-500"
+                          />
+                        </td>
+
+                        <td className="p-3">
+                          <input
+                            value={row.rackNumber}
+                            onChange={(e) =>
+                              updateRow(index, "rackNumber", e.target.value)
+                            }
+                            className="w-32 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-cyan-500"
+                          />
+                        </td>
+
+                        <td className="p-3">
+                          <input
+                            value={row.remarks}
+                            onChange={(e) =>
+                              updateRow(index, "remarks", e.target.value)
+                            }
+                            className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-cyan-500"
+                          />
+                        </td>
+
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => removeRow(index)}
+                            className="rounded-lg p-2 text-red-400 hover:bg-red-500/10"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-slate-800 px-6 py-4">
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-slate-700 px-5 py-3 text-slate-300 hover:bg-slate-800"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
+          >
+            {saving && <Loader2 size={18} className="animate-spin" />}
+            Save Bulk Opening Stock
+          </button>
+        </div>
+      </div>
+
+      {itemPickerOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
+          <div className="flex max-h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <h3 className="text-lg font-bold text-white">Select Items</h3>
+
+              <button
+                onClick={() => setItemPickerOpen(false)}
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="border-b border-slate-800 p-4">
+              <input
+                value={itemSearch}
+                onChange={(e) => setItemSearch(e.target.value)}
+                placeholder="Search item name, code, category..."
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-500"
+              />
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {(itemSearch?
+                 filteredItems:
+                 filteredItems.slice(0,20))
+                .map((item) => {
+                  const isSelected = selectedItems.some(
+                    (x) => x._id === item._id
+                  );
+
+                  return (
+                    <button
+                      key={item._id}
+                      onClick={() => toggleItem(item)}
+                      className={`rounded-2xl border p-4 text-left transition ${
+                        isSelected
+                          ? "border-cyan-400 bg-cyan-500/10 ring-2 ring-cyan-500/50"
+                          : "border-slate-800 bg-slate-900 hover:border-cyan-500/40"
+                      }`}
+                    >
+                      <div className="flex justify-between gap-3">
+                        <div>
+                          <h4 className="font-semibold text-white">
+                            {item?.itemName}
+                          </h4>
+                          <p className="mt-1 text-xs text-cyan-300">
+                            {item?.itemCode} · {item.unit || "Nos"}
+                          </p>
+                          <p className="mt-2 text-xs text-slate-500">
+                            {item?.category || "-"}
+                          </p>
+                           <p className="mt-2 text-xs  text-cyan-300">
+                           Avl: {item?.availableStock || "0"}
+                          </p>
+                        </div>
+
+                        {isSelected && (
+                          <span className="h-fit rounded-full bg-cyan-400 px-2 py-1 text-xs font-bold text-slate-950">
+                            Selected
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-800 px-6 py-4">
+              <p className="text-sm text-cyan-300">
+                {selectedItems.length} item(s) selected
+              </p>
+
+              <button
+                onClick={addSelectedItems}
+                className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+              >
+                Add Selected Items
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Input({ label, name, type = "text", value, onChange }) {

@@ -374,6 +374,102 @@ exports.getNegativeStock = async (req, res) => {
   }
 };
 
+/* ---------------- Add Bulk Opening Stock Manually STOCK ---------------- */
+
+exports.bulkAddOpeningStock = async (req, res) => {
+  try {
+    const { mainStoreRef, items } = req.body;
+
+    if (!mainStoreRef) {
+      return res.status(400).json({
+        success: false,
+        message: "Main store is required",
+      });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one item is required",
+      });
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    const skipped = [];
+
+    for (const row of items) {
+      if (!row.itemRef || Number(row.openingQty) <= 0) {
+        skipped.push(row);
+        continue;
+      }
+
+      const qty = Number(row.openingQty);
+      const rate = Number(row.rate || 0);
+
+      const existing = await MainStoreStock.findOne({
+        mainStoreRef,
+        itemRef: row.itemRef,
+      });
+
+      if (existing) {
+        existing.currentStock += qty;
+        existing.availableStock = existing.currentStock - existing.reservedStock;
+        existing.averageRate = rate || existing.averageRate;
+        existing.stockValue = existing.currentStock * existing.averageRate;
+        existing.location = row.location || existing.location;
+        existing.rackNumber = row.rackNumber || existing.rackNumber;
+
+        await existing.save();
+        updatedCount++;
+      } else {
+        await MainStoreStock.create({
+          mainStoreRef,
+          itemRef: row.itemRef,
+          currentStock: qty,
+          reservedStock: 0,
+          availableStock: qty,
+          averageRate: rate,
+          stockValue: qty * rate,
+          location: row.location || "",
+          rackNumber: row.rackNumber || "",
+        });
+
+        createdCount++;
+      }
+
+      await StockTransaction.create({
+        itemRef: row.itemRef,
+        mainStoreRef,
+        transactionType: "OPENING_STOCK",
+        direction: "IN",
+        quantity: qty,
+        rate,
+        amount: qty * rate,
+        referenceType: "OPENING_STOCK",
+        referenceId: row.itemRef,
+        referenceNumber: "BULK-OPENING-STOCK",
+        remarks: row.remarks || "Bulk opening stock entry",
+        createdBy: req.user?.id || req.user?._id || null,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Bulk opening stock processed",
+      createdCount,
+      updatedCount,
+      skippedCount: skipped.length,
+      skipped,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Bulk opening stock failed",
+      error: error.message,
+    });
+  }
+};
 /* ---------------- ADD BULK OPENING STOCK ---------------- */
 
 exports.bulkMainOpeningStockUpload = async (req, res) => {

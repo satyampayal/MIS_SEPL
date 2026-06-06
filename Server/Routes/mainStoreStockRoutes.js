@@ -12,12 +12,16 @@ const {
   updateMainStoreStock,
   deleteMainStoreStock,
   getLowStockDashboard,
+  bulkAddOpeningStock,
 } = require("../controllers/mainStoreStockController");
 const uploadExcel = require("../config/multerExcel");
 
 const {isAuthenticated}=require('../middleware/auth.midlleware')
 
 MainStoreStockRouter.post("/add-opening-stock", addOpeningStock);
+
+
+MainStoreStockRouter.post("/bulk-add-opening-stock", bulkAddOpeningStock);
 
 MainStoreStockRouter.get("/live-stock", getLiveStock);
 
