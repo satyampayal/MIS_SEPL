@@ -8,6 +8,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./layout/MainLayout";
 import LoginPage from "./User/LoginPage";
 import SuperAdminDashboard from "./pages/Dashboard/SuperAdminDashboard";
+import MaterialRequisitionPage from "./pages/MaterialRequisition/MaterialRequisitionPage";
+import MaterialPlanPage from "./pages/MaterialRequisition/MaterialPlanPage";
+import ProcurementPlanPage from "./pages/ProcurementPlan/ProcurementPlanPage";
 
 // Lazy loaded pages
 const MultiItemExcelEntryUI = lazy(() => import("./MultipleItemExcelEntryUI"));
@@ -96,8 +99,8 @@ const ProjectMaterialPlanningPage = lazy(() =>
 const StockTransactionPage = lazy(() =>
   import("./pages/StockTransaction/StockTransactionPage")
 );
-const LowStockDashboardPage=lazy(()=>
-import("./Store/LowStockDashboardPage")
+const LowStockDashboardPage = lazy(() =>
+  import("./Store/LowStockDashboardPage")
 );
 
 function PageSkeleton() {
@@ -536,6 +539,33 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* MRQ */}
+          <Route
+            path="/material-requisition"
+            element={
+              <ProtectedRoute>
+                <MaterialRequisitionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/material-requisition/:id/plan"
+            element={
+              <ProtectedRoute>
+                <MaterialPlanPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/procurement-plan"
+            element={
+              <ProtectedRoute>
+                <ProcurementPlanPage />
+              </ProtectedRoute>
+            }
+          />
+
         </Route>
       </Routes>
     </Suspense>

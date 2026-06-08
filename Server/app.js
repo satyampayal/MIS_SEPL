@@ -28,7 +28,8 @@ const MainStoreStockRouter = require("./Routes/mainStoreStockRoutes");
 const SiteStoreStockRouter = require("./Routes/siteStoreStockRoutes");
 const ItemIdentityRouter = require("./Routes/itemIdentityRoutes");
 const StockTransactionRouter = require("./Routes/stockTransactionRoutes");
-
+const MRQRouter=require('./Routes/materialRequisitionRoutes')
+const ProcuremnetPlanRouter=require('./Routes/procurementPlanRoutes')
 
 // alllow  other Port use server Resources
 app.use(
@@ -85,6 +86,10 @@ app.use("/main-store-stock", MainStoreStockRouter);
 app.use("/site-store-stock", SiteStoreStockRouter);
 // Stock Transation Routes
 app.use("/stock-transactions", StockTransactionRouter);
+// MRQ
+app.use("/material-requisition", MRQRouter);
+//Procuremnt Plan
+app.use("/procurement-plan", ProcuremnetPlanRouter);
 // All ANalytics
 app.use("/analytics", analyticalRouter);
 app.use("/head-store", headStoreItemRoutes);

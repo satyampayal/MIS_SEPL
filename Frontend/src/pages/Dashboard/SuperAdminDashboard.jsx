@@ -32,67 +32,67 @@ export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   const { dashboardData, loading, fetchDashboardAnalytics } = useDashboard();
   const {
-  monthlyTrend = [],
-  deliveryStatus = [],
-  vendorAnalysis = [],
-} = dashboardData || {};
+    monthlyTrend = [],
+    deliveryStatus = [],
+    vendorAnalysis = [],
+  } = dashboardData || {};
 
-const COLORS = ["#06B6D4", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981"];
-const formatAmount = (value) => {
-  // if (!value) return "₹0";
-  // return `₹${Number(value).toLocaleString("en-IN"),{
-  //   maximumFractionDigits:0,
-  // }}`;
+  const COLORS = ["#06B6D4", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981"];
+  const formatAmount = (value) => {
+    // if (!value) return "₹0";
+    // return `₹${Number(value).toLocaleString("en-IN"),{
+    //   maximumFractionDigits:0,
+    // }}`;
 
-   return  '₹'+Number(value || 0).toLocaleString("en-IN", {
-    maximumFractionDigits: 0,
-  });
-};
+    return '₹' + Number(value || 0).toLocaleString("en-IN", {
+      maximumFractionDigits: 0,
+    });
+  };
 
-const taxSummary = dashboardData?.taxSummary || {};
+  const taxSummary = dashboardData?.taxSummary || {};
 
-useEffect(() => {
-  fetchDashboardAnalytics();
-}, []);
+  useEffect(() => {
+    fetchDashboardAnalytics();
+  }, []);
 
- const kpis = [
-  {
-    title: "Tax Invoice Value",
-    value: formatAmount(taxSummary.totalAmount),
-    icon: IndianRupee,
-    glow: "from-cyan-500 to-blue-600",
-  },
-  {
-    title: "Total Invoices",
-    value: taxSummary.totalInvoices || 0,
-    icon: Receipt,
-    glow: "from-violet-500 to-fuchsia-600",
-  },
-  {
-    title: "Pending Deliveries",
-    value: taxSummary.pendingDeliveries || 0,
-    icon: Truck,
-    glow: "from-orange-500 to-red-600",
-  },
-  {
-    title: "Difference Alerts",
-    value: taxSummary.differenceCases || 0,
-    icon: AlertTriangle,
-    glow: "from-rose-500 to-pink-600",
-  },
-  {
-    title: "This Month Billing",
-    value: formatAmount(taxSummary.monthlyBilling),
-    icon: IndianRupee,
-    glow: "from-emerald-500 to-teal-600",
-  },
-  {
-    title: "Challan Completion",
-    value: `${taxSummary.challanPercentage || 0}%`,
-    icon: Warehouse,
-    glow: "from-sky-500 to-indigo-600",
-  },
-];
+  const kpis = [
+    {
+      title: "Tax Invoice Value",
+      value: formatAmount(taxSummary.totalAmount),
+      icon: IndianRupee,
+      glow: "from-cyan-500 to-blue-600",
+    },
+    {
+      title: "Total Invoices",
+      value: taxSummary.totalInvoices || 0,
+      icon: Receipt,
+      glow: "from-violet-500 to-fuchsia-600",
+    },
+    {
+      title: "Pending Deliveries",
+      value: taxSummary.pendingDeliveries || 0,
+      icon: Truck,
+      glow: "from-orange-500 to-red-600",
+    },
+    {
+      title: "Difference Alerts",
+      value: taxSummary.differenceCases || 0,
+      icon: AlertTriangle,
+      glow: "from-rose-500 to-pink-600",
+    },
+    {
+      title: "This Month Billing",
+      value: formatAmount(taxSummary.monthlyBilling),
+      icon: IndianRupee,
+      glow: "from-emerald-500 to-teal-600",
+    },
+    {
+      title: "Challan Completion",
+      value: `${taxSummary.challanPercentage || 0}%`,
+      icon: Warehouse,
+      glow: "from-sky-500 to-indigo-600",
+    },
+  ];
   const quickActions = [
     { title: "Add Tax Invoice", path: "/add-tax-invoice" },
     { title: "Tax Invoice Analytics", path: "/analytics/tax-invoice" },
@@ -106,7 +106,7 @@ useEffect(() => {
     <div className="space-y-6">
       {/* Hero */}
       <section className="rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl p-7 shadow-2xl">
- 
+
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
             <p className="text-sm text-cyan-300 font-semibold">
@@ -121,12 +121,12 @@ useEffect(() => {
               One screen for invoices, material movement, projects, stores,
               alerts and daily operations.
             </p>
-                 <button
-  onClick={() => fetchDashboardAnalytics(true)}
-  className="rounded-2xl bg-white/10 border border-white/10 px-5 py-3 font-semibold hover:bg-white/15 transition"
->
-  {loading ? "Refreshing..." : "Refresh Data"}
-</button>
+            <button
+              onClick={() => fetchDashboardAnalytics(true)}
+              className="rounded-2xl bg-white/10 border border-white/10 px-5 py-3 font-semibold hover:bg-white/15 transition"
+            >
+              {loading ? "Refreshing..." : "Refresh Data"}
+            </button>
           </div>
 
           <button
@@ -136,7 +136,7 @@ useEffect(() => {
             <Plus size={19} />
             Add Invoice
           </button>
-          
+
         </div>
       </section>
 
@@ -169,127 +169,127 @@ useEffect(() => {
         })}
       </section>
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-  {/* Monthly Trend */}
-  <div className="xl:col-span-2 rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl">
-    <h2 className="text-xl font-bold text-white mb-1">
-      Monthly Invoice Trend
-    </h2>
-    <p className="text-sm text-slate-400 mb-6">
-      Billing movement month-wise
-    </p>
+        {/* Monthly Trend */}
+        <div className="xl:col-span-2 rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl">
+          <h2 className="text-xl font-bold text-white mb-1">
+            Monthly Invoice Trend
+          </h2>
+          <p className="text-sm text-slate-400 mb-6">
+            Billing movement month-wise
+          </p>
 
-    <div className="h-80">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={monthlyTrend}>
-          <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-          <XAxis dataKey="month" stroke="#CBD5E1"   />
-          <YAxis stroke="#CBD5E1" fontSize={14} />
-          <Tooltip
-            formatter={(value) => formatAmount(value)}
-            contentStyle={{
-              backgroundColor: "#0F172A",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: "14px",
-              color: "#fff",
-            }}
-            labelStyle={{ color: "#E2E8F0", fontWeight: "bold" }}
-            itemStyle={{ color: "#67E8F9" }}
-          />
-          <Line
-            type="monotone"
-            dataKey="totalAmount"
-            stroke="#06B6D4"
-            strokeWidth={4}
-            dot={{ r: 5, fill: "#22D3EE", strokeWidth: 2, stroke: "#fff" }}
-            activeDot={{ r: 8, fill: "#67E8F9" }}
-            isAnimationActive
-            animationDuration={1300}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={monthlyTrend}>
+                <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                <XAxis dataKey="month" stroke="#CBD5E1" />
+                <YAxis stroke="#CBD5E1" fontSize={14} />
+                <Tooltip
+                  formatter={(value) => formatAmount(value)}
+                  contentStyle={{
+                    backgroundColor: "#0F172A",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "14px",
+                    color: "#fff",
+                  }}
+                  labelStyle={{ color: "#E2E8F0", fontWeight: "bold" }}
+                  itemStyle={{ color: "#67E8F9" }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="totalAmount"
+                  stroke="#06B6D4"
+                  strokeWidth={4}
+                  dot={{ r: 5, fill: "#22D3EE", strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 8, fill: "#67E8F9" }}
+                  isAnimationActive
+                  animationDuration={1300}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-  {/* Delivery Status */}
-  <div className="rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl">
-    <h2 className="text-xl font-bold text-white mb-1">
-      Delivery Status
-    </h2>
-    <p className="text-sm text-slate-400 mb-6">
-      Delivered / pending / partial
-    </p>
+        {/* Delivery Status */}
+        <div className="rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl">
+          <h2 className="text-xl font-bold text-white mb-1">
+            Delivery Status
+          </h2>
+          <p className="text-sm text-slate-400 mb-6">
+            Delivered / pending / partial
+          </p>
 
-    <div className="h-80">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={deliveryStatus}
-            dataKey="count"
-            nameKey="status"
-            outerRadius={105}
-            label
-          >
-            {deliveryStatus.map((_, index) => (
-              <Cell key={index} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#0F172A",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: "14px",
-              color: "#fff",
-            }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
-</section>
-{/* Vendor Status */}
-<section className="rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl">
-  <h2 className="text-xl font-bold text-white mb-1">Top Vendors</h2>
-  <p className="text-sm text-slate-400 mb-6">
-    Highest invoice value vendors
-  </p>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={deliveryStatus}
+                  dataKey="count"
+                  nameKey="status"
+                  outerRadius={105}
+                  label
+                >
+                  {deliveryStatus.map((_, index) => (
+                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#0F172A",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "14px",
+                    color: "#fff",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </section>
+      {/* Vendor Status */}
+      <section className="rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl">
+        <h2 className="text-xl font-bold text-white mb-1">Top Vendors</h2>
+        <p className="text-sm text-slate-400 mb-6">
+          Highest invoice value vendors
+        </p>
 
-  <div className="h-80">
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={vendorAnalysis}>
-        <defs>
-          <linearGradient id="vendorGradientDash" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8B5CF6" />
-            <stop offset="100%" stopColor="#06B6D4" />
-          </linearGradient>
-        </defs>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={vendorAnalysis}>
+              <defs>
+                <linearGradient id="vendorGradientDash" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8B5CF6" />
+                  <stop offset="100%" stopColor="#06B6D4" />
+                </linearGradient>
+              </defs>
 
-        <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-        <XAxis dataKey="vendorName" stroke="#CBD5E1" fontSize={14} />
-        <YAxis stroke="#CBD5E1" fontSize={14} />
-        <Tooltip
-          formatter={(value) => formatAmount(value)}
-          cursor={{ fill: "rgba(255,255,255,0.08)" }}
-          contentStyle={{
-            backgroundColor: "#0F172A",
-            border: "1px solid rgba(255,255,255,0.15)",
-            borderRadius: "14px",
-            color: "#fff",
-          }}
-          labelStyle={{ color: "#E2E8F0", fontWeight: "bold" }}
-          itemStyle={{ color: "#67E8F9" }}
-        />
+              <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+              <XAxis dataKey="vendorName" stroke="#CBD5E1" fontSize={14} />
+              <YAxis stroke="#CBD5E1" fontSize={14} />
+              <Tooltip
+                formatter={(value) => formatAmount(value)}
+                cursor={{ fill: "rgba(255,255,255,0.08)" }}
+                contentStyle={{
+                  backgroundColor: "#0F172A",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "14px",
+                  color: "#fff",
+                }}
+                labelStyle={{ color: "#E2E8F0", fontWeight: "bold" }}
+                itemStyle={{ color: "#67E8F9" }}
+              />
 
-        <Bar
-          dataKey="totalAmount"
-          radius={[10, 10, 0, 0]}
-          fill="url(#vendorGradientDash)"
-          isAnimationActive
-          animationDuration={1300}
-        />
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-</section>
+              <Bar
+                dataKey="totalAmount"
+                radius={[10, 10, 0, 0]}
+                fill="url(#vendorGradientDash)"
+                isAnimationActive
+                animationDuration={1300}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
 
       {/* Main Grid */}
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">

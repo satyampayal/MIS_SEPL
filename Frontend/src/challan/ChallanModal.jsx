@@ -143,6 +143,7 @@ export default function ChallanModal({
 
     if (challan) {
       // const selectedProject = projects.find(challan?.projectRef );
+      // console.log(challan)
 
       const selectedProject = projects.find((p) => p._id === challan.projectRef);
 
@@ -516,6 +517,10 @@ export default function ChallanModal({
       documentNumber: form.documentNumber,
       documentDate: form.documentDate,
       documentType: form.documentType,
+
+       materialRequisitionRef: challan?.materialRequisitionRef || null,
+    procurementPlanRef: challan?.procurementPlanRef || null,
+    procurementItemId: challan?.procurementItemId || null,
 
       fromMainStoreRef: form.fromMainStoreRef || null,
       toMainStoreRef: form.toMainStoreRef || null,

@@ -301,12 +301,12 @@ const downloadPDF = async () => {
 
                      
                         <td className="border border-black p-1 text-right ">
-                        <b>  {rateShow ? Number(item.rate).toFixed(0):''}</b>
+                        {/* <b>  {rateShow ? Number(item.rate).toFixed(0):''}</b> */}
                         </td>
                       
 
                        <td className="border border-black p-1 text-right">
-                         <b>  {rateShow ? Number(item.amount).toFixed(0):''}</b>
+                         {/* <b>  {rateShow ? Number(item.amount).toFixed(0):''}</b> */}
                       </td>
                          <td className="border border-black p-1 text-center">
                         {item.isReturnable
@@ -344,7 +344,7 @@ const downloadPDF = async () => {
                       Total
                     </td>
                     <td className="border border-black p-2 text-right font-bold">
-                       { rateShow ?Number(totalAmount).toFixed(2):''}
+                       {/* { rateShow ?Number(totalAmount).toFixed(2):''} */}
                     </td>
                     <td className="border border-black p-1"></td>
                     <td className="border border-black p-1"></td>
@@ -357,7 +357,7 @@ const downloadPDF = async () => {
               <div className="space-y-2 border-b border-black p-3 text-[14px]">
                 <p>
                   <b>Challan Total in Words: </b>
-                   { rateShow ? amountInWords(totalAmount):''}
+                   {/* { rateShow ? amountInWords(totalAmount):''} */}
                 </p>
 
                 <p className="font-semibold">

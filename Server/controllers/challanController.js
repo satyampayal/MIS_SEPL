@@ -6,6 +6,9 @@ const SiteStoreStock = require("../model/SiteStoreStock");
 const StockBatch = require("../model/stockBatch");
 const ProjectBoqItem = require("../model/projectBoqItem");
 const BOQMaster = require("../model/boqMaster");
+const ProcurementPlan = require("../model/ProcurementPlan");
+
+const MaterialRequisition = require('../model/MaterialRequisition')
 
 const createStockTransaction = require("../utils/createStockTransaction");
 const cleanNumber = (value = 0) => {
@@ -69,20 +72,20 @@ const releaseReservedStock = async ({ stock, qty }) => {
 /* CREATE CHALLAN */
 exports.createChallan = async (req, res) => {
 
-const canCreateChallan = [
-  "Super Admin",
-  "Admin",
-  "Project Manager",
-  "Store Manager",
-  "MIS User"
-].includes(req.user.role);
+  const canCreateChallan = [
+    "Super Admin",
+    "Admin",
+    "Project Manager",
+    "Store Manager",
+    "MIS User"
+  ].includes(req.user.role);
 
-if (!canCreateChallan) {
-  return res.status(403).json({
-    success: false,
-    message: "Access Denied",
-  });
-}
+  if (!canCreateChallan) {
+    return res.status(403).json({
+      success: false,
+      message: "Access Denied",
+    });
+  }
   const session = await mongoose.startSession();
 
   try {
@@ -102,6 +105,9 @@ if (!canCreateChallan) {
       projectName,
       items,
       remarks,
+      materialRequisitionRef,
+      procurementPlanRef,
+      procurementItemId,
     } = req.body;
 
     if (!documentNumber || !documentType) {
@@ -235,6 +241,10 @@ if (!canCreateChallan) {
           documentDate: documentDate || new Date(),
           documentType,
 
+          materialRequisitionRef: materialRequisitionRef || null,
+      procurementPlanRef: procurementPlanRef || null,
+      procurementItemId: procurementItemId || null,
+
           fromMainStoreRef: fromMainStoreRef || null,
           toMainStoreRef: toMainStoreRef || null,
           fromSiteRef: fromSiteRef || null,
@@ -264,6 +274,84 @@ if (!canCreateChallan) {
       { session }
     );
 
+
+    //MRQ CHALLAN Start
+
+    // if (materialRequisitionRef) {
+    //   const mrq = await MaterialRequisition.findById(
+    //     materialRequisitionRef
+    //   ).session(session);;
+
+    //   if (mrq) {
+    //     for (const challanItem of items) {
+
+    //       const mrqItem = mrq.items.find(
+    //         (x) =>
+    //           x.itemRef.toString() ===
+    //           challanItem.itemRef.toString()
+    //       );
+
+    //       if (mrqItem) {
+    //         mrqItem.issuedQty += Number(
+    //           challanItem.quantity || 0
+    //         );
+    //       }
+    //     }
+
+    //     const allIssued = mrq.items.every(
+    //       (item) =>
+    //         Number(item.issuedQty || 0) >=
+    //         Number(
+    //           item.approvedQty ||
+    //           item.requiredQty ||
+    //           0
+    //         )
+    //     );
+
+    //     const anyIssued = mrq.items.some(
+    //       (item) => Number(item.issuedQty || 0) > 0
+    //     );
+
+    //     mrq.status = allIssued
+    //       ? "ISSUED"
+    //       : anyIssued
+    //         ? "PARTIAL_ISSUED"
+    //         : mrq.status;
+
+    //     await mrq.save({ session });
+    //   }
+    // }
+
+    //MRQ CHALLAN END
+
+    //PP Challan Start
+    if (procurementPlanRef && procurementItemId) {
+      const plan = await ProcurementPlan.findById(procurementPlanRef).session(session);;
+
+      if (plan) {
+        const planItem = plan.items.id(procurementItemId);
+
+        if (planItem) {
+          planItem.executionStatus = "CHALLAN_CREATED";
+          planItem.challanRef = challan._id;
+          planItem.challanNumber = challan.documentNumber;
+          planItem.challanCreatedAt = new Date();
+        }
+
+        const allDone = plan.items.every(
+          (item) => item.executionStatus === "CHALLAN_CREATED" || item.executionStatus === "COMPLETED"
+        );
+
+        const anyDone = plan.items.some(
+          (item) => item.executionStatus === "CHALLAN_CREATED" || item.executionStatus === "COMPLETED"
+        );
+
+        plan.status = allDone ? "COMPLETED" : anyDone ? "IN_PROGRESS" : "PENDING";
+
+        await plan.save({ session });
+      }
+    }
+    // PP Challan End
     for (const item of challan.items) {
       const qty = cleanNumber(item.quantity);
 
@@ -287,6 +375,8 @@ if (!canCreateChallan) {
       await createStockTransaction({
         itemRef: item.itemRef,
 
+        procurementPlanRef,
+        procurementItemId,
         mainStoreRef:
           challan.documentType === "DC" ? challan.fromMainStoreRef : null,
 
@@ -339,22 +429,22 @@ if (!canCreateChallan) {
 /* APPROVE CHALLAN */
 exports.approveChallan = async (req, res) => {
 
-const canApproveChallan = [
-  "Super Admin",
-  "Admin",
-  "Project Manager",
-  "Store Manager",
-  "MIS User"
-].includes(req.user.role);
+  const canApproveChallan = [
+    "Super Admin",
+    "Admin",
+    "Project Manager",
+    "Store Manager",
+    "MIS User"
+  ].includes(req.user.role);
 
-if (!canApproveChallan) {
-  return res.status(403).json({
-    success: false,
-    message: "Access Denied",
-  });
-}
+  if (!canApproveChallan) {
+    return res.status(403).json({
+      success: false,
+      message: "Access Denied",
+    });
+  }
 
-  
+
   const session = await mongoose.startSession();
 
   try {
@@ -662,6 +752,80 @@ if (!canApproveChallan) {
 
     await challan.save({ session });
 
+    
+    // MRQ final issued update after challan approval
+if (challan.materialRequisitionRef) {
+  const mrq = await MaterialRequisition.findById(
+    challan.materialRequisitionRef
+  ).session(session);
+
+  if (mrq) {
+    for (const challanItem of challan.items) {
+      const mrqItem = mrq.items.find(
+        (x) => x.itemRef.toString() === challanItem.itemRef.toString()
+      );
+
+      if (mrqItem) {
+        mrqItem.issuedQty =
+          Number(mrqItem.issuedQty || 0) + Number(challanItem.quantity || 0);
+      }
+    }
+
+    const allIssued = mrq.items.every(
+      (item) =>
+        Number(item.issuedQty || 0) >=
+        Number(item.approvedQty || item.requiredQty || 0)
+    );
+
+    const anyIssued = mrq.items.some(
+      (item) => Number(item.issuedQty || 0) > 0
+    );
+
+    mrq.status = allIssued
+      ? "ISSUED"
+      : anyIssued
+      ? "PARTIAL_ISSUED"
+      : mrq.status;
+
+    await mrq.save({ session });
+  }
+}
+
+// PP final completion update after challan approval
+if (challan.procurementPlanRef && challan.procurementItemId) {
+  const plan = await ProcurementPlan.findById(
+    challan.procurementPlanRef
+  ).session(session);
+
+  if (plan) {
+    const planItem = plan.items.id(challan.procurementItemId);
+
+    if (planItem) {
+      planItem.executionStatus = "COMPLETED";
+    }
+
+    const allCompleted = plan.items.every(
+      (item) => item.executionStatus === "COMPLETED"
+    );
+
+    const anyCompleted = plan.items.some(
+      (item) =>
+        item.executionStatus === "COMPLETED" ||
+        item.executionStatus === "CHALLAN_CREATED"
+    );
+
+    plan.status = allCompleted
+      ? "COMPLETED"
+      : anyCompleted
+      ? "IN_PROGRESS"
+      : "PENDING";
+
+    await plan.save({ session });
+  }
+}
+
+//MRQ & PP Update end 
+
     await session.commitTransaction();
 
     return res.status(200).json({
@@ -686,19 +850,19 @@ exports.rejectChallan = async (req, res) => {
 
 
   const canRejectChallan = [
-  "Super Admin",
-  "Admin",
-  "Project Manager",
-  "Store Manager",
-  "MIS User"
-].includes(req.user.role);
+    "Super Admin",
+    "Admin",
+    "Project Manager",
+    "Store Manager",
+    "MIS User"
+  ].includes(req.user.role);
 
-if (!canRejectChallan) {
-  return res.status(403).json({
-    success: false,
-    message: "Access Denied",
-  });
-}
+  if (!canRejectChallan) {
+    return res.status(403).json({
+      success: false,
+      message: "Access Denied",
+    });
+  }
   const session = await mongoose.startSession();
 
   try {
@@ -797,20 +961,20 @@ if (!canRejectChallan) {
 exports.getAllChallans = async (req, res) => {
   try {
 
-      const canGetsChallan = [
-  "Super Admin",
-  "Admin",
-  "Project Manager",
-  "Store Manager",
-  "MIS User"
-].includes(req.user.role);
+    const canGetsChallan = [
+      "Super Admin",
+      "Admin",
+      "Project Manager",
+      "Store Manager",
+      "MIS User"
+    ].includes(req.user.role);
 
-if (!canGetsChallan) {
-  return res.status(403).json({
-    success: false,
-    message: "Access Denied",
-  });
-}
+    if (!canGetsChallan) {
+      return res.status(403).json({
+        success: false,
+        message: "Access Denied",
+      });
+    }
     const { documentType, approvalStatus, stockStatus, siteRef } = req.query;
 
     const query = {};
@@ -829,7 +993,7 @@ if (!canGetsChallan) {
       .populate("fromSiteRef", "projectName name")
       .populate("toSiteRef", "projectName name")
       .populate("createdBy", "name email")
-      .populate("projectRef","name allotedCompany consigneeAddress consigneeName gstNumber placeOfDelivery")
+      .populate("projectRef", "name allotedCompany consigneeAddress consigneeName gstNumber placeOfDelivery")
       .sort({ createdAt: -1 });
 
     return res.status(200).json({

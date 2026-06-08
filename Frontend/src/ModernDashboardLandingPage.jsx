@@ -141,10 +141,17 @@ export default function ModernDashboardLandingPage() {
       icon: ClipboardList,
       path: "/material-movement/history",
       actionType: "materialMovementHistory",
-      roles: ["Store Manager", "MIS User"],
-
-      
+      roles: ["Store Manager", "MIS User"],   
+    },
+      {
+       title: "MRQ",
+      value: null,
+      icon: ClipboardList,
+      path: "/material-requisition",
+      actionType: "materialMovementHistory",
+      // roles: ["Store Manager", "MIS User"],   
     }
+    
   ];
 
   const quickActions = [

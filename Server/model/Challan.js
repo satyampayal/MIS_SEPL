@@ -272,6 +272,20 @@ const challanSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    materialRequisitionRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MaterialRequisition",
+      default: null,
+    },
+    procurementPlanRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ProcurementPlan",
+      default: null,
+    },
+    procurementItemId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
 
     siteApprovedAt: {
       type: Date,

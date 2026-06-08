@@ -167,7 +167,15 @@ export default function MainLayout() {
       icon: PackageSearch,
       path: "/project-material-planning",
       roles: ["Super Admin", "Admin", "Manager", "MIS"],
-    },
+    },{
+       
+             title: "MRQ",
+            icon: ClipboardList,
+            path: "/material-requisition",
+            // actionType: "materialMovementHistory",
+          // roles: ["Store Manager", "MIS User"],   
+          
+    }
   ];
 
   const navBar = [
