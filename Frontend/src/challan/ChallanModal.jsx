@@ -93,12 +93,12 @@ export default function ChallanModal({
   const isReChallan = mode === "rechallan";
 
   const title = isView
-  ? "View Challan"
-  : isEdit
-  ? "Edit Challan"
-  : isReChallan
-  ? "Re-Challan / Copy Challan"
-  : "Create Challan";
+    ? "View Challan"
+    : isEdit
+      ? "Edit Challan"
+      : isReChallan
+        ? "Re-Challan / Copy Challan"
+        : "Create Challan";
 
   const [form, setForm] = useState(emptyForm);
   const [items, setItems] = useState([{ ...emptyItem }]);
@@ -518,9 +518,10 @@ export default function ChallanModal({
       documentDate: form.documentDate,
       documentType: form.documentType,
 
-       materialRequisitionRef: challan?.materialRequisitionRef || null,
-    procurementPlanRef: challan?.procurementPlanRef || null,
-    procurementItemId: challan?.procurementItemId || null,
+      materialRequisitionRef: challan?.materialRequisitionRef || null,
+      procurementPlanRef: challan?.procurementPlanRef || null,
+      procurementItemId: challan?.procurementItemId || null,
+      procurementItemIds: challan?.procurementItemIds || [],
 
       fromMainStoreRef: form.fromMainStoreRef || null,
       toMainStoreRef: form.toMainStoreRef || null,

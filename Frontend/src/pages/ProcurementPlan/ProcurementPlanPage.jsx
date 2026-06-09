@@ -46,7 +46,7 @@ export default function ProcurementPlanPage() {
     useEffect(() => {
         fetchPlans();
     }, []);
-    console.log(plans  )
+    console.log(plans)
 
     const filteredPlans = useMemo(() => {
         const keyword = search.toLowerCase();
@@ -107,13 +107,20 @@ export default function ProcurementPlanPage() {
         }
     };
 
-    const createDocumentFromProcurement = (plan, item) => {
+    const createDocumentFromProcurement = (plan, mode) => {
         const projectId = plan.projectRef?._id || plan.projectRef;
-        const documentType = item.procurementMode;
+
+        const modeItems = getPendingItemsByMode(plan, mode);
+
+        if (modeItems.length === 0) {
+            toast.error(`No pending ${mode} item found`);
+            return;
+        }
 
         const draft = {
             procurementPlanRef: plan._id,
-            procurementItemId: item._id,
+            procurementItemIds: modeItems.map((item) => item._id),
+
             materialRequisitionRef:
                 plan.materialRequisitionRef?._id || plan.materialRequisitionRef,
 
@@ -121,22 +128,20 @@ export default function ProcurementPlanPage() {
             toSiteRef: projectId,
             projectName: plan.projectRef?.projectName || plan.projectRef?.name || "",
 
-            documentType: item.procurementMode,
+            documentType: mode,
             vendorName: "",
 
-            items: [
-                {
-                    itemRef: item.itemRef?._id || item.itemRef,
-                    itemName: item.itemName,
-                    itemCode: item.itemCode,
-                    unit: item.unit,
-                    quantity: Number(item.shortageQty || 0),
-                    rate: Number(item.lastPurchaseRate || 0),
-                    amount:
-                        Number(item.shortageQty || 0) *
-                        Number(item.lastPurchaseRate || 0),
-                },
-            ],
+            items: modeItems.map((item) => ({
+                itemRef: item.itemRef?._id || item.itemRef,
+                itemName: item.itemName,
+                itemCode: item.itemCode,
+                unit: item.unit,
+                quantity: Number(item.shortageQty || 0),
+                rate: Number(item.lastPurchaseRate || 0),
+                amount:
+                    Number(item.shortageQty || 0) *
+                    Number(item.lastPurchaseRate || 0),
+            })),
         };
 
         setChallanDraft(draft);
@@ -159,6 +164,13 @@ export default function ProcurementPlanPage() {
         return "border-amber-500/30 bg-amber-500/10 text-amber-300";
     };
 
+    const getPendingItemsByMode = (plan, mode) => {
+        return (plan.items || []).filter(
+            (item) =>
+                item.procurementMode === mode &&
+                !["CHALLAN_CREATED", "COMPLETED"].includes(item.executionStatus)
+        );
+    };
     return (
         <div className="min-h-screen bg-slate-950 p-4 text-slate-100 md:p-6">
             <div className="mx-auto max-w-7xl space-y-6">
@@ -243,20 +255,45 @@ export default function ProcurementPlanPage() {
                                 key={plan._id}
                                 className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80"
                             >
-                                <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                                    <div>
-                                        <h2 className="text-lg font-bold text-white">
-                                            {plan.procurementNumber}
-                                        </h2>
-                                        <p className="text-sm text-slate-400">
-                                            MRQ: {plan.materialRequisitionRef?.requisitionNumber || "-"} ·{" "}
-                                            Project: {plan.projectRef?.projectName || plan.projectRef?.name || "-"}
-                                        </p>
+                                <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4">
+
+                                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-white">
+                                                {plan.procurementNumber}
+                                            </h2>
+
+                                            <p className="text-sm text-slate-400">
+                                                MRQ: {plan.materialRequisitionRef?.requisitionNumber || "-"} ·
+                                                Project: {plan.projectRef?.projectName || plan.projectRef?.name || "-"}
+                                            </p>
+                                        </div>
+
+                                        <span className="w-fit rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
+                                            {plan.status}
+                                        </span>
                                     </div>
 
-                                    <span className="w-fit rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
-                                        {plan.status}
-                                    </span>
+                                    {/* Mode Wise Actions */}
+
+                                    <div className="flex flex-wrap gap-2">
+                                        {["MRN", "DDC", "LPN", "ISTN"].map((mode) => {
+                                            const count = getPendingItemsByMode(plan, mode).length;
+
+                                            if (count === 0) return null;
+
+                                            return (
+                                                <button
+                                                    key={mode}
+                                                    onClick={() => createDocumentFromProcurement(plan, mode)}
+                                                    className="rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20"
+                                                >
+                                                    Create {mode} ({count})
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
                                 </div>
 
                                 <div className="overflow-x-auto">
@@ -332,12 +369,16 @@ export default function ProcurementPlanPage() {
                                                                 Already Created
                                                             </button>
                                                         ) : (
-                                                            <button
-                                                                onClick={() => createDocumentFromProcurement(plan, item)}
-                                                                className="rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20"
-                                                            >
-                                                                Create {item.procurementMode}
-                                                            </button>
+                                                            // <button
+                                                            //     onClick={() => createDocumentFromProcurement(plan, item)}
+                                                            //     className="rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20"
+                                                            // >
+                                                            //     Create {item.procurementMode}
+                                                            // </button>
+
+
+                                                            <>
+                                                            </>
                                                         )}
                                                     </td>
                                                 </tr>
@@ -350,15 +391,7 @@ export default function ProcurementPlanPage() {
                     </div>
                 )}
             </div>
-            {/* {challanModalOpen && (
-                <ChallanModal
-                    isOpen={challanModalOpen}
-                    onClose={() => setChallanModalOpen(false)}
-                    mode="rechallan"
-                    challan={challanDraft}
-                    refreshChallans={fetchPlans}
-                />
-            )} */}
+
 
             {challanModalOpen && (
                 <ChallanModal

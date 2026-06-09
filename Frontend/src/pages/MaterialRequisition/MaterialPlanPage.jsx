@@ -81,47 +81,48 @@ export default function MaterialPlanPage() {
     toast.success("DC Plan ready. Next connect this with Challan Modal.");
   };
 
-const createPurchasePlan = async () => {
-  const purchaseItems = [...groups.partial, ...groups.purchase].map((item) => ({
-    itemRef: item.itemRef?._id || item.itemRef,
-    itemName: item.itemName,
-    itemCode: item.itemCode,
-    unit: item.unit,
-    requiredQty: Number(item.requiredQty || 0),
-    availableQty: Number(item.availableQty || 0),
-    shortageQty:
-      Number(item.shortageQty || 0) ||
-      Math.max(
-        Number(item.requiredQty || 0) - Number(item.availableQty || 0),
-        0
-      ),
-    procurementMode: "MRN",
-    remarks: `Created from ${mrq.requisitionNumber}`,
-  }));
+  const createPurchasePlan = async () => {
+    const purchaseItems = [...groups.partial, ...groups.purchase].map((item) => ({
+      itemRef: item.itemRef?._id || item.itemRef,
+      itemName: item.itemName,
+      itemCode: item.itemCode,
+      unit: item.unit,
+      requiredQty: Number(item.requiredQty || 0),
+      availableQty: Number(item.availableQty || 0),
+      shortageQty:
+        Number(item.shortageQty || 0) ||
+        Math.max(
+          Number(item.requiredQty || 0) - Number(item.availableQty || 0),
+          0
+        ),
+      procurementMode: "MRN",
+      remarks: `Created from ${mrq.requisitionNumber}`,
+    }));
 
-  if (purchaseItems.length === 0) {
-    toast.error("No shortage item for purchase");
-    return;
-  }
+    if (purchaseItems.length === 0) {
+      toast.error("No shortage item for purchase");
+      return;
+    }
 
-  try {
-    await axios.post(
-      `${PROCUREMENT_API}/create`,
-      {
-        materialRequisitionRef: mrq._id,
-        projectRef: mrq.projectRef?._id || mrq.projectRef,
-        items: purchaseItems,
-      },
-      authHeader()
-    );
+    try {
+      await axios.post(
+        `${PROCUREMENT_API}/create`,
+        {
+          materialRequisitionRef: mrq._id,
+          projectRef: mrq.projectRef?._id || mrq.projectRef,
+          items: purchaseItems,
+        },
+        authHeader()
+      );
 
-    toast.success("Procurement plan created successfully");
-  } catch (error) {
-    toast.error(
-      error?.response?.data?.message || "Failed to create procurement plan"
-    );
-  }
-};
+      toast.success("Procurement plan created successfully");
+      fetchMRQ();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Failed to create procurement plan"
+      );
+    }
+  };
 
   if (loading) {
     return (
@@ -213,13 +214,24 @@ const createPurchasePlan = async () => {
           </p>
 
           <div className="flex gap-3">
-            <button
-              onClick={createPurchasePlan}
-              className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-3 font-semibold text-amber-300 hover:bg-amber-500/20"
-            >
-              <ShoppingCart size={18} />
-              Create Purchase Plan
-            </button>
+            {mrq.procurementPlanCreated ? (
+              <button
+              onClick={()=>navigate('/procurement-plan')}
+                // disabled
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-5 py-3 font-semibold text-slate-500"
+              >
+                <ShoppingCart size={18} />
+                Purchase Plan Already Created,Click to See Purchase Plan
+              </button>
+            ) : (
+              <button
+                onClick={createPurchasePlan}
+                className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-3 font-semibold text-amber-300 hover:bg-amber-500/20"
+              >
+                <ShoppingCart size={18} />
+                Create Purchase Plan
+              </button>
+            )}
 
             <button
               onClick={createDCPlan}

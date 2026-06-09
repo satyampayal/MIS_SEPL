@@ -286,6 +286,11 @@ const challanSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
+    procurementItemIds: [
+  {
+    type: mongoose.Schema.Types.ObjectId,
+  },
+],
 
     siteApprovedAt: {
       type: Date,

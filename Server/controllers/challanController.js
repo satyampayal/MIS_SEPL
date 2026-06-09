@@ -108,6 +108,7 @@ exports.createChallan = async (req, res) => {
       materialRequisitionRef,
       procurementPlanRef,
       procurementItemId,
+      procurementItemIds,
     } = req.body;
 
     if (!documentNumber || !documentType) {
@@ -242,8 +243,11 @@ exports.createChallan = async (req, res) => {
           documentType,
 
           materialRequisitionRef: materialRequisitionRef || null,
-      procurementPlanRef: procurementPlanRef || null,
-      procurementItemId: procurementItemId || null,
+          procurementPlanRef: procurementPlanRef || null,
+          procurementItemId: procurementItemId || null,
+          procurementItemIds: Array.isArray(procurementItemIds)
+            ? procurementItemIds
+            : [],
 
           fromMainStoreRef: fromMainStoreRef || null,
           toMainStoreRef: toMainStoreRef || null,
@@ -325,25 +329,34 @@ exports.createChallan = async (req, res) => {
     //MRQ CHALLAN END
 
     //PP Challan Start
-    if (procurementPlanRef && procurementItemId) {
-      const plan = await ProcurementPlan.findById(procurementPlanRef).session(session);;
+    if (procurementPlanRef) {
+      const plan = await ProcurementPlan.findById(procurementPlanRef).session(session);
 
       if (plan) {
-        const planItem = plan.items.id(procurementItemId);
+        const idsToUpdate =
+          Array.isArray(procurementItemIds) && procurementItemIds.length > 0
+            ? procurementItemIds
+            : procurementItemId
+              ? [procurementItemId]
+              : [];
 
-        if (planItem) {
-          planItem.executionStatus = "CHALLAN_CREATED";
-          planItem.challanRef = challan._id;
-          planItem.challanNumber = challan.documentNumber;
-          planItem.challanCreatedAt = new Date();
+        for (const id of idsToUpdate) {
+          const planItem = plan.items.id(id);
+
+          if (planItem) {
+            planItem.executionStatus = "CHALLAN_CREATED";
+            planItem.challanRef = challan._id;
+            planItem.challanNumber = challan.documentNumber;
+            planItem.challanCreatedAt = new Date();
+          }
         }
 
-        const allDone = plan.items.every(
-          (item) => item.executionStatus === "CHALLAN_CREATED" || item.executionStatus === "COMPLETED"
+        const allDone = plan.items.every((item) =>
+          ["CHALLAN_CREATED", "COMPLETED"].includes(item.executionStatus)
         );
 
-        const anyDone = plan.items.some(
-          (item) => item.executionStatus === "CHALLAN_CREATED" || item.executionStatus === "COMPLETED"
+        const anyDone = plan.items.some((item) =>
+          ["CHALLAN_CREATED", "COMPLETED"].includes(item.executionStatus)
         );
 
         plan.status = allDone ? "COMPLETED" : anyDone ? "IN_PROGRESS" : "PENDING";
@@ -752,79 +765,87 @@ exports.approveChallan = async (req, res) => {
 
     await challan.save({ session });
 
-    
+
     // MRQ final issued update after challan approval
-if (challan.materialRequisitionRef) {
-  const mrq = await MaterialRequisition.findById(
-    challan.materialRequisitionRef
-  ).session(session);
+    if (challan.materialRequisitionRef) {
+      const mrq = await MaterialRequisition.findById(
+        challan.materialRequisitionRef
+      ).session(session);
 
-  if (mrq) {
-    for (const challanItem of challan.items) {
-      const mrqItem = mrq.items.find(
-        (x) => x.itemRef.toString() === challanItem.itemRef.toString()
-      );
+      if (mrq) {
+        for (const challanItem of challan.items) {
+          const mrqItem = mrq.items.find(
+            (x) => x.itemRef.toString() === challanItem.itemRef.toString()
+          );
 
-      if (mrqItem) {
-        mrqItem.issuedQty =
-          Number(mrqItem.issuedQty || 0) + Number(challanItem.quantity || 0);
+          if (mrqItem) {
+            mrqItem.issuedQty =
+              Number(mrqItem.issuedQty || 0) + Number(challanItem.quantity || 0);
+          }
+        }
+
+        const allIssued = mrq.items.every(
+          (item) =>
+            Number(item.issuedQty || 0) >=
+            Number(item.approvedQty || item.requiredQty || 0)
+        );
+
+        const anyIssued = mrq.items.some(
+          (item) => Number(item.issuedQty || 0) > 0
+        );
+
+        mrq.status = allIssued
+          ? "ISSUED"
+          : anyIssued
+            ? "PARTIAL_ISSUED"
+            : mrq.status;
+
+        await mrq.save({ session });
       }
     }
 
-    const allIssued = mrq.items.every(
-      (item) =>
-        Number(item.issuedQty || 0) >=
-        Number(item.approvedQty || item.requiredQty || 0)
-    );
+    // PP final completion update after challan approval
+    if (challan.procurementPlanRef) {
+      const plan = await ProcurementPlan.findById(
+        challan.procurementPlanRef
+      ).session(session);
 
-    const anyIssued = mrq.items.some(
-      (item) => Number(item.issuedQty || 0) > 0
-    );
+      if (plan) {
+        const idsToUpdate =
+          Array.isArray(challan.procurementItemIds) &&
+            challan.procurementItemIds.length > 0
+            ? challan.procurementItemIds
+            : challan.procurementItemId
+              ? [challan.procurementItemId]
+              : [];
 
-    mrq.status = allIssued
-      ? "ISSUED"
-      : anyIssued
-      ? "PARTIAL_ISSUED"
-      : mrq.status;
+        for (const id of idsToUpdate) {
+          const planItem = plan.items.id(id);
 
-    await mrq.save({ session });
-  }
-}
+          if (planItem) {
+            planItem.executionStatus = "COMPLETED";
+          }
+        }
 
-// PP final completion update after challan approval
-if (challan.procurementPlanRef && challan.procurementItemId) {
-  const plan = await ProcurementPlan.findById(
-    challan.procurementPlanRef
-  ).session(session);
+        const allCompleted = plan.items.every(
+          (item) => item.executionStatus === "COMPLETED"
+        );
 
-  if (plan) {
-    const planItem = plan.items.id(challan.procurementItemId);
+        const anyProgress = plan.items.some((item) =>
+          ["CHALLAN_CREATED", "COMPLETED"].includes(item.executionStatus)
+        );
 
-    if (planItem) {
-      planItem.executionStatus = "COMPLETED";
+        plan.status = allCompleted
+          ? "COMPLETED"
+          : anyProgress
+            ? "IN_PROGRESS"
+            : "PENDING";
+
+        await plan.save({ session });
+      }
     }
 
-    const allCompleted = plan.items.every(
-      (item) => item.executionStatus === "COMPLETED"
-    );
-
-    const anyCompleted = plan.items.some(
-      (item) =>
-        item.executionStatus === "COMPLETED" ||
-        item.executionStatus === "CHALLAN_CREATED"
-    );
-
-    plan.status = allCompleted
-      ? "COMPLETED"
-      : anyCompleted
-      ? "IN_PROGRESS"
-      : "PENDING";
-
-    await plan.save({ session });
-  }
-}
-
-//MRQ & PP Update end 
+    //MRQ & PP Update end 
 
     await session.commitTransaction();
 
