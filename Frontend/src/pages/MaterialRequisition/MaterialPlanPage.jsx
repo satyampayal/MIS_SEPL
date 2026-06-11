@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { ArrowLeft, Loader2, PackageCheck, ShoppingCart } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import BASE_URL from "../../../config/api";
-
+import ChallanModal from '../../challan/ChallanModal'
 const MRQ_API = `${BASE_URL}/material-requisition`;
 const PROCUREMENT_API = `${BASE_URL}/procurement-plan`;
 
@@ -20,6 +20,9 @@ export default function MaterialPlanPage() {
 
   const [mrq, setMrq] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const [challanDraft, setChallanDraft] = useState(null);
+const [challanModalOpen, setChallanModalOpen] = useState(false);
 
   const fetchMRQ = async () => {
     try {
@@ -58,7 +61,7 @@ export default function MaterialPlanPage() {
     return { available, partial, purchase };
   }, [mrq]);
 
-  const createDCPlan = () => {
+  const createDCPlan = async () => {
     const dcItems = [...groups.available, ...groups.partial].map((item) => ({
       itemRef: item.itemRef?._id || item.itemRef,
       itemName: item.itemName,
@@ -76,9 +79,26 @@ export default function MaterialPlanPage() {
       toast.error("No store available item for DC");
       return;
     }
+    const draft = {
+      materialRequisitionRef: mrq._id,
 
-    console.log("DC PLAN ITEMS =>", dcItems);
-    toast.success("DC Plan ready. Next connect this with Challan Modal.");
+      projectRef: mrq.projectRef?._id || mrq.projectRef,
+      toSiteRef: mrq.projectRef?._id || mrq.projectRef,
+      items: dcItems,
+
+      projectName:
+        mrq.projectRef?.projectName ||
+        mrq.projectRef?.name,
+
+      documentType: "DC",
+
+    };
+
+    // await axios.put(`${MRQ_API}/mark-dc-plan/${mrq._id}`, {}, authHeader());
+    // toast.success("DC plan created");
+    // fetchMRQ();
+    setChallanDraft(draft);
+    setChallanModalOpen(true);
   };
 
   const createPurchasePlan = async () => {
@@ -216,7 +236,7 @@ export default function MaterialPlanPage() {
           <div className="flex gap-3">
             {mrq.procurementPlanCreated ? (
               <button
-              onClick={()=>navigate('/procurement-plan')}
+                onClick={() => navigate('/procurement-plan')}
                 // disabled
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-5 py-3 font-semibold text-slate-500"
               >
@@ -233,16 +253,46 @@ export default function MaterialPlanPage() {
               </button>
             )}
 
-            <button
-              onClick={createDCPlan}
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
-            >
-              <PackageCheck size={18} />
-              Create DC Plan
-            </button>
+            {/* {mrq.dcPlanCreated ? (
+              <button disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-5 py-3 font-semibold text-slate-500">
+                <PackageCheck size={18} />
+                DC Plan Already Created
+              </button>
+            ) : (
+              <button
+                onClick={createDCPlan}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+              >
+                <PackageCheck size={18} />
+                Create DC Plan
+              </button>
+            )} */}
+             <button
+                onClick={createDCPlan}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+              >
+                <PackageCheck size={18} />
+                Create DC Plan
+              </button>
           </div>
         </div>
       </div>
+      {challanModalOpen && (
+  <ChallanModal
+    isOpen={challanModalOpen}
+    onClose={() => {
+      setChallanModalOpen(false);
+      setChallanDraft(null);
+    }}
+    challan={challanDraft}
+    mode="rechallan"
+    refreshChallans={() => {
+      setChallanModalOpen(false);
+      setChallanDraft(null);
+      fetchMRQ();
+    }}
+  />
+)}
     </div>
   );
 }

@@ -21,6 +21,7 @@ export default function ChallanApprovalPage() {
   const [challans, setChallans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
+
   const [search, setSearch] = useState("");
   const [documentTypeFilter, setDocumentTypeFilter] = useState("All");
 
@@ -28,17 +29,23 @@ export default function ChallanApprovalPage() {
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
-       const authHeader = {
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  },
-};
+  const [correctionModal, setCorrectionModal] = useState(false);
+  const [selectedChallan, setSelectedChallan] = useState(null);
+  const [correctionReason, setCorrectionReason] = useState("");
+
+
+
+  const authHeader = {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  };
 
   const fetchPendingChallans = async () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `${API_URL}/all?approvalStatus=PENDING_SITE_APPROVAL`,authHeader
+        `${API_URL}/all?approvalStatus=PENDING_SITE_APPROVAL`, authHeader
       );
       setChallans(res.data.data || []);
     } catch (error) {
@@ -103,7 +110,7 @@ export default function ChallanApprovalPage() {
 
     try {
       setActionLoading(id);
-      await axios.put(`${API_URL}/approve/${id}`,{},authHeader);
+      await axios.put(`${API_URL}/approve/${id}`, {}, authHeader);
       toast.success("Challan approved and stock updated");
       fetchPendingChallans();
     } catch (error) {
@@ -122,8 +129,8 @@ export default function ChallanApprovalPage() {
       await axios.put(`${API_URL}/reject/${rejectModal._id}`, {
         rejectionReason: rejectionReason || "Rejected by site",
       }, authHeader
-    
-    );
+
+      );
 
       toast.success("Challan rejected and reserved stock released");
       setRejectModal(null);
@@ -156,6 +163,51 @@ export default function ChallanApprovalPage() {
     if (c.destinationType === "SITE_STORE") return c.toSiteRef?.projectName || c.toSiteRef?.name || "Site";
     if (c.destinationType === "VENDOR") return c.vendorName || "Vendor";
     return c.destinationType || "-";
+  };
+
+  const openCorrectionModal = (challan) => {
+    setSelectedChallan(challan);
+    setCorrectionReason(
+      challan?.correctionReason || ""
+    );
+    setCorrectionModal(true);
+  };
+
+  const closeCorrectionModal = () => {
+    setSelectedChallan(null);
+    setCorrectionReason("");
+    setCorrectionModal(false);
+  };
+
+  const submitCorrectionRequest = async () => {
+    try {
+      if (!correctionReason.trim()) {
+        return toast.error(
+          "Please enter correction reason"
+        );
+      }
+
+      await axios.put(
+        `${CHALLAN_API}/request-correction/${selectedChallan._id}`,
+        {
+          correctionReason,
+        },
+        authHeader()
+      );
+
+      toast.success(
+        "Correction request sent successfully"
+      );
+
+      closeCorrectionModal();
+
+      fetchPendingApprovals();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+        "Failed to request correction"
+      );
+    }
   };
 
   const StatCard = ({ title, value, icon: Icon, tone }) => (
@@ -346,6 +398,12 @@ export default function ChallanApprovalPage() {
                           >
                             <Eye size={18} />
                           </button>
+                          <button
+                            onClick={() => openCorrectionModal(c)}
+                            className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-300"
+                          >
+                            Request Correction
+                          </button>
 
                           <button
                             onClick={() => approveChallan(c._id)}
@@ -401,6 +459,55 @@ export default function ChallanApprovalPage() {
           onReject={rejectChallan}
           loading={actionLoading === rejectModal._id}
         />
+      )}
+
+      {correctionModal && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-950">
+
+            <div className="border-b border-slate-800 px-6 py-4">
+              <h2 className="text-xl font-bold text-white">
+                Request Correction
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-400">
+                Send challan back to creator for correction.
+              </p>
+            </div>
+
+            <div className="p-6">
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Correction Reason *
+              </label>
+
+              <textarea
+                rows={5}
+                value={correctionReason}
+                onChange={(e) =>
+                  setCorrectionReason(e.target.value)
+                }
+                placeholder="Example: Please remove cable item and update dispatch location."
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-800 px-6 py-4">
+              <button
+                onClick={closeCorrectionModal}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-slate-300"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={submitCorrectionRequest}
+                className="rounded-xl bg-amber-500 px-5 py-3 font-semibold text-slate-950"
+              >
+                Send Back For Correction
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -12,6 +12,7 @@ import {
     AlertTriangle,
     CheckCircle2,
     Eye,
+    RefreshCcw,
 } from "lucide-react";
 import BASE_URL from "../../../config/api";
 import ChallanModal from "../../challan/ChallanModal";
@@ -60,6 +61,11 @@ export default function MaterialRequisitionPage() {
 
     const [challanModalOpen, setChallanModalOpen] = useState(false);
     const [selectedChallan, setSelectedChallan] = useState(null);
+
+    const [linkedChallans, setLinkedChallans] = useState([]);
+    const [challanLoading, setChallanLoading] = useState(false);
+
+    const [editingMRQ, setEditingMRQ] = useState(null);
 
     // const [planModalOpen, setPlanModalOpen] = useState(false);
     // const [selectedPlanMRQ, setSelectedPlanMRQ] = useState(null);
@@ -134,6 +140,7 @@ export default function MaterialRequisitionPage() {
     }, [mrqs]);
 
     const resetModal = () => {
+        setEditingMRQ(null);
         setForm(emptyForm);
         setSelectedRows([]);
         setPickerSelectedItems([]);
@@ -241,27 +248,38 @@ export default function MaterialRequisitionPage() {
             return toast.error(`Enter valid qty for ${invalidRow.itemName}`);
         }
 
+        const payload = {
+            ...form,
+            items: selectedRows.map((row) => ({
+                itemRef: row.itemRef,
+                requiredQty: Number(row.requiredQty),
+                remarks: row.remarks || "",
+            })),
+        };
+
         try {
             setSaving(true);
 
-            await axios.post(
-                `${MRQ_API}/create`,
-                {
-                    ...form,
-                    items: selectedRows.map((row) => ({
-                        itemRef: row.itemRef,
-                        requiredQty: Number(row.requiredQty),
-                        remarks: row.remarks || "",
-                    })),
-                },
-                authHeader()
-            );
+            if (editingMRQ) {
+                await axios.put(
+                    `${MRQ_API}/update/${editingMRQ._id}`,
+                    payload,
+                    authHeader()
+                );
 
-            toast.success("Material requisition created");
+                toast.success("MRQ updated successfully");
+            } else {
+                await axios.post(`${MRQ_API}/create`, payload, authHeader());
+                toast.success("Material requisition created");
+            }
+
             closeModal();
             fetchMRQs();
         } catch (error) {
-            toast.error(error?.response?.data?.message || "Failed to create MRQ");
+            toast.error(
+                error?.response?.data?.message ||
+                (editingMRQ ? "Failed to update MRQ" : "Failed to create MRQ")
+            );
         } finally {
             setSaving(false);
         }
@@ -285,6 +303,7 @@ export default function MaterialRequisitionPage() {
     const openViewMRQ = (mrq) => {
         setSelectedMRQ(mrq);
         setViewModalOpen(true);
+        fetchLinkedChallans(mrq._id);
     };
 
     const approveMRQ = async (id) => {
@@ -372,30 +391,79 @@ export default function MaterialRequisitionPage() {
     //     setPlanModalOpen(true);
     // };
 
+    //
+    const fetchLinkedChallans = async (mrqId) => {
+        try {
+            setChallanLoading(true);
+
+            const res = await axios.get(`${BASE_URL}/challan/by-mrq/${mrqId}`, authHeader());
+
+            setLinkedChallans(res.data.data || []);
+        } catch (error) {
+            toast.error("Failed to load linked challans");
+        } finally {
+            setChallanLoading(false);
+        }
+    };
+
+    // Open Edit Modal
+    const openEditMRQ = (mrq) => {
+        setEditingMRQ(mrq);
+
+        setForm({
+            projectRef: mrq.projectRef?._id || mrq.projectRef || "",
+            priority: mrq.priority || "NORMAL",
+            purpose: mrq.purpose || "",
+            requiredDate: mrq.requiredDate
+                ? mrq.requiredDate.slice(0, 10)
+                : "",
+        });
+
+        setSelectedRows(
+            (mrq.items || []).map((item) => ({
+                itemRef: item.itemRef?._id || item.itemRef || "",
+                itemName: item.itemName || item.itemRef?.itemName || "",
+                itemCode: item.itemCode || item.itemRef?.itemCode || "",
+                unit: item.unit || "Nos",
+                requiredQty: item.requiredQty || "",
+                remarks: item.remarks || "",
+            }))
+        );
+
+        setPickerSelectedItems([]);
+        setItemSearch("");
+        setModalOpen(true);
+    };
+
+
     const exportMRQExcel = async (mrq) => {
-  try {
-    const res = await axios.get(`${MRQ_API}/export/${mrq._id}`, {
-      ...authHeader(),
-      responseType: "blob",
-    });
+        try {
+            const res = await axios.get(`${MRQ_API}/export/${mrq._id}`, {
+                ...authHeader(),
+                responseType: "blob",
+            });
 
-    const url = window.URL.createObjectURL(new Blob([res.data]));
+            const url = window.URL.createObjectURL(new Blob([res.data]));
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${mrq.requisitionNumber || "MRQ"}.xlsx`;
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${mrq.requisitionNumber || "MRQ"}.xlsx`;
 
-    document.body.appendChild(link);
-    link.click();
+            document.body.appendChild(link);
+            link.click();
 
-    link.remove();
-    window.URL.revokeObjectURL(url);
+            link.remove();
+            window.URL.revokeObjectURL(url);
 
-    toast.success("MRQ Excel downloaded");
-  } catch (error) {
-    toast.error("Failed to download MRQ Excel "+error.message);
-  }
-};
+            toast.success("MRQ Excel downloaded");
+        } catch (error) {
+            toast.error("Failed to download MRQ Excel " + error.message);
+        }
+    };
+
+
+
+
     return (
         <div className="min-h-screen bg-slate-950 p-4 text-slate-100 md:p-6">
             <div className="mx-auto max-w-7xl space-y-6">
@@ -416,14 +484,24 @@ export default function MaterialRequisitionPage() {
                                 analysis.
                             </p>
                         </div>
+                        <div className="inline-flex items-center gap-2">
+                            <button
+                                onClick={fetchMRQs}
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+                            >
+                                <RefreshCcw size={17} />
+                                Refresh
+                            </button>
 
-                        <button
-                            onClick={openCreateModal}
-                            className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
-                        >
-                            <Plus size={18} />
-                            Create MRQ
-                        </button>
+                            <button
+                                onClick={openCreateModal}
+                                className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+                            >
+                                <Plus size={18} />
+                                Create MRQ
+                            </button>
+                        </div>
+
 
                     </div>
                 </div>
@@ -559,6 +637,16 @@ export default function MaterialRequisitionPage() {
                                                     >
                                                         <Eye size={17} />
                                                     </button>
+
+                                                    {/* Edit  */}
+                                                    {["DRAFT", "SUBMITTED"].includes(mrq.status) && (
+                                                        <button
+                                                            onClick={() => openEditMRQ(mrq)}
+                                                            className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-cyan-300"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    )}
                                                     {mrq.status === "SUBMITTED" && (
                                                         <>
                                                             <button
@@ -594,12 +682,12 @@ export default function MaterialRequisitionPage() {
                                                             Material Plan
                                                         </button>
                                                     )}
-                                                    <button
+                                                    {/* <button
                                                         onClick={() => exportMRQExcel(mrq)}
                                                         className="rounded-xl bg-emerald-500 px-4 py-2 font-semibold text-slate-950"
                                                     >
                                                         Export Excel
-                                                    </button>
+                                                    </button> */}
                                                 </td>
                                             </tr>
                                         );
@@ -613,6 +701,8 @@ export default function MaterialRequisitionPage() {
 
             {modalOpen && (
                 <CreateMRQModal
+                    isEdit={Boolean(editingMRQ)}
+                    editingMRQ={editingMRQ}
                     form={form}
                     setForm={setForm}
                     projects={projects}
@@ -637,9 +727,11 @@ export default function MaterialRequisitionPage() {
                 <MRQViewModal
                     mrq={selectedMRQ}
                     onClose={() => setViewModalOpen(false)}
+                    linkedChallans={linkedChallans}
+                    challanLoading={challanLoading}
+                    onExportMRQExcel={(mrq) => exportMRQExcel(mrq)}
                 />
             )}
-
             {challanModalOpen && (
                 <ChallanModal
                     isOpen={challanModalOpen}
@@ -696,7 +788,16 @@ function StatCard({ title, value, icon: Icon, tone = "text-white" }) {
 }
 
 
-function MRQViewModal({ mrq, onClose }) {
+function MRQViewModal(
+    { mrq,
+        onClose,
+        linkedChallans = [],
+        challanLoading = false,
+        onExportMRQExcel
+
+    }) {
+
+
     const getActionClass = (action) => {
         if (action === "DC") {
             return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
@@ -708,7 +809,9 @@ function MRQViewModal({ mrq, onClose }) {
 
         return "border-red-500/30 bg-red-500/10 text-red-300";
     };
-// console.log(mrq)
+
+
+    // console.log(mrq)
     return (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4">
             <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
@@ -723,14 +826,26 @@ function MRQViewModal({ mrq, onClose }) {
                         <p className="mt-1 text-sm text-slate-400">
                             {mrq.projectRef?.projectName || mrq.projectRef?.name || "-"}
                         </p>
+
                     </div>
 
-                    <button
-                        onClick={onClose}
-                        className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
-                    >
-                        <X size={22} />
-                    </button>
+                    <div className="inline-flex justify-center gap-5">
+                        <button
+                            onClick={() => onExportMRQExcel(mrq)}
+                            className="rounded-xl bg-emerald-500 px-4 py-2 font-semibold text-slate-950"
+                        >
+                            Export Excel
+                        </button>
+
+
+                        <button
+                            onClick={onClose}
+                            className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+                        >
+                            <X size={22} />
+                        </button>
+                    </div>
+
                 </div>
 
                 <div className="grid gap-4 border-b border-slate-800 p-5 md:grid-cols-4">
@@ -813,6 +928,84 @@ function MRQViewModal({ mrq, onClose }) {
                                     ))}
                                 </tbody>
                             </table>
+
+                            <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80">
+                                <div className="border-b border-slate-800 px-5 py-4">
+                                    <h3 className="text-lg font-bold text-white">Linked Challans</h3>
+                                    <p className="text-sm text-slate-400">
+                                        Challans created against this MRQ.
+                                    </p>
+                                </div>
+
+                                {challanLoading ? (
+                                    <div className="p-6 text-center text-slate-400">
+                                        Loading challans...
+                                    </div>
+                                ) : linkedChallans.length === 0 ? (
+                                    <div className="p-6 text-center text-slate-500">
+                                        No challan created yet.
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full min-w-[900px] text-sm">
+                                            <thead className="bg-slate-950 text-xs uppercase text-slate-500">
+                                                <tr>
+                                                    <th className="p-4 text-left">Challan No</th>
+                                                    <th className="p-4 text-left">Type</th>
+                                                    <th className="p-4 text-left">From</th>
+                                                    <th className="p-4 text-left">To</th>
+                                                    <th className="p-4 text-left">Items</th>
+                                                    <th className="p-4 text-left">Approval</th>
+                                                    <th className="p-4 text-left">Stock</th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody className="divide-y divide-slate-800">
+                                                {linkedChallans.map((ch) => (
+                                                    <tr key={ch._id} className="hover:bg-slate-800/50">
+                                                        <td className="p-4 font-semibold text-cyan-300">
+                                                            {ch.documentNumber}
+                                                        </td>
+
+                                                        <td className="p-4 text-white">{ch.documentType}</td>
+
+                                                        <td className="p-4 text-slate-300">
+                                                            {ch.fromMainStoreRef?.storeName ||
+                                                                ch.fromSiteRef?.projectName ||
+                                                                ch.fromSiteRef?.name ||
+                                                                ch.vendorName ||
+                                                                "-"}
+                                                        </td>
+
+                                                        <td className="p-4 text-slate-300">
+                                                            {ch.toMainStoreRef?.storeName ||
+                                                                ch.toSiteRef?.projectName ||
+                                                                ch.toSiteRef?.name ||
+                                                                "-"}
+                                                        </td>
+
+                                                        <td className="p-4 text-slate-300">
+                                                            {ch.items?.length || 0}
+                                                        </td>
+
+                                                        <td className="p-4">
+                                                            <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300">
+                                                                {ch.approvalStatus}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="p-4">
+                                                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                                                                {ch.stockStatus}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

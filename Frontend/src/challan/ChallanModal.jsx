@@ -576,7 +576,7 @@ export default function ChallanModal({
 
       if (isEdit) {
 
-        await axios.put(`${CHALLAN_API}/update/${challan._id}`, payload, authHeader);
+        await axios.put(`${CHALLAN_API}/update-before-approval/${challan._id}`, payload, authHeader);
         toast.success("Challan updated successfully");
       } else {
         await axios.post(`${CHALLAN_API}/create`, payload, authHeader);

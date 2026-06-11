@@ -99,14 +99,18 @@ const materialRequisitionSchema = new mongoose.Schema(
         },
       },
     ],
-    dcPlanCreated: {
-      type: Boolean,
-      default: false,
-    },
+    // dcPlanCreated: {
+    //   type: Boolean,
+    //   default: false,
+    // },
     procurementPlanCreated: {
       type: Boolean,
       default: false,
     },
+    dcChallans: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Challan"
+}],
 
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,

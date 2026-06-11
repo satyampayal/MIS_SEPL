@@ -34,6 +34,8 @@ const emptyForm = {
 };
 
 export default function CreateMRQModal({
+    isEdit,
+    editingMRQ,
     form,
     setForm,
     projects,
@@ -65,7 +67,15 @@ export default function CreateMRQModal({
                         <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
                             Material Requisition
                         </p>
-                        <h2 className="text-xl font-bold text-white">Create MRQ</h2>
+                        <h2 className="text-xl font-bold text-white">
+                            {isEdit ? `Update MRQ - ${editingMRQ?.requisitionNumber}` : "Create MRQ"}
+                        </h2>
+
+                        <p className="mt-1 text-sm text-slate-400">
+                            {isEdit
+                                ? "You can update this MRQ before approval only."
+                                : "Create a new material requirement request."}
+                        </p>
                     </div>
 
                     <button
@@ -232,7 +242,7 @@ export default function CreateMRQModal({
                         className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
                     >
                         {saving && <Loader2 size={18} className="animate-spin" />}
-                        Save MRQ
+                        {isEdit ? "Update MRQ" : "Save MRQ"}
                     </button>
                 </div>
             </div>

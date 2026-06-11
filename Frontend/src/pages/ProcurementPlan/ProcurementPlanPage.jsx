@@ -46,7 +46,7 @@ export default function ProcurementPlanPage() {
     useEffect(() => {
         fetchPlans();
     }, []);
-    console.log(plans)
+    // console.log(plans)
 
     const filteredPlans = useMemo(() => {
         const keyword = search.toLowerCase();

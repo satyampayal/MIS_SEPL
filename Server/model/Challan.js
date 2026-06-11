@@ -231,17 +231,6 @@ const challanSchema = new mongoose.Schema(
       default: 0,
     },
 
-    approvalStatus: {
-      type: String,
-      enum: [
-        "PENDING_SITE_APPROVAL",
-        "APPROVED_BY_SITE",
-        "REJECTED_BY_SITE",
-        "CANCELLED",
-      ],
-      default: "PENDING_SITE_APPROVAL",
-    },
-
     stockStatus: {
       type: String,
       enum: [
@@ -267,11 +256,7 @@ const challanSchema = new mongoose.Schema(
       default: "PENDING",
     },
 
-    siteApprovedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
+
     materialRequisitionRef: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MaterialRequisition",
@@ -287,13 +272,50 @@ const challanSchema = new mongoose.Schema(
       default: null,
     },
     procurementItemIds: [
-  {
-    type: mongoose.Schema.Types.ObjectId,
-  },
-],
+      {
+        type: mongoose.Schema.Types.ObjectId,
+      },
+    ],
+    siteApprovedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
 
     siteApprovedAt: {
       type: Date,
+      default: null,
+    },
+    approvalStatus: {
+      type: String,
+      enum: [
+        "PENDING_SITE_APPROVAL",
+        "CORRECTION_REQUESTED",
+        "APPROVED_BY_SITE",
+        "REJECTED_BY_SITE",
+      ],
+      default: "PENDING_SITE_APPROVAL",
+    },
+
+    correctionReason: {
+      type: String,
+      default: "",
+    },
+
+    correctionRequestedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    correctionRequestedAt: {
+      type: Date,
+      default: null,
+    },
+
+    lastUpdatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       default: null,
     },
 

@@ -7,6 +7,7 @@ const generateMRQNumber = async () => {
   return `MRQ-${String(count + 1).padStart(5, "0")}`;
 };
 
+// Create MRQ 
 exports.createMaterialRequisition = async (req, res) => {
   try {
     const { projectRef, requiredDate, priority, purpose, items } = req.body;
@@ -93,6 +94,7 @@ exports.createMaterialRequisition = async (req, res) => {
   }
 };
 
+// Get All MRQ
 exports.getAllMaterialRequisitions = async (req, res) => {
   try {
     const { status, projectRef, search } = req.query;
@@ -130,6 +132,7 @@ exports.getAllMaterialRequisitions = async (req, res) => {
   }
 };
 
+//  Get MRQ By ID
 exports.getMaterialRequisitionById = async (req, res) => {
   try {
     const requisition = await MaterialRequisition.findById(req.params.id)
@@ -158,6 +161,7 @@ exports.getMaterialRequisitionById = async (req, res) => {
   }
 };
 
+//  Approve Respected MRQ By ID
 exports.approveMaterialRequisition = async (req, res) => {
   try {
     const requisition = await MaterialRequisition.findById(req.params.id);
@@ -188,7 +192,7 @@ exports.approveMaterialRequisition = async (req, res) => {
     });
   }
 };
-
+//  Reject Respected MRQ By ID
 exports.rejectMaterialRequisition = async (req, res) => {
   try {
     const { rejectionReason } = req.body;
@@ -221,6 +225,145 @@ exports.rejectMaterialRequisition = async (req, res) => {
   }
 };
 
+// Update MRQ before approval
+exports.updateMaterialRequisitionById = async (req, res) => {
+  try {
+    const { projectRef, requiredDate, priority, purpose, items } = req.body;
+
+    const requisition = await MaterialRequisition.findById(req.params.id);
+
+    if (!requisition) {
+      return res.status(404).json({
+        success: false,
+        message: "Material requisition not found",
+      });
+    }
+
+    if (!["DRAFT", "SUBMITTED"].includes(requisition.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "MRQ cannot be edited after approval/rejection/issue process",
+      });
+    }
+
+    if (!projectRef) {
+      return res.status(400).json({
+        success: false,
+        message: "Project is required",
+      });
+    }
+
+    if (!requiredDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Required date is required",
+      });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one item is required",
+      });
+    }
+
+    const finalItems = [];
+
+    for (const row of items) {
+      const item = await ItemIdentity.findById(row.itemRef);
+
+      if (!item) continue;
+
+      const stock = await MainStoreStock.findOne({
+        itemRef: item._id,
+      });
+
+      const requiredQty = Number(row.requiredQty || 0);
+      const availableQty = Number(stock?.availableStock || 0);
+      const shortageQty = Math.max(requiredQty - availableQty, 0);
+
+      let suggestedAction = "PURCHASE";
+
+      if (availableQty >= requiredQty) {
+        suggestedAction = "DC";
+      } else if (availableQty > 0 && shortageQty > 0) {
+        suggestedAction = "DC_AND_PURCHASE";
+      }
+
+      finalItems.push({
+        itemRef: item._id,
+        itemName: item.itemName,
+        itemCode: item.itemCode,
+        unit: item.unit,
+        requiredQty,
+        approvedQty: requiredQty,
+        issuedQty: 0,
+        availableQty,
+        shortageQty,
+        suggestedAction,
+        remarks: row.remarks || "",
+      });
+    }
+
+    requisition.projectRef = projectRef;
+    requisition.requiredDate = requiredDate;
+    requisition.priority = priority || "NORMAL";
+    requisition.purpose = purpose || "";
+    requisition.items = finalItems;
+
+    await requisition.save();
+
+    const updatedMRQ = await MaterialRequisition.findById(requisition._id)
+      .populate("projectRef", "projectName name projectCode")
+      .populate("requestedBy", "fullName email role")
+      .populate("approvedBy", "fullName email role")
+      .populate("items.itemRef");
+
+    res.status(200).json({
+      success: true,
+      message: "MRQ updated successfully",
+      data: updatedMRQ,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to update MRQ",
+      error: error.message,
+    });
+  }
+};
+
+
+
+// //Mark DC Plan Created 
+// exports.markDCPlanCreated = async (req, res) => {
+//   try {
+//     const mrq = await MaterialRequisition.findByIdAndUpdate(
+//       req.params.id,
+//       { dcPlanCreated: true },
+//       { new: true }
+//     );
+
+//     if (!mrq) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "MRQ not found",
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "DC plan marked as created",
+//       data: mrq,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to update DC plan",
+//       error: error.message,
+//     });
+//   }
+// };
 // Excel format
 exports.exportMRQExcel = async (req, res) => {
   try {
@@ -300,3 +443,4 @@ exports.exportMRQExcel = async (req, res) => {
     });
   }
 };
+
