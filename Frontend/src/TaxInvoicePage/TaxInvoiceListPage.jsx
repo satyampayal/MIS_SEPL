@@ -37,6 +37,7 @@ export default function TaxInvoiceListPage() {
     vendorName: "",
     projectSite: "",
     deliveryStatus: "",
+    approvalChallanStatus: "",
     invoiceDate: "",
     challanDate: "",
     challanNumber: "",
@@ -83,7 +84,7 @@ export default function TaxInvoiceListPage() {
 
     const invoiceDate = new Date(invoice.invoiceDate);
     const isDelivered =
-      invoice?.deliveryStatus?.toLowerCase() === "delivered";
+      invoice?.approvalChallanStatus?.toLowerCase() === "delivered";
 
     const endDate =
       isDelivered && invoice?.challanDate
@@ -102,6 +103,10 @@ export default function TaxInvoiceListPage() {
 
   const deliveredInvoices = invoices.filter(
     (i) => i.deliveryStatus?.toLowerCase() === "delivered"
+  ).length;
+
+    const pendingApprovedChallan= invoices.filter(
+    (i) => i.approvalChallanStatus?.toLowerCase() !== "delivered"
   ).length;
 
   const delayedInvoices = invoices.filter(
@@ -313,6 +318,7 @@ export default function TaxInvoiceListPage() {
       vendorName: "",
       projectSite: "",
       deliveryStatus: "",
+      approvalChallanStatus:"",
       invoiceDate: "",
       challanDate: "",
       challanNumber: "",
@@ -396,7 +402,7 @@ export default function TaxInvoiceListPage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4 mb-6">
+        <div className="grid md:grid-cols-5 gap-4 mb-6">
           <SummaryCard title="Total Invoices" value={invoices.length} />
           <SummaryCard
             title="Delivered"
@@ -406,6 +412,11 @@ export default function TaxInvoiceListPage() {
           <SummaryCard
             title="Pending / Partial"
             value={pendingInvoices}
+            valueClass="text-red-400"
+          />
+           <SummaryCard
+            title="Approved Challan Pending"
+            value={pendingApprovedChallan}
             valueClass="text-red-400"
           />
           <SummaryCard
@@ -465,6 +476,17 @@ export default function TaxInvoiceListPage() {
               className={inputClass}
             >
               <option value="">Delivery Status</option>
+              <option value="delivered">Delivered</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
+            </select>
+              <select
+              name="approvalChallanStatus"
+              value={filters.approvalChallanStatus}
+              onChange={handleFilterChange}
+              className={inputClass}
+            >
+              <option value="">Approval Challan Status</option>
               <option value="delivered">Delivered</option>
               <option value="pending">Pending</option>
               <option value="partial">Partial</option>
@@ -550,9 +572,10 @@ export default function TaxInvoiceListPage() {
                     <Th>Challan Date</Th>
                     <Th>Delay Days</Th>
                     <Th>Vendor</Th>
-                    <Th>Amount</Th>
+                    {canManageInvoices && <Th>Amount</Th> }
                     <Th>Project Site</Th>
                     <Th>Delivery Status</Th>
+                    <Th>Approved Challan Status</Th>
                     <th className="p-4 text-center text-slate-300 font-semibold">
                       Actions
                     </th>
@@ -562,8 +585,9 @@ export default function TaxInvoiceListPage() {
                 <tbody>
                   {paginatedInvoices.map((invoice) => {
                     const delayDays = calculateDelayDays(invoice);
+                  // I add later a Approval Challan Status sonow i not chage the is Delivered Varible 
                     const isDelivered =
-                      invoice?.deliveryStatus?.toLowerCase() === "delivered";
+                      invoice?.approvalChallanStatus?.toLowerCase() === "delivered";
 
                     return (
                       <tr
@@ -610,9 +634,9 @@ export default function TaxInvoiceListPage() {
                           {invoice.vendorName}
                         </td>
 
-                        <td className="p-4 text-slate-300">
+                        {canManageInvoices && <td className="p-4 text-slate-300">
                           ₹ {formatAmount(invoice.invoiceAmount)}
-                        </td>
+                        </td> }
 
                         <td className="p-4 text-slate-300">
                           {invoice.projectSite}
@@ -620,6 +644,9 @@ export default function TaxInvoiceListPage() {
 
                         <td className="p-4">
                           <StatusBadge status={invoice.deliveryStatus} />
+                        </td>
+                         <td className="p-4">
+                          <StatusBadge status={invoice?.approvalChallanStatus} />
                         </td>
 
                         <td className="p-4">

@@ -140,7 +140,9 @@ const projectSchema = new mongoose.Schema(
 projectContacts: {
   client: [contactPersonSchema],
   project: [contactPersonSchema],
+  staff: [contactPersonSchema],
   electrical: [contactPersonSchema],
+  helper: [contactPersonSchema],
   hr: [contactPersonSchema],
   accounts: [contactPersonSchema],
   safety: [contactPersonSchema],

@@ -74,6 +74,7 @@ exports.register = async (req, res) => {
             challanNumber,
             challanDate,
             deliveryStatus,
+            approvalChallanStatus,
             quantitySent,
             quantityReceived,
             itemDetailsRequired,
@@ -106,8 +107,6 @@ exports.register = async (req, res) => {
                 data: existingInvoice
             });
         }
-
-        // 🆕 Create new (IMPORTANT FIX HERE)
         const newInvoice = new TaxInvoice({
             invoiceDate,
             invoiceNumber,
@@ -118,6 +117,7 @@ exports.register = async (req, res) => {
             challanNumber,
             challanDate,
             deliveryStatus,
+            approvalChallanStatus,
             quantitySent,
             quantityReceived,
             itemDetailsRequired,
@@ -241,7 +241,6 @@ exports.bulkInvoiceRegister = async (req, res) => {
     }
 };
 
-
 // Delete Tax Invoice 
 exports.deleteTaxInnvoice = async (req, res) => {
     try {
@@ -298,6 +297,7 @@ exports.intoExcel = async (req, res) => {
             { header: "Challan Number", key: "challanNumber", width: 25 },
             { header: "Challan Date", key: "challanDate", width: 18 },
             { header: "Delivery Status", key: "deliveryStatus", width: 18 },
+            { header: "Approval Challan Status", key: "approvalChallanStatus", width: 18 },
             { header: "Quantity Sent", key: "quantitySent", width: 18 },
             { header: "Quantity Received", key: "quantityReceived", width: 20 },
             { header: "Material Difference", key: "materialDifference", width: 20 }
@@ -315,6 +315,7 @@ exports.intoExcel = async (req, res) => {
                 challanNumber: invoice.challanNumber,
                 challanDate: invoice.challanDate,
                 deliveryStatus: invoice.deliveryStatus,
+                approvalChallanStatus: invoice.approvalChallanStatus,
                 quantitySent: invoice.quantitySent,
                 quantityReceived: invoice.quantityReceived,
                 materialDifference: invoice.materialDifference
@@ -356,6 +357,7 @@ exports.filterTaxInvoices = async (req, res) => {
       invoiceDate,
       challanDate,
       challanNumber,
+      approvalChallanStatus,
     } = req.query;
 
     const filter = {};
@@ -374,6 +376,10 @@ exports.filterTaxInvoices = async (req, res) => {
 
     if (deliveryStatus) {
       filter.deliveryStatus = { $regex: deliveryStatus.trim(), $options: "i" };
+    }
+    if(approvalChallanStatus){
+      filter.approvalChallanStatus = { $regex: approvalChallanStatus.trim(), $options: "i" };
+
     }
 
     if (typeOfChallan) {
@@ -455,7 +461,6 @@ exports.updateInvoice = async (req, res) => {
             ...formData,
             materialDifference,
 
-            // ✅ Only update file if new uploaded
             invoiceFile: invoiceFile || existingInvoice.invoiceFile,
             challanFile: challanFile || existingInvoice.challanFile,
         };
@@ -485,7 +490,6 @@ exports.updateInvoice = async (req, res) => {
         });
     }
 };
-
 
 // Spending
 exports.getProjectWiseSpending = async (req, res) => {
@@ -536,6 +540,9 @@ exports.getPendingChallans = async (req, res) => {
         { deliveryStatus: "Pending" },
         { deliveryStatus: "Partial" },
         { deliveryStatus: "" },
+         { approvalChallanStatus: "Pending" },
+        { approvalChallanStatus: "Partial" },
+        { approvalChallanStatus: "" },
         {
           $expr: {
             $lt: ["$quantityReceived", "$quantitySent"]
@@ -680,3 +687,26 @@ exports.fixInvoiceAmounts = async (req, res) => {
     });
   }
 };
+
+// Temperory
+// exports.updateApprovalChallanStatus=async (req, res) => {
+//   try{
+//     const invoices=await TaxInvoice.find({});
+//     for(let invoice of invoices){
+//       if(invoice.deliveryStatus==="Delivered"){
+//          invoice.approvalChallanStatus='Delivered'
+//       }
+//       await invoice.save();
+
+
+
+//     }
+
+//   }catch(error){
+//     res.staus(500).json({
+//        success: false,
+//       message: "Update approval chalan status failed",
+//       error: error.message,
+//     })
+//   }
+// }

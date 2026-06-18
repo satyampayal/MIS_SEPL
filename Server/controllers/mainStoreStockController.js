@@ -3,6 +3,7 @@ const MainStoreStock = require("../model/mainStoreStock");
 const ItemIdentity = require("../model/ItemIdentity");
 const MasterStore = require("../model/masterStore");
 const StockBatch = require("../model/stockBatch");
+const StockTransaction = require('../model/StockTransaction')
 
 /* ---------------- HELPERS ---------------- */
 
@@ -481,7 +482,7 @@ exports.bulkMainOpeningStockUpload = async (req, res) => {
       });
     }
 
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
@@ -509,10 +510,10 @@ exports.bulkMainOpeningStockUpload = async (req, res) => {
         continue;
       }
 
-      if (openingQty <= 0) {
+      if (openingQty < 0) {
         skippedRows.push({
           row: i + 2,
-          reason: "Opening Qty must be greater than 0",
+          reason: "Opening Qty must be greater than 0 or zero ",
           data: row,
         });
         continue;
@@ -685,10 +686,13 @@ exports.getLowStockDashboard = async (req, res) => {
       match.mainStoreRef = mainStoreRef;
     }
 
-    const stocks = await MainStoreStock.find(match)
-      .populate("itemRef", "itemName itemCode unit category minimumStockLevel reorderLevel")
-      .populate("mainStoreRef", "storeName storeCode location")
-      .sort({ availableStock: 1 });
+    const stocks = await MainStoreStock.find({
+      isActive: true,
+      stockStatus: "LOW_STOCK",
+    })
+      .populate("itemRef", "itemName itemCode unit category")
+      .populate("mainStoreRef", "storeName storeCode")
+      .sort({ updatedAt: -1 });
 
     let lowStockItems = [];
     let outOfStockItems = [];
@@ -704,15 +708,15 @@ exports.getLowStockDashboard = async (req, res) => {
 
       const minimumStockLevel = Number(
         stock.minimumStockLevel ||
-          item?.minimumStockLevel ||
-          0
+        item?.minimumStockLevel ||
+        0
       );
 
       const reorderLevel = Number(
         stock.reorderLevel ||
-          item?.reorderLevel ||
-          minimumStockLevel ||
-          0
+        item?.reorderLevel ||
+        minimumStockLevel ||
+        0
       );
 
       let stockStatus = "HEALTHY";
@@ -797,6 +801,131 @@ exports.getLowStockDashboard = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+// Bulk Update Rate 
+exports.bulkMainOpeningStockUploadRate = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Excel file is required",
+      });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    const skippedRows = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+
+      const storeCode = String(row.storeCode || row["Store Code"] || "").trim();
+      const itemCode = String(row.itemCode || row["Item Code"] || "")
+        .trim()
+        .toUpperCase();
+
+      const openingQty = Number(row.openingQty || row["Opening Qty"] || 0);
+      const rate = Number(row.rate || row["Rate"] || 0);
+
+      if (!storeCode || !itemCode) {
+        skippedRows.push({
+          row: i + 2,
+          reason: "Store Code and Item Code are required",
+          data: row,
+        });
+        continue;
+      }
+
+      // if (openingQty <= 0) {
+      //   skippedRows.push({
+      //     row: i + 2,
+      //     reason: "Opening Qty must be greater than 0",
+      //     data: row,
+      //   });
+      //   continue;
+      // }
+
+      const store = await MasterStore.findOne({ storeCode });
+
+      if (!store) {
+        skippedRows.push({
+          row: i + 2,
+          reason: `Store not found for storeCode: ${storeCode}`,
+          data: row,
+        });
+        continue;
+      }
+
+      const item = await ItemIdentity.findOne({ itemCode });
+
+      if (!item) {
+        skippedRows.push({
+          row: i + 2,
+          reason: `Item not found for itemCode: ${itemCode}`,
+          data: row,
+        });
+        continue;
+      }
+
+      let stock = await MainStoreStock.findOne({
+        mainStoreRef: store._id,
+        itemRef: item._id,
+      });
+
+      if (stock) {
+        const oldQty = Number(stock.currentStock || 0);
+        // const oldRate = Number(stock.averageRate || 0);
+        // const newQty = oldQty;
+
+        // stock.currentStock = newQty;
+        stock.averageRate =rate;
+         
+
+        // stock.minimumStockLevel = item.minimumStockLevel || stock.minimumStockLevel || 0;
+        // stock.reorderLevel = item.reorderLevel || stock.reorderLevel || 0;
+        // stock.location = row.location || row["Location"] || stock.location;
+        // stock.rackNumber = row.rackNumber || row["Rack Number"] || stock.rackNumber;
+
+        await stock.save();
+        updatedCount++;
+      } else {
+        await MainStoreStock.create({
+          mainStoreRef: store._id,
+          itemRef: item._id,
+          currentStock: openingQty,
+          reservedStock: 0,
+          averageRate: rate,
+          minimumStockLevel: item.minimumStockLevel || 0,
+          reorderLevel: item.reorderLevel || 0,
+          location: row.location || row["Location"] || "",
+          rackNumber: row.rackNumber || row["Rack Number"] || "",
+        });
+
+        createdCount++;
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Main store opening stock uploaded successfully",
+      createdCount,
+      updatedCount,
+      skippedCount: skippedRows.length,
+      skippedRows,
+    });
+  } catch (error) {
+    console.error("Bulk Main Opening Stock Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload main store opening stock",
+      error: error.message,
     });
   }
 };

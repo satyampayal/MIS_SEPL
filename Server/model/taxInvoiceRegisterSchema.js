@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 
 const taxInvoiceRegisterSchema = new mongoose.Schema(
   {
-invoiceDate: {
-  type: Date,
-  required: true,
-},
+    invoiceDate: {
+      type: Date,
+      required: true,
+    },
 
     invoiceNumber: {
       type: String,
@@ -30,10 +30,10 @@ invoiceDate: {
       required: true,
       trim: true,
     },
-    typeOfChallan:{
-      type:String,
-      enum:["DDC","DC","MRN","LPN",""],
-      default:"DDC"
+    typeOfChallan: {
+      type: String,
+      enum: ["DDC", "DC", "MRN", "LPN", ""],
+      default: "DDC"
     },
 
     challanCreated: {
@@ -48,15 +48,20 @@ invoiceDate: {
       trim: true,
     },
 
- challanDate: {
-  type: Date,
-  default: null,
-},
+    challanDate: {
+      type: Date,
+      default: null,
+    },
 
     deliveryStatus: {
       type: String,
       enum: ["Delivered", "Pending", "Partial", ""],
-      default: "",
+      default: "Pending",
+    },
+    approvalChallanStatus: {
+      type: String,
+      enum: ["Delivered", "Pending", "Partial", ""],
+      default: "Pending",
     },
 
     quantitySent: {

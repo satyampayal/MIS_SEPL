@@ -64,7 +64,7 @@ const challanItemSchema = new mongoose.Schema(
     },
     itemPurpose: {
       type: String,
-      enum: ["BOQ_INSTALLATION", "CONSUMABLE", "TOOL", "SAFETY", "TEMPORARY_USE", "OTHER"],
+      enum: ["MAIN ITEM","ACCESSORIES","BOQ_INSTALLATION", "CONSUMABLE", "TOOL", "SAFETY", "TEMPORARY_USE", "OTHER"],
       default: "BOQ_INSTALLATION",
     },
     boqItemRef: {

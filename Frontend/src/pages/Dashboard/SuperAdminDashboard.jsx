@@ -130,7 +130,7 @@ export default function SuperAdminDashboard() {
           </div>
 
           <button
-            onClick={() => navigate("/add-tax-invoice")}
+            onClick={() => navigate("/TaxInvoiceListPage")}
             className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 font-semibold shadow-lg shadow-cyan-500/30 hover:scale-[1.02] transition"
           >
             <Plus size={19} />

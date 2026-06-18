@@ -7,6 +7,7 @@ const StockBatch = require("../model/stockBatch");
 const ProjectBoqItem = require("../model/projectBoqItem");
 const BOQMaster = require("../model/boqMaster");
 const ProcurementPlan = require("../model/ProcurementPlan");
+const Project =require('../model/Project')
 
 const MaterialRequisition = require('../model/MaterialRequisition')
 
@@ -675,6 +676,79 @@ exports.approveChallan = async (req, res) => {
               rate,
               landingRate: rate,
               remarks: "Site material return approved",
+              createdBy: req.user?._id || null,
+            },
+          ],
+          { session }
+        );
+      }
+      /* MRN: Vendor -> Main Store */
+      if (challan.documentType === "MRN") {
+        let oldMainStock = 0;
+
+        const existingMainStock = await MainStoreStock.findOne({
+          mainStoreRef: challan.toMainStoreRef,
+          itemRef: item.itemRef,
+        }).session(session);
+
+        if (existingMainStock) {
+          oldMainStock = existingMainStock.currentStock || 0;
+        }
+
+        const mainStock = await increaseStock({
+          Model: MainStoreStock,
+          findQuery: {
+            mainStoreRef: challan.toMainStoreRef,
+            itemRef: item.itemRef,
+          },
+          qty,
+          rate,
+          session,
+        });
+
+        await createStockTransaction({
+          itemRef: item.itemRef,
+          mainStoreRef: challan.toMainStoreRef,
+
+          transactionType: "CHALLAN_RECEIVED_MAIN_STORE",
+          direction: "IN",
+
+          quantity: qty,
+
+          beforeStock: oldMainStock,
+          afterStock: mainStock.currentStock,
+
+          rate,
+
+          referenceType: "CHALLAN",
+          referenceId: challan._id,
+          referenceNumber: challan.documentNumber,
+
+          remarks: "Vendor material received in main store after MRN approval",
+          createdBy: req.user?._id || null,
+          session,
+        });
+
+        item.toStockRef = mainStock._id;
+
+        await StockBatch.create(
+          [
+            {
+              mainStoreRef: challan.toMainStoreRef,
+              itemRef: item.itemRef,
+
+              sourceType: "VENDOR_PURCHASE",
+              documentType: "MRN",
+              documentNumber: challan.documentNumber,
+              documentDate: challan.documentDate,
+
+              receivedQty: qty,
+              remainingQty: qty,
+
+              rate,
+              landingRate: rate,
+
+              remarks: "MRN approved and material received in main store",
               createdBy: req.user?._id || null,
             },
           ],
@@ -1588,5 +1662,82 @@ exports.updateChallanBeforeApproval = async (req, res) => {
     });
   } finally {
     session.endSession();
+  }
+};
+
+
+// Predict Next ChallanNumber
+exports.generateChallanNumber = async (req, res) => {
+  try {
+    const { projectRef, documentType } = req.query;
+
+    if (!projectRef || !documentType) {
+      return res.status(400).json({
+        success: false,
+        message: "Project and document type required",
+      });
+    }
+
+    const project = await Project.findById(projectRef);
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const companyName =
+      project.allotedCompany || "";
+
+    const projectCode=project.code || "Store-001"
+
+    let prefix = "SPPPL";
+
+    if (
+      companyName
+        .toLowerCase()
+        .includes("sachin electrical")
+    ) {
+      prefix = "SEPL";
+    }
+
+    const lastChallan =
+      await Challan.findOne({
+        projectRef,
+        documentType,
+      }).sort({
+        createdAt: -1,
+      });
+
+    let nextNumber = 1;
+
+    if (lastChallan?.documentNumber) {
+      const lastPart =
+        lastChallan.documentNumber
+          .split("-")
+          .pop();
+
+      nextNumber =
+        Number(lastPart || 0) + 1;
+    }
+
+    const documentNumber =
+      `${prefix}/${projectCode}/${documentType}-${String(
+        nextNumber
+      ).padStart(1, "0")}`;
+
+    return res.status(200).json({
+      success: true,
+      documentNumber,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to generate document number",
+    });
   }
 };

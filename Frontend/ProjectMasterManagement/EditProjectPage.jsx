@@ -23,7 +23,9 @@ const emptyProjectContacts = {
 const contactSections = [
   { key: "client", label: "Client Team" },
   { key: "project", label: "Project Incharge" },
-  { key: "electrical", label: "Electrical Site Incharge" },
+  { key: "staff", label: "Staff" },
+  { key: "electrical", label: "Electrical" },
+  { key: "helper", label: "Helper" },
   { key: "hr", label: "HR Department" },
   { key: "accounts", label: "Accounts Department" },
   { key: "safety", label: "Safety Team" },

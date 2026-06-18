@@ -11,7 +11,8 @@ const { getAllTaxInvoie,
   getPendingChallans,
   getVendorWiseSpending,
   fixInvoiceAndChallanDates,
-  fixInvoiceAmounts
+  fixInvoiceAmounts,
+  // updateApprovalChallanStatus
   } = require("../controllers/taxInvoiceController");
 const upload = require("../config/multer");
 const taxInvoiceRouter = express.Router();
@@ -41,5 +42,10 @@ taxInvoiceRouter.get(
 
 // Temp
 taxInvoiceRouter.get("/fix-invoice-amounts", fixInvoiceAmounts);
+
+// Temp update InoiveApprorval 
+// taxInvoiceRouter.put('/update',updateApprovalChallanStatus)
+
+
 
 module.exports=taxInvoiceRouter;

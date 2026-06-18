@@ -15,6 +15,7 @@ import {
   XCircle,
   IndianRupee,
   Copy,
+  Download,
 } from "lucide-react";
 import ChallanModal from "./ChallanModal";
 import BASE_URL from "../../config/api";
@@ -82,6 +83,13 @@ export default function ChallanManagement() {
     setModalMode("edit");
     setModalOpen(true);
   };
+  // For Direct View then Download If need who Already Created 
+  const openViewAndDownloadModal=(challan)=> {
+    setSelectedChallan(challan);
+    setModalMode("directView")
+    setModalOpen(true);
+
+  }
 
   const formatDate = (date) => {
     if (!date) return "-";
@@ -368,6 +376,7 @@ export default function ChallanManagement() {
               <option>PENDING_SITE_APPROVAL</option>
               <option>APPROVED_BY_SITE</option>
               <option>REJECTED_BY_SITE</option>
+              <option>CORRECTION_REQUESTED</option>
               <option>CANCELLED</option>
             </select>
 
@@ -495,13 +504,14 @@ export default function ChallanManagement() {
                               <Eye size={18} />
                             </button>
 
-                            <button
+                         {item?.approvalStatus==='CORRECTION_REQUESTED' &&    <button
                               onClick={() => openEditModal(item)}
                               className="rounded-lg p-2 text-cyan-400 transition hover:bg-cyan-500/10 hover:text-cyan-300"
                               title="Edit"
                             >
                               <Pencil size={18} />
                             </button>
+                          }
                             <button
                               onClick={() => openReChallanModal(item)}
                               className="rounded-lg p-2 text-purple-400 transition hover:bg-purple-500/10 hover:text-purple-300"
@@ -510,17 +520,18 @@ export default function ChallanManagement() {
                               <Copy size={18} />
                             </button>
 
-                            {item.challanFile && (
-                              <a
-                                href={item.challanFile}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="rounded-lg p-2 text-emerald-400 transition hover:bg-emerald-500/10 hover:text-emerald-300"
-                                title="Open File"
-                              >
-                                <FileText size={18} />
-                              </a>
-                            )}
+
+                            
+                            
+                                <button
+                              onClick={() => openViewAndDownloadModal(item)}
+                              className="rounded-lg p-2 text-purple-400 transition hover:bg-purple-500/10 hover:text-purple-300"
+                              title="Re-Challan / Copy"
+                            >
+                              <Download size={18} />
+                            </button>
+                              
+                           
                           </div>
                         </td>
                       </tr>

@@ -210,7 +210,7 @@ exports.searchParties = async (req, res) => {
         }
 
         const parties = await PartyMaster.find(query)
-            .select("partyName partyType gstNumber contactPerson contactNumber city state")
+            .select("partyName partyType gstNumber contactPerson contactNumber email city state address")
             .sort({ partyName: 1 })
             .limit(limit);
 

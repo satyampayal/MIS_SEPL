@@ -280,25 +280,25 @@ export default function MainStoreLiveStockPage() {
     }, [stocks, search, statusFilter, categoryFilter]);
 
     const stats = useMemo(() => {
-        const totalValue = stocks.reduce(
+        const totalValue = filteredStocks.reduce(
             (sum, s) => sum + Number(s.stockValue || 0),
             0
         );
 
-        const reservedQty = stocks.reduce(
+        const reservedQty = filteredStocks.reduce(
             (sum, s) => sum + Number(s.reservedStock || 0),
             0
         );
 
         return {
-            totalItems: stocks.length,
+            totalItems: filteredStocks.length,
             totalValue,
             reservedQty,
-            lowStock: stocks.filter((s) => s.stockStatus === "LOW_STOCK").length,
-            outStock: stocks.filter((s) => s.stockStatus === "OUT_OF_STOCK").length,
-            negative: stocks.filter((s) => s.stockStatus === "NEGATIVE_STOCK").length,
+            lowStock: filteredStocks.filter((s) => s.stockStatus === "LOW_STOCK").length,
+            outStock: filteredStocks.filter((s) => s.stockStatus === "OUT_OF_STOCK").length,
+            negative: filteredStocks.filter((s) => s.stockStatus === "NEGATIVE_STOCK").length,
         };
-    }, [stocks]);
+    }, [filteredStocks]);
 
     const totalPages = Math.max(1, Math.ceil(filteredStocks.length / itemsPerPage));
 

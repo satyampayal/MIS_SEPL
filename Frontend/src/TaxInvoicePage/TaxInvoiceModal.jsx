@@ -10,6 +10,7 @@ const initialForm = {
   invoiceAmount: "",
   projectSite: "",
   deliveryStatus: "",
+  approvalChallanStatus: "",
   challanNumber: "",
   challanDate: "",
   quantitySent: "",
@@ -85,6 +86,7 @@ export default function TaxInvoiceModal({
         invoiceAmount: invoice.invoiceAmount || "",
         projectSite: invoice.projectSite || "",
         deliveryStatus: invoice.deliveryStatus || "",
+        approvalChallanStatus:invoice.approvalChallanStatus||"",
         challanNumber: invoice.challanNumber || "",
         challanDate: invoice.challanDate
           ? invoice.challanDate.substring(0, 10)
@@ -241,6 +243,8 @@ export default function TaxInvoiceModal({
           <Select label="Type of Challan" name="typeOfChallan" value={formData.typeOfChallan} onChange={handleChange} disabled={isView} options={["DDC", "DC", "MRN", "LPN"]} placeholder="Select Type Of Challan" />
 
           <Select label="Delivery Status" name="deliveryStatus" value={formData.deliveryStatus} onChange={handleChange} disabled={isView} options={["Delivered", "Pending", "Partial"]} placeholder="Select Delivery Status" />
+
+          <Select label="Approval Challan Status" name="approvalChallanStatus" value={formData.approvalChallanStatus} onChange={handleChange} disabled={isView} options={["Delivered", "Pending", "Partial"]} placeholder="Select Approval Challan Status" />
 
           <Input label="Challan Number" name="challanNumber" value={formData.challanNumber} onChange={handleChange} disabled={isView} />
 

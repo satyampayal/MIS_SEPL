@@ -10,6 +10,7 @@ const {
   getChallansByMRQ,
   updateChallanBeforeApproval,
   requestChallanCorrection,
+  generateChallanNumber,
 } = require("../controllers/challanController");
 
 const upload = require("../config/multer");
@@ -21,12 +22,16 @@ ChallanRouter.get("/by-mrq/:mrqId", isAuthenticated, getChallansByMRQ);
 
 ChallanRouter.post("/create",isAuthenticated, createChallan);
 
+//Genearte Challan Number
+ChallanRouter.get("/number", generateChallanNumber);
+
 ChallanRouter.put("/approve/:id",isAuthenticated, approveChallan);
 
 ChallanRouter.put("/reject/:id",isAuthenticated, rejectChallan);
 
-
 ChallanRouter.get("/picker-items", getChallanPickerItems);
+
+
 
 ChallanRouter.put(
   "/update-before-approval/:id",

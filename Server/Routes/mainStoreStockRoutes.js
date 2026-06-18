@@ -13,6 +13,7 @@ const {
   deleteMainStoreStock,
   getLowStockDashboard,
   bulkAddOpeningStock,
+  bulkMainOpeningStockUploadRate,
 } = require("../controllers/mainStoreStockController");
 const uploadExcel = require("../config/multerExcel");
 
@@ -35,6 +36,9 @@ MainStoreStockRouter.get("/:id", getSingleStock);
 
 MainStoreStockRouter.post("/bulk-opening-stock", uploadExcel.single("excelFile"),
   bulkMainOpeningStockUpload);
+  // FOr to Update the Rate Temperory Route and Contoller
+  // MainStoreStockRouter.post("/bulk-opening-stock", uploadExcel.single("excelFile"),
+  // bulkMainOpeningStockUploadRate);
   
 MainStoreStockRouter.put("/adjust/:id", adjustStock);
 

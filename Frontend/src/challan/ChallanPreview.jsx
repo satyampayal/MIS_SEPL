@@ -12,8 +12,10 @@ export default function ChallanPreview({
   totalAmount = 0,
   onBack,
   onConfirm,
-  challanProject = {}
+  challanProject = {},
+  mode
 }) {
+  const isDirectMode=mode==="directView";
   const formatDate = (date) => {
     if (!date) {
       return new Date().toLocaleDateString("en-IN");
@@ -199,7 +201,7 @@ const downloadPDF = async () => {
               </div>
 
               <div className="grid grid-cols-2 border-b border-black text-[16px]">
-                <div className="space-y-3 p-b-3">
+                <div className="space-y-3 p-b-1">
                   <p className='border-b border-black p-1'>
                     <b>Document Number: </b>
                     {formData.documentNumber || "-"}
@@ -208,10 +210,14 @@ const downloadPDF = async () => {
                     <b>Document Type: </b>
                     {formData.documentType || "-"}
                   </p>
-                  {/* <p>
-                    <b>Approval Status: </b>
-                    Pending Site Approval
-                  </p> */}
+                  <p  className='border-b border-black p-1'>
+                    <b>Transport Details: </b>
+                      {formData?.transportDetail}
+                  </p>
+                   <p  className='p-1'>
+                    <b>Transport Mode/Vechile No.: </b>
+                      {formData?.transportMode}
+                  </p>
                 </div>
 
                 <div className="space-y-1 border-l border-black p-b-3">
@@ -235,7 +241,7 @@ const downloadPDF = async () => {
               </div>
 
               <div className="space-y-1 border-b border-black  p-b-3">
-                <p className='text-[14px] font-semibold border-b border-black p-1'>
+                <p className='text-[14px] font-semibold border-b border-black p-1 '>
                   <b>Name of Project / Site: </b>
                   {formData.projectName || "-"}
                 </p>
@@ -243,10 +249,10 @@ const downloadPDF = async () => {
                   <b>Purpose: </b>
                   Approval based digital material movement
                 </p> */}
-                <p className='text-[16px] font-semibold border-b border-black p-1'>
+                {/* <p className='text-[16px] font-semibold border-b border-black '>
                   <b>Remarks: </b>
                   {formData.remarks || "-"}
-                </p>
+                </p> */}
               </div>
 
               <table className="w-full border-collapse text-[14px]">
@@ -254,14 +260,15 @@ const downloadPDF = async () => {
                   <tr>
                     <th className="border border-black p-1 w-10">Sr.</th>
                     <th className="border border-black p-1">Material</th>
-                    <th className="border border-black p-1 w-24">Type</th>
-                    <th className="border border-black p-1 w-16">UOM</th>
+                    {/* <th className="border border-black p-1 w-24">Type</th> */}
                     <th className="border border-black p-1 w-24">HSN</th>
+
+                    <th className="border border-black p-1 w-16">UOM</th>
                     <th className="border border-black p-1 w-16">Qty</th>
                     <th className="border border-black p-1 w-20">Rate</th>
                     <th className="border border-black p-1 w-24">Amount</th>
-                    <th className="border border-black p-1 w-20">Return </th>
-                    <th className="border border-black p-1 w-24">Remarks</th>
+                    <th className="border border-black p-1 w-20">BOQ Sr.No </th>
+                    <th className="border border-black p-1 w-25">Remarks</th>
                   </tr>
                 </thead>
 
@@ -280,8 +287,11 @@ const downloadPDF = async () => {
                         ) : null}
                       </td>
 
-                      <td className="border border-black p-1 text-center">
+                      {/* <td className="border border-black p-1 text-center">
                         {item.itemPurpose || "-"}
+                      </td> */}
+                       <td className="border border-black p-1 text-center">
+                        {item.hsnCode || "-"}
                       </td>
 
                       <td className="border border-black p-1 text-center">
@@ -290,9 +300,7 @@ const downloadPDF = async () => {
 
                      
 
-                      <td className="border border-black p-1 text-center">
-                        {item.hsnCode || "-"}
-                      </td>
+                     
 
                    
                        <td className="border border-black p-1 text-center">
@@ -308,10 +316,13 @@ const downloadPDF = async () => {
                        <td className="border border-black p-1 text-right">
                          {/* <b>  {rateShow ? Number(item.amount).toFixed(0):''}</b> */}
                       </td>
-                         <td className="border border-black p-1 text-center">
+                         {/* <td className="border border-black p-1 text-center">
                         {item.isReturnable
                           ? `Yes ${item.expectedReturnDate ? `(${formatDate(item.expectedReturnDate)})` : ""}`
                           : ""}
+                      </td> */}
+                      <td className="border border-black p-1 text-center">
+                        {item?.boqNum||'-'}
                       </td>
                       <td className="border border-black p-1 text-right">
 
@@ -322,7 +333,7 @@ const downloadPDF = async () => {
                   {Array.from({ length: Math.max(0, 20 - items.length) }).map(
                     (_, index) => (
                       <tr key={`blank-${index}`}>
-                        <td className="h-7 border border-black p-1">&nbsp;</td>
+                        <td className=" border border-black p-1">&nbsp;</td>
                         <td className="border border-black p-1"></td>
                         <td className="border border-black p-1"></td>
                         <td className="border border-black p-1"></td>
@@ -331,14 +342,14 @@ const downloadPDF = async () => {
                         <td className="border border-black p-1"></td>
                         <td className="border border-black p-1"></td>
                         <td className="border border-black p-1"></td>
-                        <td className="border border-black p-1"></td>
+                        {/* <td className="border border-black p-1"></td> */}
                       </tr>
                     )
                   )}
 
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan="6"
                       className="border border-black p-2 text-right font-bold"
                     >
                       Total
@@ -361,17 +372,15 @@ const downloadPDF = async () => {
                 </p>
 
                 <p className="font-semibold">
-                  Certified that the above material is issued through digital
-                  challan control and will be updated in stock only after
-                  approval.
+                  Certified that the above material is not for sale & is being sent for job Work.
                 </p>
               </div>
 
               <div className="grid grid-cols-3">
                 <div className="min-h-[115px] border-r border-black p-3">
-                  <p className="font-bold">Prepared By</p>
+                  <p className="font-bold">Received by </p>
                   <div className="mt-16 border-t border-black pt-1">
-                    Store / MIS User
+                    Site Person Name 
                   </div>
                 </div>
 
@@ -396,13 +405,21 @@ const downloadPDF = async () => {
         </div>
 
         <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-800 bg-slate-950/95 px-5 py-4 backdrop-blur">
-          <button
+        { !isDirectMode && <button
             onClick={onBack}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white"
           >
             <ArrowLeft size={18} />
             Back to Edit
-          </button>
+          </button>}
+          
+           { isDirectMode && <button
+            onClick={onBack}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white"
+          >
+            <ArrowLeft size={18} />
+            Cancel
+          </button>}
 
           <button
             onClick={downloadPDF}
@@ -412,13 +429,13 @@ const downloadPDF = async () => {
             Download PDF
           </button>
 
-          <button
+         { !isDirectMode &&  <button
             onClick={onConfirm}
             className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400"
           >
             <CheckCircle2 size={18} />
             Confirm & Save
-          </button>
+          </button>}
         </div>
       </div>
     </div>

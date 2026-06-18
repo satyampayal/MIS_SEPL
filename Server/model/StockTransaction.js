@@ -29,6 +29,7 @@ const stockTransactionSchema = new mongoose.Schema(
         "CHALLAN_RECEIVED_SITE",
         "CHALLAN_REJECT_RELEASE",
         "STOCK_ADJUSTMENT",
+        "CHALLAN_RECEIVED_MAIN_STORE",
       ],
       required: true,
     },

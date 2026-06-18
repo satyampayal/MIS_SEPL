@@ -489,9 +489,9 @@ export default function ProjectSpendingSurveillancePage() {
                           <Th>Invoice No.</Th>
                           <Th>Vendor</Th>
                           <Th>Project</Th>
-                          <Th>Qty Sent</Th>
-                          <Th>Qty Received</Th>
-                          <Th>Status</Th>
+                          {/* <Th>Qty Sent</Th>
+                          <Th>Qty Received</Th> */}
+                          <Th>Approval Cha. Status</Th>
                           <Th>Amount</Th>
                         </tr>
                       </thead>
@@ -517,14 +517,14 @@ export default function ProjectSpendingSurveillancePage() {
                             <td className="p-4 text-slate-300">
                               {item.projectSite}
                             </td>
-                            <td className="p-4 text-slate-300">
+                            {/* <td className="p-4 text-slate-300">
                               {item.quantitySent || 0}
                             </td>
                             <td className="p-4 text-slate-300">
                               {item.quantityReceived || 0}
-                            </td>
+                            </td> */}
                             <td className="p-4">
-                              <StatusBadge status={item.deliveryStatus} />
+                              <StatusBadge status={item.approvalChallanStatus} />
                             </td>
                             <td className="p-4 font-semibold text-cyan-400">
                               ₹ {formatAmount(item.invoiceAmount)}

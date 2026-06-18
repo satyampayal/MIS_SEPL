@@ -186,13 +186,12 @@ export default function ChallanApprovalPage() {
           "Please enter correction reason"
         );
       }
-
       await axios.put(
-        `${CHALLAN_API}/request-correction/${selectedChallan._id}`,
+        `${API_URL}/request-correction/${selectedChallan._id}`,
         {
           correctionReason,
         },
-        authHeader()
+        authHeader
       );
 
       toast.success(
@@ -201,8 +200,9 @@ export default function ChallanApprovalPage() {
 
       closeCorrectionModal();
 
-      fetchPendingApprovals();
+      fetchPendingChallans();
     } catch (error) {
+      // console.log(correctionReason)
       toast.error(
         error?.response?.data?.message ||
         "Failed to request correction"

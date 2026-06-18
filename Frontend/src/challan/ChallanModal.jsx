@@ -23,7 +23,10 @@ const SITE_STOCK_API = `${BASE_URL}/site-store-stock/live-stock`;
 const DOCUMENT_TYPES = ["DC", "DDC", "LPN", "ISTN", "MRN", "MRS", "CN"];
 
 const PURPOSES = [
+  { value: "", label: "Select Type" },
   { value: "CONSUMABLE", label: "Consumable" },
+  { value: "MAIN ITEM", label: "MAIN ITEM" },
+  { value: "ACCESSORIES", label: "ACCESSORIES" },
   { value: "TOOL", label: "Tool" },
   { value: "SAFETY", label: "Safety" },
   { value: "TEMPORARY_USE", label: "Temporary Use" },
@@ -91,6 +94,7 @@ export default function ChallanModal({
   const isView = mode === "view";
   const isEdit = mode === "edit";
   const isReChallan = mode === "rechallan";
+  const isDirectView = mode === "directView";
 
   const title = isView
     ? "View Challan"
@@ -98,7 +102,9 @@ export default function ChallanModal({
       ? "Edit Challan"
       : isReChallan
         ? "Re-Challan / Copy Challan"
-        : "Create Challan";
+        : isDirectView
+          ? "Direct view "
+          : "Create Challan";
 
   const [form, setForm] = useState(emptyForm);
   const [items, setItems] = useState([{ ...emptyItem }]);
@@ -243,6 +249,26 @@ export default function ChallanModal({
     }
   }, [isOpen, form.fromMainStoreRef, form.fromSiteRef, form.documentType]);
 
+  //  For the challan Number Predict
+  useEffect(() => {
+  if (isEdit || isView || challan) return;
+
+  const projectId =
+    form.toSiteRef ||
+    form.fromSiteRef ||
+    form.projectRef;
+
+  if (!projectId || !form.documentType) return;
+
+  generateChallanNumber(projectId, form.documentType);
+
+}, [
+  form.toSiteRef,
+  form.fromSiteRef,
+  form.projectRef,
+  form.documentType,
+]);
+
   if (!isOpen) return null;
 
   const fetchProjects = async () => {
@@ -295,7 +321,31 @@ export default function ChallanModal({
   );
 
 
+const generateChallanNumber = async (
+  projectId,
+  documentType
+) => {
+  try {
+    if (!projectId || !documentType) return;
 
+    const res = await axios.get(
+      `${CHALLAN_API}/number`,
+      {
+        params: {
+          projectRef: projectId,
+          documentType,
+        },
+      }
+    );
+
+    setForm((prev) => ({
+      ...prev,
+      documentNumber: res.data.documentNumber,
+    }));
+  } catch (error) {
+    console.error(error);
+  }
+};
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
@@ -350,6 +400,8 @@ export default function ChallanModal({
       if (value) fetchItemsByMainStore(value);
       return;
     }
+    
+    
 
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -599,6 +651,7 @@ export default function ChallanModal({
   };
 
   const hasError = items.some((item) => item.stockError);
+  
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 text-slate-100">
@@ -627,6 +680,7 @@ export default function ChallanModal({
             value={form.documentNumber}
             onChange={handleFormChange}
             disabled={isView || isEdit}
+            // disabled={isView }
           />
 
           <Input
@@ -643,7 +697,7 @@ export default function ChallanModal({
             name="documentType"
             value={form.documentType}
             onChange={handleFormChange}
-            disabled={isView || isEdit}
+            disabled={isView}
           >
             {DOCUMENT_TYPES.map((type) => (
               <option key={type}>{type}</option>
@@ -656,7 +710,7 @@ export default function ChallanModal({
               name="fromMainStoreRef"
               value={form.fromMainStoreRef}
               onChange={handleFormChange}
-              disabled={isView || isEdit}
+              disabled={isView}
             >
               <option value="">Select Main Store</option>
               {stores.map((store) => (
@@ -690,7 +744,7 @@ export default function ChallanModal({
               name="fromSiteRef"
               value={form.fromSiteRef}
               onChange={handleFormChange}
-              disabled={isView || isEdit}
+              disabled={isView}
             >
               <option value="">Select Site</option>
               {projects.map((project) => (
@@ -707,7 +761,7 @@ export default function ChallanModal({
               name="toSiteRef"
               value={form.toSiteRef}
               onChange={handleFormChange}
-              disabled={isView || isEdit}
+              disabled={isView}
             >
               <option value="">Select Site</option>
               {projects.map((project) => (
@@ -1020,6 +1074,23 @@ export default function ChallanModal({
           )}
         </div>
       </div>
+
+      {/* DIrect Open View  */}
+      {
+        isDirectView  && (
+           <ChallanPreview
+          formData={form}
+          items={items}
+          totalAmount={totalAmount}
+          onBack={onClose }
+          
+          onConfirm={saveChallan}
+          challanProject={challanProject}
+          mode ="directView"
+        />
+        )
+      }
+
       {previewOpen && (
         <ChallanPreview
           formData={form}
