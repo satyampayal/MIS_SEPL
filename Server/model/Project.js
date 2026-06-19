@@ -143,6 +143,7 @@ projectContacts: {
   staff: [contactPersonSchema],
   electrical: [contactPersonSchema],
   helper: [contactPersonSchema],
+  fire:[contactPersonSchema],
   hr: [contactPersonSchema],
   accounts: [contactPersonSchema],
   safety: [contactPersonSchema],

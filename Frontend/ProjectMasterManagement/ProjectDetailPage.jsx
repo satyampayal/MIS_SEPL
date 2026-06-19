@@ -18,6 +18,7 @@ const contactSections = [
   { key: "staff", label: "Staff" },
   { key: "electrical", label: "Electrical" },
   { key: "helper", label: "Helper" },
+  { key: "fire", label: "FIre Team" },
   { key: "hr", label: "HR Department" },
   { key: "accounts", label: "Accounts Department" },
   { key: "safety", label: "Safety Team" },
