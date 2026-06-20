@@ -14,10 +14,14 @@ const emptyProjectContacts = {
   client: [],
   project: [],
   electrical: [],
+  helper:[],
+  fire:[],
   hr: [],
   accounts: [],
   safety: [],
   store: [],
+  contractor:[],
+  superVisior:[],
 };
 
 const contactSections = [
@@ -31,6 +35,10 @@ const contactSections = [
   { key: "accounts", label: "Accounts Department" },
   { key: "safety", label: "Safety Team" },
   { key: "store", label: "Store Team" },
+  { key: "contractor", label: "Contractor Base Team" },
+  { key: "superVisior", label: "superVisior" },
+  
+  
 ];
 
 export default function EditProjectPage() {

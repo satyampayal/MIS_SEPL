@@ -144,6 +144,8 @@ projectContacts: {
   electrical: [contactPersonSchema],
   helper: [contactPersonSchema],
   fire:[contactPersonSchema],
+  contractor:[contactPersonSchema],
+  superVisior:[contactPersonSchema],
   hr: [contactPersonSchema],
   accounts: [contactPersonSchema],
   safety: [contactPersonSchema],

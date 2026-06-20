@@ -19,6 +19,8 @@ import {
     Pencil
 } from "lucide-react";
 import BASE_URL from "../../config/api";
+import * as XLSX from "xlsx";
+
 
 const API_URL = `${BASE_URL}/site-store-stock`;
 const PROJECT_API = `${BASE_URL}/project-master/all`;
@@ -60,6 +62,7 @@ export default function SiteStoreLiveStockPage() {
 
     const [excelFile, setExcelFile] = useState(null);
     const [uploadingExcel, setUploadingExcel] = useState(false);
+    const [exportExcel, setExportExcel] = useState(false);
 
     const fetchProjects = async () => {
         try {
@@ -246,6 +249,7 @@ export default function SiteStoreLiveStockPage() {
 
         try {
             setUploadingExcel(true);
+            // setExportExcel(true);
 
             const formData = new FormData();
             formData.append("excelFile", excelFile);
@@ -261,11 +265,14 @@ export default function SiteStoreLiveStockPage() {
             );
 
             setExcelFile(null);
+
             fetchStock();
         } catch (error) {
             toast.error(error?.response?.data?.message || "Excel upload failed");
         } finally {
             setUploadingExcel(false);
+            // setExportExcel(false);
+
         }
     };
 
@@ -302,7 +309,7 @@ export default function SiteStoreLiveStockPage() {
             siteRef: stock.siteRef?._id || stock.siteRef || "",
             itemRef: stock.itemRef?._id || stock.itemRef || "",
             receivedTillDate:
-                stock.currentStock +  stock.consumedQty + stock.returnedQty + stock.damagedQty || "",
+                stock.currentStock + stock.consumedQty + stock.returnedQty + stock.damagedQty || "",
             consumedTillDate: stock.consumedQty || "",
             returnedTillDate: stock.returnedQty || "",
             damagedTillDate: stock.damagedQty || "",
@@ -316,6 +323,54 @@ export default function SiteStoreLiveStockPage() {
 
     const openViewModal = (stock) => fillStockForm(stock, "view");
     const openEditModal = (stock) => fillStockForm(stock, "edit");
+
+    // Export Repected Stock of Site
+    const handleExportSiteStock = () => {
+        try {
+            setExportExcel(true);
+            console.log("Export Excel Start")
+
+            const exportData = filteredStocks.map((item, index) => ({
+                "S.No": index + 1,
+
+                "Item Name": item?.itemRef?.itemName || "",
+                "Item Code": item?.itemRef?.itemCode || "",
+                "Category ": item?.itemRef?.category || "",
+                "HSN Code ": item?.itemRef?.hsnCode || "",
+                "UNIT ": item?.itemRef?.unit || "",
+                "Available Stock": item?.availableStock || 0,
+                "Consumed Qty": item?.consumedQty || 0,
+                "Current Stock": item?.currentStock || 0,
+
+                //   "Created At": proj?.createdAt
+                //     ? new Date(proj.createdAt).toLocaleString("en-IN")
+                //     : "",
+                //   "Updated At": proj?.updatedAt
+                //     ? new Date(proj.updatedAt).toLocaleString("en-IN")
+                //     : "",
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Site Stock ");
+
+            XLSX.writeFile(workbook, "SiteStock.xlsx");
+        }
+        catch (error) {
+
+            toast.error(error || "Errror in Exporting")
+        } finally {
+            setExportExcel(false);
+            console.log("Export Excel End")
+
+        }
+
+
+
+
+    };
+    //   console.log(filteredStocks);
 
     const StatCard = ({ title, value, icon: Icon, tone }) => (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg shadow-slate-950/30">
@@ -439,10 +494,17 @@ export default function SiteStoreLiveStockPage() {
 
                             <button
                                 onClick={uploadSiteOpeningExcel}
-                                disabled={uploadingExcel}
+                                disabled={uploadingExcel || exportExcel}
                                 className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50"
                             >
                                 {uploadingExcel ? "Uploading..." : "Upload Excel"}
+                            </button>
+                            <button
+                                onClick={handleExportSiteStock}
+                                disabled={uploadingExcel || exportExcel}
+                                className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 disabled:opacity-50"
+                            >
+                                {exportExcel ? "Exporting..." : "Export Excel"}
                             </button>
                         </div>
                     </div>
@@ -687,7 +749,7 @@ export default function SiteStoreLiveStockPage() {
                     projects={projects}
                     items={items}
                     onClose={() => setOpeningModal(false)}
-                    onSave={(type)=>saveSiteOpeningStock(type)}
+                    onSave={(type) => saveSiteOpeningStock(type)}
                     saving={savingOpening}
                     mode={modalMode}
                 />
@@ -867,12 +929,12 @@ function SiteOpeningStockModal({
 
                     {!isView && (
                         <button
-                            onClick={isEdit?()=>onSave('update'):()=> onSave('add')}
+                            onClick={isEdit ? () => onSave('update') : () => onSave('add')}
                             disabled={saving || liveStock < 0}
                             className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
                         >
                             {saving && <Loader2 size={18} className="animate-spin" />}
-                           {isEdit?"Update Site Stock":" Add Site Stock"}
+                            {isEdit ? "Update Site Stock" : " Add Site Stock"}
                         </button>
                     )}
                     {/* {
