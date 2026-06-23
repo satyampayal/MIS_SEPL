@@ -1,4 +1,4 @@
-const Contractor = require("../model/contractor");
+const Contractor = require("../model/Contractor");
 
 exports.createContractor = async (req, res) => {
   try {
