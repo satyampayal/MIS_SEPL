@@ -30,6 +30,10 @@ const ItemIdentityRouter = require("./Routes/itemIdentityRoutes");
 const StockTransactionRouter = require("./Routes/stockTransactionRoutes");
 const MRQRouter=require('./Routes/materialRequisitionRoutes')
 const ProcuremnetPlanRouter=require('./Routes/procurementPlanRoutes')
+const measurementBookRouter = require("./Routes/measurementBookRouter");
+const contractorRouter = require("./Routes/contractorRouter");
+
+
 
 // alllow  other Port use server Resources
 app.use(
@@ -69,12 +73,18 @@ app.use('/api/store-items',sroreItemRouter)
 /* store Master Rotes*/
 app.use('/store-master',storeMasterRouter)
 
+//COntractor
+app.use("/contractor", contractorRouter);
+
 // DPR  Router
 app.use('/dpr',dprRouter);
 // Boq Routes
 app.use('/boq',boqRouter);
+//MB 
+app.use("/measurement-book", measurementBookRouter);
 // Item Identity Routes
 app.use("/item-identity", ItemIdentityRouter);
+
 
 // Material Movement Routes
 app.use("/material-movement", materialMovementRouter);

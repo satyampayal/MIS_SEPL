@@ -1,87 +1,135 @@
 const DailyProgressReport = require("../model/DailyProgressReportSchema");
-const BOQItem = require('../model/boqItem')
+const Project = require("../model/Project");
+const Contractor = require("../model/Contractor");
 
+const cleanText = (value) => String(value || "").trim();
 
-const parseWorkItems = (workItems) => {
-  if (!workItems) return [];
-
-  let items = workItems;
-
-  if (typeof workItems === "string") {
-    items = JSON.parse(workItems);
-  }
-
-  if (!Array.isArray(items)) return [];
-
-  return items.map((item) => {
-    const todayQty = Number(item.todayQty) || 0;
-    const rate = Number(item.rate) || 0;
-
-    return {
-      boqItemRef: item.boqItemRef || null,
-      boqItemCode: item.boqItemCode || "",
-      generalName: item.generalName || "",
-      description: item.description || "",
-      uom: item.uom || "",
-      todayQty,
-      rate,
-      amount: todayQty * rate,
-      workType: item.workType || "INSTALLATION",
-      remarks: item.remarks || "",
-    };
-  });
+const toNumber = (value) => {
+  const n = Number(value || 0);
+  return Number.isFinite(n) ? n : 0;
 };
-/**
- * CREATE DPR
- */
+
+const generateDPRNumber = async (projectRef, reportDate) => {
+  const year = new Date(reportDate).getFullYear();
+
+  const count = await DailyProgressReport.countDocuments({
+    projectRef,
+    reportDate: {
+      $gte: new Date(`${year}-01-01`),
+      $lte: new Date(`${year}-12-31`),
+    },
+  });
+
+  return `DPR/${year}/${String(count + 1).padStart(4, "0")}`;
+};
+
 exports.createDPR = async (req, res) => {
   try {
     const {
-      projectId,
+      projectRef,
       contractorRef,
-      projectName,
       reportDate,
-      workDoneToday,
-      manpowerCount,
-      materialReceived,
-      materialUsed,
-      issuesFaced,
-      tomorrowPlan,
       siteInchargeName,
+      weather,
+      manpowerDetails = [],
+      workDoneToday,
+      materialReceived = [],
+      materialUsed = [],
+      visitors,
       remarks,
-      workItems,
+      status,
     } = req.body;
 
-    if (!projectName || !reportDate) {
+    if (!projectRef) {
       return res.status(400).json({
         success: false,
-        message: "Project name and report date are required",
+        message: "Project is required",
       });
     }
 
-    const photos =
-      req.files?.map((file) => ({
-        url: file.path,
-        publicId: file.filename,
-      })) || [];
+    if (!reportDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Report date is required",
+      });
+    }
 
-    const finalWorkItems = parseWorkItems(workItems);
+    if (!cleanText(workDoneToday)) {
+      return res.status(400).json({
+        success: false,
+        message: "Work done today is required",
+      });
+    }
+
+    const project = await Project.findById(projectRef);
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    let contractor = null;
+
+    if (contractorRef) {
+      contractor = await Contractor.findById(contractorRef);
+    }
+
+    const safeManpower = manpowerDetails
+      .map((m) => ({
+        role: cleanText(m.role),
+        count: toNumber(m.count),
+      }))
+      .filter((m) => m.role || m.count > 0);
+
+    const manpowerCount = safeManpower.reduce(
+      (sum, m) => sum + Number(m.count || 0),
+      0
+    );
+
+    const normalizeMaterial = (items = []) =>
+      items
+        .map((item) => ({
+          itemRef: item.itemRef || null,
+          itemName: cleanText(item.itemName),
+          itemCode: cleanText(item.itemCode),
+          uom: cleanText(item.uom),
+          quantity: toNumber(item.quantity),
+          source: item.source || "OTHER",
+          remarks: cleanText(item.remarks),
+        }))
+        .filter((item) => item.itemName && item.quantity > 0);
+
+    const dprNumber = await generateDPRNumber(projectRef, reportDate);
 
     const dpr = await DailyProgressReport.create({
-      projectId: projectId || null,
-      contractorRef: contractorRef || null,
-      projectName,
+      dprNumber,
+
+      projectRef,
+      projectName: project.name || project.projectName || "",
+
+      contractorRef: contractor?._id || null,
+      contractorName:
+        contractor?.contractorName || contractor?.name || "",
+
       reportDate,
-      workDoneToday: workDoneToday || "",
+      siteInchargeName: cleanText(siteInchargeName),
+      weather: weather || "CLEAR",
+
       manpowerCount,
-      materialReceived,
-      materialUsed,
-      issuesFaced,
-      tomorrowPlan,
-      siteInchargeName,
-      remarks,
-      workItems: finalWorkItems,
-      photos,
+      manpowerDetails: safeManpower,
+
+      workDoneToday: cleanText(workDoneToday),
+
+      materialReceived: normalizeMaterial(materialReceived),
+      materialUsed: normalizeMaterial(materialUsed),
+
+      visitors: cleanText(visitors),
+      remarks: cleanText(remarks),
+
+      status: status || "SUBMITTED",
+
       createdBy: req.user?._id || null,
     });
 
@@ -91,360 +139,229 @@ exports.createDPR = async (req, res) => {
       dpr,
     });
   } catch (error) {
-    console.log("Create DPR Error:", error);
+    console.error("Create DPR Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while creating DPR",
+      message: "Failed to create DPR",
       error: error.message,
     });
   }
 };
-/**
- * GET ALL DPR
- */
+
+
 exports.getAllDPR = async (req, res) => {
   try {
-    const reports = await DailyProgressReport.find()
-      .populate("projectId")
-      // .populate("contractorRef", "contractorName contactPerson mobile")
-      .populate("workItems.boqItemRef")
-      // .populate("createdBy", "fullName email")
-      .sort({ reportDate: -1, createdAt: -1 });
+    const { projectRef, fromDate, toDate, search } = req.query;
 
-    return res.status(200).json({
-      success: true,
-      total: reports.length,
-      reports
-    });
-  } catch (error) {
-    console.log("Get All DPR Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error while fetching DPR",
-      error: error.message
-    });
-  }
-};
+    const filter = {};
 
-/**
- * GET PARTICULAR DPR BY ID
- */
-exports.getParticularDPR = async (req, res) => {
-  try {
-    const { dprId } = req.params;
-    const id = dprId;
-
-    const dpr = await DailyProgressReport.findById(id)
-      .populate("projectId")
-      .populate("contractorRef", "contractorName contactPerson mobile")
-      .populate("workItems.boqItemRef")
-      .populate("createdBy", "fullName email");
-
-    if (!dpr) {
-      return res.status(404).json({
-        success: false,
-        message: "DPR not found"
-      });
+    if (projectRef) {
+      filter.projectRef = projectRef;
     }
 
+    if (fromDate || toDate) {
+      filter.reportDate = {};
+
+      if (fromDate) {
+        filter.reportDate.$gte = new Date(fromDate);
+      }
+
+      if (toDate) {
+        filter.reportDate.$lte = new Date(toDate);
+      }
+    }
+
+    if (search) {
+      filter.$or = [
+        {
+          projectName: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          siteInchargeName: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      ];
+    }
+
+    const dprs = await DailyProgressReport.find(filter)
+      .sort({ reportDate: -1 })
+      .populate("projectRef", "name code")
+      .populate("createdBy", "name");
+
     return res.status(200).json({
       success: true,
-      dpr
+      count: dprs.length,
+      dprs,
     });
   } catch (error) {
-    console.log("Get Particular DPR Error:", error);
+    console.error(error);
+
     return res.status(500).json({
       success: false,
-      message: "Server error while fetching particular DPR",
-      error: error.message
+      message: "Failed to fetch DPRs",
     });
   }
 };
 
-/**
- * GET DPR BY PROJECT ID
- */
-exports.getDPRByProjectId = async (req, res) => {
+
+exports.getSingleDPR = async (req, res) => {
   try {
-    const { projectId } = req.params;
+    const dpr = await DailyProgressReport.findById(req.params.id)
+      .populate("projectRef")
+      .populate("createdBy", "name");
 
-    const reports = await DailyProgressReport.find({ projectId })
-      .populate("projectId")
-      .populate("createdBy", "fullName email")
-      .populate("contractorRef", "contractorName contactPerson mobile")
-      .populate("workItems.boqItemRef")
-      .sort({ reportDate: -1 });
-
-    return res.status(200).json({
-      success: true,
-      total: reports.length,
-      reports
-    });
-  } catch (error) {
-    console.log("Get DPR By Project Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error while fetching project DPR",
-      error: error.message
-    });
-  }
-};
-
-/**
- * UPDATE DPR
- */
-exports.updateDPR = async (req, res) => {
-  try {
-    const { dprId } = req.params;
-
-    const existingDPR = await DailyProgressReport.findById(dprId);
-
-    if (!existingDPR) {
+    if (!dpr) {
       return res.status(404).json({
         success: false,
         message: "DPR not found",
       });
     }
 
-    const newPhotos =
-      req.files?.map((file) => ({
-        url: file.path,
-        publicId: file.filename,
-      })) || [];
-
-    const updatedData = {
-      ...req.body,
-    };
-
-    if (req.body.workItems !== undefined) {
-      updatedData.workItems = parseWorkItems(req.body.workItems);
-    }
-
-    if (newPhotos.length > 0) {
-      updatedData.photos = [...existingDPR.photos, ...newPhotos];
-    }
-
-    const updatedDPR = await DailyProgressReport.findByIdAndUpdate(
-      dprId,
-      updatedData,
-      { new: true, runValidators: true }
-    )
-      .populate("projectId")
-      .populate("contractorRef", "contractorName contactPerson mobile")
-      .populate("workItems.boqItemRef");
-
     return res.status(200).json({
       success: true,
-      message: "DPR updated successfully",
-      dpr: updatedDPR,
+      dpr,
     });
   } catch (error) {
-    console.log("Update DPR Error:", error);
+    console.error(error);
+
     return res.status(500).json({
       success: false,
-      message: "Server error while updating DPR",
-      error: error.message,
+      message: "Failed to fetch DPR",
     });
   }
 };
 
-/**
- * DELETE DPR
- */
-exports.deleteDPR = async (req, res) => {
-  try {
-    const { dprId } = req.params;
-    const id = dprId;
 
-    const dpr = await DailyProgressReport.findById(id);
+exports.updateDPR = async (req, res) => {
+  try {
+    const dpr = await DailyProgressReport.findById(req.params.id);
 
     if (!dpr) {
       return res.status(404).json({
         success: false,
-        message: "DPR not found"
+        message: "DPR not found",
       });
     }
 
-    await DailyProgressReport.findByIdAndDelete(id);
+    Object.assign(dpr, req.body);
+
+    dpr.updatedBy = req.user._id;
+
+    await dpr.save();
 
     return res.status(200).json({
       success: true,
-      message: "DPR deleted successfully"
+      message: "DPR updated successfully",
+      dpr,
     });
   } catch (error) {
-    console.log("Delete DPR Error:", error);
+    console.error(error);
+
     return res.status(500).json({
       success: false,
-      message: "Server error while deleting DPR",
-      error: error.message
+      message: "Failed to update DPR",
     });
   }
 };
 
-/**
- * FILTER DPR
- */
-exports.filterDPR = async (req, res) => {
+
+exports.deleteDPR = async (req, res) => {
   try {
-    const { search, fromDate, toDate, projectName } = req.query;
+    const dpr = await DailyProgressReport.findById(req.params.id);
 
-    const query = {};
-
-    if (projectName) {
-      query.projectName = { $regex: projectName, $options: "i" };
+    if (!dpr) {
+      return res.status(404).json({
+        success: false,
+        message: "DPR not found",
+      });
     }
 
-    if (search) {
-      query.$or = [
-        { projectName: { $regex: search, $options: "i" } },
-        { workDoneToday: { $regex: search, $options: "i" } },
-        { siteInchargeName: { $regex: search, $options: "i" } },
-        { issuesFaced: { $regex: search, $options: "i" } }
-      ];
-    }
-
-    if (fromDate || toDate) {
-      query.reportDate = {};
-
-      if (fromDate) {
-        query.reportDate.$gte = new Date(fromDate);
-      }
-
-      if (toDate) {
-        query.reportDate.$lte = new Date(toDate);
-      }
-    }
-
-    const reports = await DailyProgressReport.find(query).sort({
-      reportDate: -1
-    });
+    await dpr.deleteOne();
 
     return res.status(200).json({
       success: true,
-      total: reports.length,
-      reports
+      message: "DPR deleted successfully",
     });
   } catch (error) {
-    console.log("Filter DPR Error:", error);
+    console.error(error);
+
     return res.status(500).json({
       success: false,
-      message: "Server error while filtering DPR",
-      error: error.message
+      message: "Failed to delete DPR",
     });
   }
 };
 
-// Get Monthly Dpr
-exports.getMonthlyContractorReport = async (req, res) => {
+
+exports.verifyDPR = async (req, res) => {
   try {
-    const { projectId, contractorRef, month, year } = req.query;
+    const dpr = await DailyProgressReport.findById(req.params.id);
 
-    const startDate = new Date(year, month - 1, 1);
-
-    const endDate = new Date(year, month, 0, 23, 59, 59);
-
-    const reports = await DailyProgressReport.find({
-      projectId,
-      contractorRef,
-      reportDate: {
-        $gte: startDate,
-        $lte: endDate,
-      },
-    });
-
-    let totalAmount = 0;
-    let totalQty = 0;
-
-    const boqSummary = {};
-
-    reports.forEach((report) => {
-      report.workItems.forEach((item) => {
-        totalAmount += Number(item.amount || 0);
-        totalQty += Number(item.todayQty || 0);
-
-        const key =
-          item.generalName || item.description || "Unknown Item";
-
-        if (!boqSummary[key]) {
-          boqSummary[key] = {
-            generalName: item.generalName,
-            description: item.description,
-            uom: item.uom,
-            totalQty: 0,
-            totalAmount: 0,
-          };
-        }
-
-        boqSummary[key].totalQty += Number(item.todayQty || 0);
-        boqSummary[key].totalAmount += Number(item.amount || 0);
+    if (!dpr) {
+      return res.status(404).json({
+        success: false,
+        message: "DPR not found",
       });
-    });
+    }
+
+    dpr.status = "VERIFIED";
+    dpr.verifiedBy = req.user?._id || null;
+    dpr.verifiedAt = new Date();
+    dpr.rejectionReason = "";
+
+    await dpr.save();
 
     return res.status(200).json({
       success: true,
-      totalDPR: reports.length,
-      totalQty,
-      totalAmount,
-      boqSummary: Object.values(boqSummary),
+      message: "DPR verified successfully",
+      dpr,
     });
   } catch (error) {
-    console.log("Monthly Contractor Report Error:", error);
-
+    console.error("Verify DPR Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to generate contractor report",
+      message: "Failed to verify DPR",
       error: error.message,
     });
   }
 };
 
-// Monthly Project Report
-exports.getMonthlyProjectReport = async (req, res) => {
+exports.rejectDPR = async (req, res) => {
   try {
-    const { projectId, month, year } = req.query;
+    const { rejectionReason } = req.body;
 
-    const startDate = new Date(year, month - 1, 1);
+    const dpr = await DailyProgressReport.findById(req.params.id);
 
-    const endDate = new Date(year, month, 0, 23, 59, 59);
-
-    const reports = await DailyProgressReport.find({
-      projectId,
-      reportDate: {
-        $gte: startDate,
-        $lte: endDate,
-      },
-    });
-
-    let totalAmount = 0;
-    let totalQty = 0;
-    let totalManpower = 0;
-
-    reports.forEach((report) => {
-      totalManpower += Number(report.manpowerCount || 0);
-
-      report.workItems.forEach((item) => {
-        totalQty += Number(item.todayQty || 0);
-        totalAmount += Number(item.amount || 0);
+    if (!dpr) {
+      return res.status(404).json({
+        success: false,
+        message: "DPR not found",
       });
-    });
+    }
+
+    dpr.status = "REJECTED";
+    dpr.rejectionReason = rejectionReason || "Rejected";
+    dpr.verifiedBy = req.user?._id || null;
+    dpr.verifiedAt = new Date();
+
+    await dpr.save();
 
     return res.status(200).json({
       success: true,
-      totalDPR: reports.length,
-      totalQty,
-      totalAmount,
-      totalManpower,
-      reports,
+      message: "DPR rejected successfully",
+      dpr,
     });
   } catch (error) {
-    console.log("Monthly Project Report Error:", error);
-
+    console.error("Reject DPR Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to generate project report",
+      message: "Failed to reject DPR",
       error: error.message,
     });
   }
 };
-
-

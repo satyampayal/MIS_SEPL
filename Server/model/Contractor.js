@@ -6,6 +6,14 @@ const contractorSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      index: true,
+    },
+
+    contractorCode: {
+      type: String,
+      trim: true,
+      default: "",
+      index: true,
     },
 
     contactPerson: {
@@ -32,19 +40,39 @@ const contractorSchema = new mongoose.Schema(
       default: "",
     },
 
+    panNumber: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     address: {
       type: String,
       trim: true,
       default: "",
     },
 
+    workTypes: {
+      type: [String],
+      default: [],
+    },
+
     status: {
       type: String,
-      enum: ["ACTIVE", "INACTIVE"],
+      enum: ["ACTIVE", "INACTIVE", "BLACKLISTED"],
       default: "ACTIVE",
+      index: true,
+    },
+
+    remarks: {
+      type: String,
+      default: "",
+      trim: true,
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Contractor", contractorSchema);
+module.exports =
+  mongoose.models.Contractor ||
+  mongoose.model("Contractor", contractorSchema);

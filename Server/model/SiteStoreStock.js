@@ -40,7 +40,6 @@ const siteStoreStockSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
     consumedQty: {
       type: Number,
       default: 0,
@@ -98,7 +97,7 @@ siteStoreStockSchema.pre("save", function (next) {
     Number(this.currentStock || 0) - Number(this.reservedStock || 0);
 
   this.stockValue =
-    Number(this.currentStock || 0) * Number(this.averageRate || 0);
+    Number(this.currentStock || 0) * Number(this.averageRate || 0); 
 
   if (this.currentStock < 0) {
     this.stockStatus = "NEGATIVE_STOCK";

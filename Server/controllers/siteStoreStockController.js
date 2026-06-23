@@ -37,9 +37,48 @@ exports.getSiteLiveStock = async (req, res) => {
       });
     }
 
+    const summary = stocks.reduce(
+  (acc, stock) => {
+    const rate = Number(stock.averageRate || 0);
+    const currentQty = Number(stock.currentStock || 0);
+    const consumedQty = Number(stock.consumedQty || 0);
+    const returnedQty = Number(stock.returnedQty || 0);
+    const damagedQty = Number(stock.damagedQty || 0);
+
+    const currentStockValue = currentQty * rate;
+    const consumedValue = consumedQty * rate;
+    const returnedValue = returnedQty * rate;
+    const damagedValue = damagedQty * rate;
+
+    const grossInvestedValue =
+      currentStockValue + consumedValue + returnedValue + damagedValue;
+
+    const netInvestedValue =
+      currentStockValue + consumedValue + damagedValue;
+
+    acc.currentStockValue += currentStockValue;
+    acc.consumedValue += consumedValue;
+    acc.returnedValue += returnedValue;
+    acc.damagedValue += damagedValue;
+    acc.grossInvestedValue += grossInvestedValue;
+    acc.netInvestedValue += netInvestedValue;
+
+    return acc;
+  },
+  {
+    currentStockValue: 0,
+    consumedValue: 0,
+    returnedValue: 0,
+    damagedValue: 0,
+    grossInvestedValue: 0,
+    netInvestedValue: 0,
+  }
+);
+
     return res.status(200).json({
       success: true,
       count: stocks.length,
+      summary,
       data: stocks,
     });
   } catch (error) {
@@ -483,10 +522,11 @@ exports.bulkSiteOpeningStockUpload = async (req, res) => {
           });
 
         if (stock) {
-          stock.currentStock += currentStock;
-          stock.consumedQty += consumedQty;
-          stock.returnedQty += returnedQty;
-          stock.damagedQty += damagedQty;
+          stock.currentStock = +currentStock;
+          stock.consumedQty = +consumedQty;
+          stock.returnedQty = +returnedQty;
+          stock.damagedQty = +damagedQty;
+       
 
           stock.averageRate =
             Number(

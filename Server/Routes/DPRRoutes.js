@@ -4,48 +4,64 @@ const dprRouter = express.Router();
 const {
   createDPR,
   getAllDPR,
-  getParticularDPR,
-  getDPRByProjectId,
+  getSingleDPR,
+  // getDPRByProjectId,
   updateDPR,
   deleteDPR,
-  filterDPR,
-  getMonthlyContractorReport,
-  getMonthlyProjectReport,
+  verifyDPR,
+  rejectDPR,
+  // filterDPR,
+  // getMonthlyContractorReport,
+  // getMonthlyProjectReport,
 } = require("../controllers/DPRController");
+const {isAuthenticated}= require('../middleware/auth.midlleware')
 
 const upload = require("../config/multer");
 
 // Create DPR
-dprRouter.post("/create", upload.array("photos", 10), createDPR);
+// dprRouter.post("/create", upload.array("photos", 10), createDPR);
 
-// Get all DPR
+dprRouter.post("/create", createDPR);
+
 dprRouter.get("/all", getAllDPR);
 
-// Filter DPR
-dprRouter.get("/filter", filterDPR);
+dprRouter.get("/:id", getSingleDPR);
 
-// Get particular DPR
-dprRouter.get("/particular/:dprId", getParticularDPR);
+dprRouter.put("/:id", updateDPR);
 
-// Get DPR by project id
-dprRouter.get("/project/:projectId", getDPRByProjectId);
+dprRouter.delete("/:id", deleteDPR);
 
-// Update DPR
-dprRouter.put("/update/:dprId", upload.array("photos", 10), updateDPR);
+dprRouter.put("/:id/verify", verifyDPR);
+dprRouter.put("/:id/reject", rejectDPR);
 
-// Delete DPR
-dprRouter.delete("/delete/:dprId", deleteDPR);
+// // Get all DPR
+// dprRouter.get("/all", getAllDPR);
 
-// Monthly contractor payment report
-dprRouter.get(
-  "/monthly-contractor-report",
-  getMonthlyContractorReport
-);
+// // Filter DPR
+// dprRouter.get("/filter", filterDPR);
 
-// Monthly project progress report
-dprRouter.get(
-  "/monthly-project-report",
-  getMonthlyProjectReport
-);
+// // Get particular DPR
+// dprRouter.get("/particular/:dprId", getParticularDPR);
+
+// // Get DPR by project id
+// dprRouter.get("/project/:projectId", getDPRByProjectId);
+
+// // Update DPR
+// dprRouter.put("/update/:dprId", upload.array("photos", 10), updateDPR);
+
+// // Delete DPR
+// dprRouter.delete("/delete/:dprId", deleteDPR);
+
+// // Monthly contractor payment report
+// dprRouter.get(
+//   "/monthly-contractor-report",
+//   getMonthlyContractorReport
+// );
+
+// // Monthly project progress report
+// dprRouter.get(
+//   "/monthly-project-report",
+//   getMonthlyProjectReport
+// );
 
 module.exports = dprRouter;

@@ -202,32 +202,62 @@ export default function SiteStoreLiveStockPage() {
     }, [search, siteFilter, statusFilter, categoryFilter, itemsPerPage]);
 
     const stats = useMemo(() => {
-        const totalValue = filteredStocks.reduce(
-            (sum, s) => sum + Number(s.stockValue || 0),
-            0
-        );
+        const formatValue = (qty, rate) =>
+            Number(qty || 0) * Number(rate || 0);
 
-        return {
-            totalItems: filteredStocks.length,
-            totalValue,
-            consumedQty: filteredStocks.reduce(
-                (sum, s) => sum + Number(s.consumedQty || 0),
-                0
-            ),
-            returnedQty: filteredStocks.reduce(
-                (sum, s) => sum + Number(s.returnedQty || 0),
-                0
-            ),
-            damagedQty: filteredStocks.reduce(
-                (sum, s) => sum + Number(s.damagedQty || 0),
-                0
-            ),
-            lowStock: filteredStocks.filter((s) => s.stockStatus === "LOW_STOCK")
-                .length,
-            negative: filteredStocks.filter((s) => s.stockStatus === "NEGATIVE_STOCK")
-                .length,
-        };
+        return filteredStocks.reduce(
+            (acc, s) => {
+                const rate = Number(s.averageRate || 0);
+
+                const currentValue = formatValue(s.currentStock, rate);
+                const consumedValue = formatValue(s.consumedQty, rate);
+                const returnedValue = formatValue(s.returnedQty, rate);
+                const damagedValue = formatValue(s.damagedQty, rate);
+
+                acc.totalItems += 1;
+
+                acc.currentStockValue += currentValue;
+                acc.consumedValue += consumedValue;
+                acc.returnedValue += returnedValue;
+                acc.damagedValue += damagedValue;
+
+                // Business main value
+                acc.netInvestedValue += currentValue + consumedValue + damagedValue;
+
+                // Only for reference
+                acc.grossMaterialValue +=
+                    currentValue + consumedValue + returnedValue + damagedValue;
+
+                acc.consumedQty += Number(s.consumedQty || 0);
+                acc.returnedQty += Number(s.returnedQty || 0);
+                acc.damagedQty += Number(s.damagedQty || 0);
+
+                if (s.stockStatus === "LOW_STOCK") acc.lowStock += 1;
+                if (s.stockStatus === "NEGATIVE_STOCK") acc.negative += 1;
+
+                return acc;
+            },
+            {
+                totalItems: 0,
+                currentStockValue: 0,
+                consumedValue: 0,
+                returnedValue: 0,
+                damagedValue: 0,
+                netInvestedValue: 0,
+                grossMaterialValue: 0,
+                consumedQty: 0,
+                returnedQty: 0,
+                damagedQty: 0,
+                lowStock: 0,
+                negative: 0,
+            }
+        );
     }, [filteredStocks]);
+
+    const formatMoney = (value) =>
+        `₹${Number(value || 0).toLocaleString("en-IN", {
+            maximumFractionDigits: 0,
+        })}`;
 
     const statusClass = (status) => {
         switch (status) {
@@ -338,8 +368,11 @@ export default function SiteStoreLiveStockPage() {
                 "Category ": item?.itemRef?.category || "",
                 "HSN Code ": item?.itemRef?.hsnCode || "",
                 "UNIT ": item?.itemRef?.unit || "",
-                "Available Stock": item?.availableStock || 0,
+                "Total Received ": item?.returnedQty + item?.currentStock + item?.consumedQty + item?.damagedQty || "",
                 "Consumed Qty": item?.consumedQty || 0,
+                "Return Qty": item?.returnedQty || 0,
+                "Damaged Qty": item?.damagedQty || 0,
+
                 "Current Stock": item?.currentStock || 0,
 
                 //   "Created At": proj?.createdAt
@@ -372,19 +405,25 @@ export default function SiteStoreLiveStockPage() {
     };
     //   console.log(filteredStocks);
 
-    const StatCard = ({ title, value, icon: Icon, tone }) => (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg shadow-slate-950/30">
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm text-slate-400">{title}</p>
-                    <h2 className={`mt-2 text-1xl font-bold ${tone}`}>{value}</h2>
-                </div>
-                <div className="rounded-2xl bg-slate-800 p-3">
-                    <Icon size={16} className={tone} />
-                </div>
-            </div>
-        </div>
-    );
+  const StatCard = ({ title, value, icon: Icon, tone }) => (
+  <div className="group rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-5 shadow-lg shadow-slate-950/40 transition hover:-translate-y-1 hover:border-cyan-500/30 hover:shadow-cyan-950/20">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {title}
+        </p>
+
+        <h2 className={`mt-3 text-xl font-black ${tone}`}>
+          {value}
+        </h2>
+      </div>
+
+      <div className="rounded-2xl border border-slate-700 bg-slate-800/80 p-3 transition group-hover:scale-110">
+        <Icon size={18} className={tone} />
+      </div>
+    </div>
+  </div>
+);
 
 
 
@@ -429,44 +468,56 @@ export default function SiteStoreLiveStockPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-7">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-4">
+                    <StatCard
+                        title="Net Site Investment"
+                        value={formatMoney(stats.netInvestedValue)}
+                        icon={IndianRupee}
+                        tone="text-emerald-300"
+                    />
+
+                    <StatCard
+                        title="Current Stock Value"
+                        value={formatMoney(stats.currentStockValue)}
+                        icon={PackageCheck}
+                        tone="text-cyan-300"
+                    />
+
+                    <StatCard
+                        title="Consumed Value"
+                        value={formatMoney(stats.consumedValue)}
+                        icon={Hammer}
+                        tone="text-blue-300"
+                    />
+
+                    <StatCard
+                        title="Damaged Loss"
+                        value={formatMoney(stats.damagedValue)}
+                        icon={ShieldAlert}
+                        tone="text-red-300"
+                    />
+
+                    <StatCard
+                        title="Returned Value"
+                        value={formatMoney(stats.returnedValue)}
+                        icon={RotateCcw}
+                        tone="text-purple-300"
+                    />
+
                     <StatCard
                         title="Site Items"
                         value={stats.totalItems}
                         icon={Boxes}
                         tone="text-white"
                     />
-                    <StatCard
-                        title="Stock Value"
-                        value={`${stats.totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
-                        icon={IndianRupee}
-                        tone="text-cyan-300"
 
-                    />
-                    <StatCard
-                        title="Consumed"
-                        value={stats.consumedQty}
-                        icon={Hammer}
-                        tone="text-blue-300"
-                    />
-                    <StatCard
-                        title="Returned"
-                        value={stats.returnedQty}
-                        icon={RotateCcw}
-                        tone="text-purple-300"
-                    />
-                    <StatCard
-                        title="Damaged"
-                        value={stats.damagedQty}
-                        icon={ShieldAlert}
-                        tone="text-red-300"
-                    />
                     <StatCard
                         title="Low Stock"
                         value={stats.lowStock}
                         icon={AlertTriangle}
                         tone="text-amber-300"
                     />
+
                     <StatCard
                         title="Negative"
                         value={stats.negative}

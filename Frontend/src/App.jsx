@@ -11,6 +11,10 @@ import SuperAdminDashboard from "./pages/Dashboard/SuperAdminDashboard";
 import MaterialRequisitionPage from "./pages/MaterialRequisition/MaterialRequisitionPage";
 import MaterialPlanPage from "./pages/MaterialRequisition/MaterialPlanPage";
 import ProcurementPlanPage from "./pages/ProcurementPlan/ProcurementPlanPage";
+import MeasurementBookPage from "./pages/MeasurementBook/MeasurementBookPage";
+import ContractorPage from "./pages/Contractor/ContractorPage";
+import BOQManagementPage from "./pages/BOQ/BOQManagementPage";
+import DPRManagementPage from "./pages/DPR/DPRManagementPage";
 
 // Lazy loaded pages
 const MultiItemExcelEntryUI = lazy(() => import("./MultipleItemExcelEntryUI"));
@@ -52,8 +56,8 @@ const DailyProgressReportPage = lazy(() =>
 
 const UserManagementPage = lazy(() => import("./User/UserManagementPage"));
 
-const BOQManagementPage = lazy(() => import("./boq/BOQManagementPage"));
-const BOQDetailPage = lazy(() => import("./boq/BOQDetailPage"));
+// const BOQManagementPage = lazy(() => import("/BOQManagementPage"));
+const BOQDetailPage = lazy(() => import("./pages/BOQ/BOQDetailPage"));
 
 const PartyListPage = lazy(() => import("./Party/PartyListPage"));
 
@@ -372,7 +376,7 @@ function App() {
           />
 
           {/* DPR */}
-          <Route
+          {/* <Route
             path="/dpr"
             element={
               <ProtectedRoute
@@ -381,7 +385,7 @@ function App() {
                 <DailyProgressReportPage />
               </ProtectedRoute>
             }
-          />
+          /> */}
 
           {/* Projects */}
           <Route
@@ -482,23 +486,23 @@ function App() {
           />
 
           {/* BOQ */}
-          <Route
+          {/* <Route
             path="/project/:projectId/boq"
             element={
               <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
                 <BOQManagementPage />
               </ProtectedRoute>
             }
-          />
+          /> */}
 
-          <Route
+          {/* <Route
             path="/boq/:boqId"
             element={
               <ProtectedRoute allowedRoles={["Super Admin", "Admin"]}>
                 <BOQDetailPage />
               </ProtectedRoute>
             }
-          />
+          /> */}
 
           {/* Project Material Planning */}
           <Route
@@ -565,6 +569,54 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* MB */}
+          <Route
+            path="/measurement-book"
+            element={
+              <ProtectedRoute>
+                <MeasurementBookPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* BOQ */}
+          <Route
+            path="/boq"
+            element={
+              <ProtectedRoute>
+                <BOQManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/boq/:id"
+            element={
+              <ProtectedRoute>
+                <BOQDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* COntractor */}
+
+          <Route
+            path="/contractor"
+            element={
+              <ProtectedRoute>
+                <ContractorPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* DPR */}
+             <Route
+            path="/dpr"
+            element={
+              <ProtectedRoute
+              allowedRoles={["Super Admin", "Admin", "Manager"]}
+              >
+                <DPRManagementPage />
+              </ProtectedRoute>
+            }
+          />
+
 
         </Route>
       </Routes>
