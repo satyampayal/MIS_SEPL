@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
-const MeasurementBookEntry = require("../model/measurementBookEntry");
+const MeasurementBookEntry = require("../model/MeasurementBookEntry");
 const BOQItem = require("../model/boqItem");
-const Contractor = require("../model/contractor");
+const Contractor = require("../model/Contractor");
 
 
 exports.createMBEntry = async (req, res) => {
