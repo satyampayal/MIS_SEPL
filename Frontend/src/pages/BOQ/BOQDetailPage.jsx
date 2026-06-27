@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
 import axios from "axios";
 import {
     Upload,
@@ -10,12 +11,15 @@ import {
     Eye,
     Pencil,
     Trash2,
+    BarChart3,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import UploadBOQExcelModal from "../BOQ/components/UploadBOQExcelModal";
 import AddBOQItemModal from "../BOQ/components/AddBOQItemModal";
 
 import BASE_URL from '../../../config/api';
+import BOQDailyPlanModal from "./components/BOQDailyPlanModal";
+import TargetRecoveryPlanModal from "./components/TargetRecoveryPlanModal";
 
 const authHeader = () => ({
     headers: {
@@ -31,6 +35,7 @@ const formatAmount = (value) => {
 
 export default function BOQDetailPage() {
     const { id } = useParams();
+    const navigate = useNavigate();
     //   console.log(id)
     const emptyItemForm = {
         boqItemCode: "",
@@ -60,6 +65,9 @@ export default function BOQDetailPage() {
 
     const [search, setSearch] = useState("");
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+    const [dailyPlanModalOpen, setDailyPlanModalOpen] = useState(false);
+    const [recoveryPlanOpen, setRecoveryPlanOpen] = useState(false);
     //  console.log(BASE_URL)
     const fetchBOQDetails = async () => {
         try {
@@ -232,6 +240,77 @@ export default function BOQDetailPage() {
             (sum, item) => sum + Number(item.contractorInstallationAmount || 0),
             0
         ),
+        workValue: filteredItems.reduce(
+            (sum, item) => sum + Number(item.completedQty * item.installationRate || 0),
+            0
+        ),
+    };
+
+    const exportBOQDetailExcel = () => {
+        try {
+            if (!filteredItems.length) {
+                return toast.error("No BOQ items available to export");
+            }
+
+            const exportRows = filteredItems.map((item, index) => {
+                const poQty = Number(item.poQty || 0);
+                const completedQty = Number(item.completedQty || 0);
+                const balanceQty = Number(item.balanceQty ?? poQty - completedQty);
+                const progress = poQty > 0 ? ((completedQty / poQty) * 100).toFixed(2) : 0;
+
+                return {
+                    "Sr No": index + 1,
+                    "BOQ Code": item.boqItemCode || "",
+                    "BOQ Sr.NO.": item.boqSrNo || "",
+                    // "General Name": item.generalName || "",
+                    "Description": item.description || "",
+                    "UOM": item.uom || "",
+                    "PO Qty": poQty,
+                    "Completed Qty": completedQty,
+                    "Balance Qty": balanceQty,
+                    "Progress %": Number(progress),
+                    "Supply Rate": Number(item.supplyRate || 0),
+                    "Supply Amount": Number(item.supplyAmount || 0),
+                    "Installation Rate": Number(item.installationRate || 0),
+                    "Installation Amount": Number(item.installationAmount || 0),
+                    "Contractor Rate": Number(item.contractorInstallationRate || 0),
+                    "Contractor Amount": Number(item.contractorInstallationAmount || 0),
+                    "Remarks": item.remarks || "",
+                };
+            });
+
+            const summaryRows = [
+                ["BOQ Name", boq?.boqName || boq?.title || "BOQ"],
+                ["Project", boq?.projectRef?.name || boq?.projectName || "-"],
+                ["Contractor", boq?.contractorRef?.contractorName || boq?.contractorName || "-"],
+                ["Total Items", stats.totalItems],
+                ["Total PO Qty", stats.totalPoQty],
+                ["Completed Qty", stats.completedQty],
+                ["Balance Qty", stats.balanceQty],
+                ["Supply Amount", stats.supplyAmount],
+                ["Installation Amount", stats.installationAmount],
+                ["Company BOQ Amount", stats.supplyAmount + stats.installationAmount],
+                ["Contractor Amount", stats.contractorAmount],
+                ["Installation Done Amount", stats.workValue],
+            ];
+
+            const wb = XLSX.utils.book_new();
+
+            const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+            const itemSheet = XLSX.utils.json_to_sheet(exportRows);
+
+            XLSX.utils.book_append_sheet(wb, summarySheet, "BOQ Summary");
+            XLSX.utils.book_append_sheet(wb, itemSheet, "BOQ Items");
+
+            const fileName = `${boq?.boqName || "BOQ"}_Detail_Report.xlsx`
+                .replace(/[\\/:*?"<>|]/g, "_");
+
+            XLSX.writeFile(wb, fileName);
+
+            toast.success("BOQ detail exported successfully");
+        } catch (error) {
+            toast.error("Failed to export BOQ detail");
+        }
     };
 
     return (
@@ -283,10 +362,33 @@ export default function BOQDetailPage() {
                             <Plus size={17} />
                             Add Item
                         </button>
+                        <button
+                            onClick={() => navigate(`/boq-analytics`)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 text-purple-300 border border-purple-500/30 hover:bg-purple-500/20"
+                        >
+                            <BarChart3 size={17} />
+                            Analytics
+                        </button>
 
-                        <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">
+                        <button
+                            onClick={() => setDailyPlanModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20"
+                        >
+                            Today Plan
+                        </button>
+                        <button
+                            onClick={() => setRecoveryPlanOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 text-rose-300 border border-rose-500/30 hover:bg-rose-500/20"
+                        >
+                            Target Recovery
+                        </button>
+
+                        <button
+                            onClick={exportBOQDetailExcel}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700"
+                        >
                             <Download size={17} />
-                            Export
+                            Export Excel
                         </button>
 
                         <button
@@ -321,6 +423,11 @@ export default function BOQDetailPage() {
                     title="Contractor Amount"
                     value={`₹ ${formatAmount(stats.contractorAmount)}`}
                 />
+                <StatCard
+                    title="Installation Done Amount"
+                    value={`₹ ${formatAmount(stats.workValue)}`}
+                />
+
             </div>
 
             {/* Search */}
@@ -402,7 +509,7 @@ export default function BOQDetailPage() {
                                         </td>
 
                                         <td className="px-4 py-3 text-right">
-                                            {item.poQty || 0}
+                                            {formatAmount(item.poQty) || 0}
                                         </td>
 
                                         <td className="px-4 py-3 text-right">
@@ -426,7 +533,7 @@ export default function BOQDetailPage() {
                                         </td>
 
                                         <td className="px-4 py-3 text-right text-amber-300">
-                                            {item.balanceQty || 0}
+                                            {formatAmount(item.balanceQty) || 0}
                                         </td>
 
                                         <td className="px-4 py-3 text-right text-purple-300">
@@ -488,6 +595,22 @@ export default function BOQDetailPage() {
                     mode={itemMode}
                 />
             )}
+
+            {dailyPlanModalOpen && (
+                <BOQDailyPlanModal
+                    boq={boq}
+                    items={filteredItems}
+                    onClose={() => setDailyPlanModalOpen(false)}
+                />
+            )}
+
+            {recoveryPlanOpen && (
+                <TargetRecoveryPlanModal
+                    boq={boq}
+                    items={filteredItems}
+                    onClose={() => setRecoveryPlanOpen(false)}
+                />
+            )}
         </div>
     );
 }
@@ -497,9 +620,9 @@ function StatCard({ title, value }) {
         <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-4">
             <p className="text-sm text-slate-400">{title}</p>
             <h3 className="text-xl font-bold text-white mt-2">
-               {/* {Number(value || 0).toFixed(2)} */}
-               {value}
-                </h3>
+                {/* {Number(value || 0).toFixed(2)} */}
+                {value}
+            </h3>
         </div>
     );
 }

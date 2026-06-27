@@ -15,6 +15,7 @@ import MeasurementBookPage from "./pages/MeasurementBook/MeasurementBookPage";
 import ContractorPage from "./pages/Contractor/ContractorPage";
 import BOQManagementPage from "./pages/BOQ/BOQManagementPage";
 import DPRManagementPage from "./pages/DPR/DPRManagementPage";
+import BOQAnalyticsPage from "./pages/BOQ/BOQAnalyticsPage";
 
 // Lazy loaded pages
 const MultiItemExcelEntryUI = lazy(() => import("./MultipleItemExcelEntryUI"));
@@ -592,6 +593,17 @@ function App() {
             element={
               <ProtectedRoute>
                 <BOQDetailPage />
+              </ProtectedRoute>
+            }
+          />
+            {/* BOQ ANALYTICS */}
+             <Route
+            path="/boq-analytics"
+            element={
+              <ProtectedRoute
+              allowedRoles={["Super Admin", "Admin", "Manager"]}
+              >
+                <BOQAnalyticsPage />
               </ProtectedRoute>
             }
           />

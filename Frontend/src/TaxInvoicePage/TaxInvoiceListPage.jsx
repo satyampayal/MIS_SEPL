@@ -575,7 +575,7 @@ export default function TaxInvoiceListPage() {
                     {canManageInvoices && <Th>Amount</Th> }
                     <Th>Project Site</Th>
                     <Th>Delivery Status</Th>
-                    <Th>Approved Challan Status</Th>
+                    <Th>Verify Challan Status</Th>
                     <th className="p-4 text-center text-slate-300 font-semibold">
                       Actions
                     </th>

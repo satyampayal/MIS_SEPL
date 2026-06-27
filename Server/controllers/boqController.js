@@ -92,7 +92,7 @@ exports.getAllBOQByProject = async (req, res) => {
         const { projectId } = req.params;
 
         const boqs = await BOQMaster.find({ projectRef: projectId })
-            .populate("projectRef", "projectName name siteName clientName")
+            .populate("projectRef", "projectName name siteName clientName complitionDate")
             .populate("contractorRef", "contractorName mobile")
             .sort({ createdAt: -1 });
 
@@ -117,7 +117,7 @@ exports.getAllBOQ = async (req, res) => {
         // const { projectId } = req.params;
 
         const boqs = await BOQMaster.find({})
-            .populate("projectRef", "projectName name siteName clientName")
+            .populate("projectRef", "projectName name siteName clientName complitionDate")
             .populate("contractorRef", "contractorName mobile")
             .sort({ createdAt: -1 });
 
@@ -148,7 +148,7 @@ exports.getSingleBOQ = async (req, res) => {
         }
 
         const boq = await BOQMaster.findById(boqId)
-            .populate("projectRef", "projectName name siteName clientName")
+            .populate("projectRef", "projectName name siteName clientName complitionDate")
             .populate("contractorRef", "contractorName mobile");
 
         if (!boq) {

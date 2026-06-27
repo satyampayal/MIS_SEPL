@@ -491,7 +491,7 @@ export default function ProjectSpendingSurveillancePage() {
                           <Th>Project</Th>
                           {/* <Th>Qty Sent</Th>
                           <Th>Qty Received</Th> */}
-                          <Th>Approval Cha. Status</Th>
+                          <Th>Verify Cha. Status</Th>
                           <Th>Amount</Th>
                         </tr>
                       </thead>

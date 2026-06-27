@@ -33,6 +33,8 @@ const ProcuremnetPlanRouter=require('./Routes/procurementPlanRoutes')
 const measurementBookRouter = require("./Routes/measurementBookRouter");
 const contractorRouter = require("./Routes/contractorRouter");
 
+const boqDailyPlanRouter = require("./Routes/boqDailyPlanRouter");
+
 
 
 // alllow  other Port use server Resources
@@ -82,6 +84,8 @@ app.use('/dpr',dprRouter);
 app.use('/boq',boqRouter);
 //MB 
 app.use("/measurement-book", measurementBookRouter);
+// BOQ Daily Plan
+app.use("/boq-daily-plan", boqDailyPlanRouter);
 // Item Identity Routes
 app.use("/item-identity", ItemIdentityRouter);
 

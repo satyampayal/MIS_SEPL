@@ -31,6 +31,7 @@ exports.getAllStockTransactions = async (req, res) => {
       query.$or = [
         { referenceNumber: { $regex: search, $options: "i" } },
         { remarks: { $regex: search, $options: "i" } },
+        { itemName: { $regex: search, $options: "i" } },
       ];
     }
 

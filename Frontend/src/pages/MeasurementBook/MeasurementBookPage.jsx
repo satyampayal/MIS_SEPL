@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import BASE_URL from "../../../config/api";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import FillFromDailyPlanModal from "./components/FillFromDailyPlanModal";
 
 const MB_API = `${BASE_URL}/measurement-book`;
 const PROJECT_API = `${BASE_URL}/project-master/all`;
@@ -45,6 +46,9 @@ export default function MeasurementBookPage() {
 
     const [modalMode, setModalMode] = useState("create");
     const [selectedEntry, setSelectedEntry] = useState(null);
+
+    const [fillPlanModalOpen, setFillPlanModalOpen] = useState(false);
+    const [dailyPlanCopiedItems, setDailyPlanCopiedItems] = useState([]);
 
     const fetchProjects = async () => {
         const res = await axios.get(PROJECT_API);
@@ -201,6 +205,60 @@ export default function MeasurementBookPage() {
             }
         };
         */
+
+
+        //  Fill MB FROM DAILY PLAN
+    const handleFillFromDailyPlan = (payload) => {
+        setForm((prev) => ({
+            ...prev,
+            projectRef: payload.items?.[0]?.projectRef || prev.projectRef,
+            measurementDate: payload.measurementDate || prev.measurementDate,
+            executedByType: "SEPL",
+        }));
+
+        const mappedItems = payload.items.map((item) => ({
+            boqItemRef: item.boqItemRef,
+            todayQty: item.todayQty,
+            location: item.location || "",
+            floor: item.floor || "",
+            area: item.area || "",
+            remarks: item.remarks || "",
+        }));
+
+        setSelectedItems(mappedItems);
+        setDailyPlanCopiedItems(payload.items);
+    };
+      //  Fill MB FROM DAILY PLAN
+
+    const markDailyPlanItemsCopied = async (mbRef) => {
+        try {
+            if (!dailyPlanCopiedItems.length) return;
+
+            const groupedByPlan = dailyPlanCopiedItems.reduce((acc, item) => {
+                if (!acc[item.planId]) acc[item.planId] = [];
+                acc[item.planId].push(item.planItemId);
+                return acc;
+            }, {});
+
+            await Promise.all(
+                Object.entries(groupedByPlan).map(([planId, itemIds]) =>
+                    axios.put(
+                        `${BASE_URL}/boq-daily-plan/${planId}/mark-copied-to-mb`,
+                        {
+                            itemIds,
+                            mbRef,
+                        },
+                        authHeader()
+                    )
+                )
+            );
+
+            setDailyPlanCopiedItems([]);
+        } catch (error) {
+            toast.error("MB saved, but daily plan copy status not updated");
+        }
+    };
+
     const saveMBEntry = async () => {
         try {
             if (!form.projectRef) return toast.error("Select project");
@@ -279,6 +337,7 @@ export default function MeasurementBookPage() {
             setSaving(false);
         }
     };
+    
     const submitEntry = async (id) => {
         try {
             await axios.put(`${MB_API}/submit/${id}`);
@@ -592,6 +651,10 @@ export default function MeasurementBookPage() {
     };
 
 
+
+
+
+
     useEffect(() => {
         fetchProjects();
         fetchContractors();
@@ -625,7 +688,7 @@ export default function MeasurementBookPage() {
         <div className="min-h-screen bg-slate-950 p-6 text-white">
             <h1 className="text-2xl font-bold">Measurement Book</h1>
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-5">
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-6">
                 <select
                     value={projectRef}
                     onChange={(e) => setProjectRef(e.target.value)}
@@ -664,6 +727,12 @@ export default function MeasurementBookPage() {
                     Create MB Entry
                 </button>
                 <button
+                    onClick={() => setFillPlanModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20"
+                >
+                    Fill From Daily Plan
+                </button>
+                <button
                     onClick={exportMBExcel}
                     className="rounded-xl bg-indigo-500 px-5 py-3 font-semibold text-white"
                 >
@@ -676,7 +745,7 @@ export default function MeasurementBookPage() {
                 <StatCard title="Pending" value={stats.pending} />
                 <StatCard title="Approved" value={stats.approved} />
                 <StatCard title="Rejected" value={stats.rejected} />
-                <StatCard title="SEPL Qty" value={stats.seplQty} />
+                <StatCard title="SEPL Qty" value={stats.seplQty.toLocaleString("en-IN")} />
                 <StatCard
                     title="SEPL Amount"
                     value={`₹${stats.seplAmount.toLocaleString("en-IN")}`}
@@ -885,6 +954,14 @@ export default function MeasurementBookPage() {
                     mode={modalMode}
                 />
             )}
+
+            {fillPlanModalOpen && (
+                <FillFromDailyPlanModal
+                    projectRef={projectRef}
+                    onClose={() => setFillPlanModalOpen(false)}
+                    onFillMB={handleFillFromDailyPlan}
+                />
+            )}
         </div>
     );
 }
@@ -906,8 +983,8 @@ function CreateMBModal({
 
     const selectedItems = Array.isArray(form.items) ? form.items : [];
     const update = (e) => {
-        if(isView) return;
-        
+        if (isView) return;
+
         const { name, value } = e.target;
 
         setForm((prev) => ({
@@ -1161,8 +1238,8 @@ function CreateMBModal({
                                                     {row.activity || row.generalName || row.description || "-"}
                                                 </p>
                                                 <p className="text-xs text-slate-400">
-                                                    BOQ: {row.poQty.toLocaleString("en-IN",{ maximumFractionDigits: 2})} {row.uom} | Done: {row.completedQty.toLocaleString("en-IN",{ maximumFractionDigits: 2}) || 0} | Bal:{" "}
-                                                    {row.balanceQty.toLocaleString("en-IN",{ maximumFractionDigits: 2}) || 0}
+                                                    BOQ: {row.poQty.toLocaleString("en-IN", { maximumFractionDigits: 2 })} {row.uom} | Done: {row.completedQty.toLocaleString("en-IN", { maximumFractionDigits: 2 }) || 0} | Bal:{" "}
+                                                    {row.balanceQty.toLocaleString("en-IN", { maximumFractionDigits: 2 }) || 0}
                                                 </p>
                                             </div>
 
@@ -1192,14 +1269,14 @@ function CreateMBModal({
                                             <div className="md:col-span-2">
                                                 <p className="text-xs text-slate-500">Rate</p>
                                                 <p className="font-semibold text-amber-300">
-                                                    ₹{rate.toLocaleString("en-IN",{ maximumFractionDigits: 2})}
+                                                    ₹{rate.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                                                 </p>
                                             </div>
 
                                             <div className="md:col-span-2">
                                                 <p className="text-xs text-slate-500">Amount</p>
                                                 <p className="font-semibold text-emerald-300">
-                                                    ₹{amount.toLocaleString("en-IN",{ maximumFractionDigits: 2})}
+                                                    ₹{amount.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                                                 </p>
                                             </div>
 
@@ -1209,7 +1286,7 @@ function CreateMBModal({
                                                     className={`font-semibold ${balanceAfter < 0 ? "text-red-300" : "text-white"
                                                         }`}
                                                 >
-                                                    {balanceAfter.toLocaleString("en-IN",{ maximumFractionDigits: 2})}
+                                                    {balanceAfter.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                                                 </p>
                                             </div>
 
@@ -1286,17 +1363,17 @@ function CreateMBModal({
 
                                 <PreviewBox
                                     label="Total After"
-                                    value={`${afterTotal.toLocaleString("en-IN",{ maximumFractionDigits: 2})} || 0} ${selectedBoq.uom}`}
+                                    value={`${afterTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })} || 0} ${selectedBoq.uom}`}
                                 />
 
                                 <PreviewBox
                                     label="Balance After"
-                                    value={`${afterBalance.toLocaleString("en-IN",{ maximumFractionDigits: 2})} || 0} ${selectedBoq.uom}`}
+                                    value={`${afterBalance.toLocaleString("en-IN", { maximumFractionDigits: 2 })} || 0} ${selectedBoq.uom}`}
                                 />
 
                                 <PreviewBox
                                     label="Amount"
-                                    value={`₹${amount.toLocaleString("en-IN",{ maximumFractionDigits: 2})}`}
+                                    value={`₹${amount.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`}
                                 />
                             </div>
 
@@ -1349,13 +1426,13 @@ function CreateMBModal({
                                 Contractor Rate: ₹
                                 {Number(
                                     selectedBoq.contractorInstallationRate || 0
-                                ).toLocaleString("en-IN",{ maximumFractionDigits: 2})}
+                                ).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                             </p>
                             <p className="mt-1 text-sm text-slate-400">
                                 Installtion Rate: ₹
                                 {Number(
                                     selectedBoq.installationRate || 0
-                                ).toLocaleString("en-IN",{ maximumFractionDigits: 2})}
+                                ).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                             </p>
                         </div>
                     )}
@@ -1391,6 +1468,7 @@ function CreateMBModal({
                     )}
                 </div>
             </div>
+
         </div>
     );
 }
