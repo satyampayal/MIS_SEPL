@@ -198,15 +198,21 @@ export default function MainLayout() {
       roles: ["MIS User", "Store Manager", "Accountant"],
     },
     {
-      title: "Material Analytics",
+      title: "Measurement  Book",
       icon: Warehouse,
-      path: "/material-movement/analytics",
+      path: "/measurement-book",
       roles: ["Store Manager", "MIS User"],
     },
     {
-      title: "Reports",
+      title: "BOQ",
       icon: BarChart3,
-      path: "/reports/material-analytics",
+      path: "/boq",
+      roles: ["Super Admin", "Admin"],
+    },
+      {
+      title: "DPR",
+      icon: BarChart3,
+      path: "/dpr",
       roles: ["Super Admin", "Admin"],
     },
   ];
