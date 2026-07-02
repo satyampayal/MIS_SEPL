@@ -353,7 +353,7 @@ export default function SiteStoreLiveStockPage() {
 
     const openViewModal = (stock) => fillStockForm(stock, "view");
     const openEditModal = (stock) => fillStockForm(stock, "edit");
-
+console.log(filteredStocks)
     // Export Repected Stock of Site
     const handleExportSiteStock = () => {
         try {
@@ -362,7 +362,7 @@ export default function SiteStoreLiveStockPage() {
 
             const exportData = filteredStocks.map((item, index) => ({
                 "S.No": index + 1,
-
+                "Site ":    item?.siteRef?.name || item?.siteRef?.projectName  || "",
                 "Item Name": item?.itemRef?.itemName || "",
                 "Item Code": item?.itemRef?.itemCode || "",
                 "Category ": item?.itemRef?.category || "",

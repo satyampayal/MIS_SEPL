@@ -284,21 +284,35 @@ export default function MainStoreLiveStockPage() {
             (sum, s) => sum + Number(s.stockValue || 0),
             0
         );
+        const availableStockValue=filteredStocks.reduce(
+            (sum,s)=>sum + Number(s.availableStock)*Number(s.averageRate),
+            0
+        );
+          const reserveStockValue=filteredStocks.reduce(
+            (sum,s)=>sum + Number(s.reservedStock)*Number(s.averageRate),
+            0
+        );
 
         const reservedQty = filteredStocks.reduce(
             (sum, s) => sum + Number(s.reservedStock || 0),
             0
         );
+        
 
         return {
             totalItems: filteredStocks.length,
             totalValue,
+            availableStockValue,
+            reserveStockValue,
+
             reservedQty,
+
             lowStock: filteredStocks.filter((s) => s.stockStatus === "LOW_STOCK").length,
             outStock: filteredStocks.filter((s) => s.stockStatus === "OUT_OF_STOCK").length,
             negative: filteredStocks.filter((s) => s.stockStatus === "NEGATIVE_STOCK").length,
         };
     }, [filteredStocks]);
+    console.log(filteredStocks)
 
     const totalPages = Math.max(1, Math.ceil(filteredStocks.length / itemsPerPage));
 
@@ -443,14 +457,27 @@ export default function MainStoreLiveStockPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-7">
                     <StatCard
                         title="Total Items"
                         value={stats.totalItems}
                         icon={Boxes}
                         tone="text-white"
                     />
-                    <StatCard
+                       <StatCard
+                        title="Reserve Stock Value"
+                        value={`₹${stats.reserveStockValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
+                        icon={IndianRupee}
+                        tone="text-cyan-300"
+                    />
+                 
+                      <StatCard
+                        title="Availble Stock Value"
+                        value={`₹${stats.availableStockValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
+                        icon={IndianRupee}
+                        tone="text-cyan-300"
+                    />
+                       <StatCard
                         title="Stock Value"
                         value={`₹${stats.totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
                         icon={IndianRupee}
@@ -476,13 +503,13 @@ export default function MainStoreLiveStockPage() {
                         icon={PackageCheck}
                         tone="text-slate-300"
                     />
-                    <StatCard
+                    {/* <StatCard
                         title="Negative"
                         value={stats.negative}
                         icon={AlertTriangle}
                         tone="text-red-300"
 
-                    />
+                    /> */}
                 </div>
 
                 <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">

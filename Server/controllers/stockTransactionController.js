@@ -1,5 +1,5 @@
 const StockTransaction = require("../model/StockTransaction");
-
+const ItemIdentity= require('../model/ItemIdentity')
 exports.getAllStockTransactions = async (req, res) => {
   try {
     const {
@@ -27,14 +27,20 @@ exports.getAllStockTransactions = async (req, res) => {
       if (toDate) query.createdAt.$lte = new Date(toDate);
     }
 
-    if (search) {
-      query.$or = [
-        { referenceNumber: { $regex: search, $options: "i" } },
-        { remarks: { $regex: search, $options: "i" } },
-        { itemName: { $regex: search, $options: "i" } },
-      ];
-    }
+   if (search) {
+  const items = await ItemIdentity.find({
+    $or: [
+      { itemName: { $regex: search, $options: "i" } },
+      { itemCode: { $regex: search, $options: "i" } },
+    ],
+  }).select("_id");
 
+  query.$or = [
+    { referenceNumber: { $regex: search, $options: "i" } },
+    { remarks: { $regex: search, $options: "i" } },
+    { itemRef: { $in: items.map((i) => i._id) } },
+  ];
+}
     const transactions = await StockTransaction.find(query)
       .populate("itemRef", "itemName itemCode unit")
       .populate("mainStoreRef", "storeName storeCode")

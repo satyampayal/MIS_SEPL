@@ -95,6 +95,14 @@ export default function StockTransactionPage() {
     fetchTransactions();
   };
 
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    fetchTransactions();
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [filters.search]);
+
   const resetFilters = () => {
     setFilters({
       search: "",
@@ -230,7 +238,7 @@ export default function StockTransactionPage() {
               name="search"
               value={filters.search}
               onChange={handleChange}
-              placeholder="Search reference / remarks"
+              placeholder="Search Item Name, Item Code, Challan No..."
               className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2 pl-10 pr-3 outline-none focus:border-blue-500"
             />
           </div>

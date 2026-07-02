@@ -89,21 +89,21 @@ export default function ChallanApprovalPage() {
 
   const stats = useMemo(() => {
     return {
-      pending: challans.length,
-      totalItems: challans.reduce(
+      pending: filteredChallans.length,
+      totalItems: filteredChallans.reduce(
         (sum, c) => sum + Number(c.items?.length || 0),
         0
       ),
-      totalQty: challans.reduce(
+      totalQty: filteredChallans.reduce(
         (sum, c) => sum + Number(c.totalQuantity || 0),
         0
       ),
-      totalValue: challans.reduce(
+      totalValue: filteredChallans.reduce(
         (sum, c) => sum + Number(c.totalAmount || 0),
         0
       ),
     };
-  }, [challans]);
+  }, [filteredChallans]);
 
   const approveChallan = async (id) => {
     if (!window.confirm("Approve this challan and update stock?")) return;
