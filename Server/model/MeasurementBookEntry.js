@@ -83,7 +83,16 @@ const measurementBookEntrySchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-
+    manPowerCount: {// new add filed on 10oct 2026
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    teamName: {// new add filed on 10oct 2026
+      type: String,
+      default: "",
+      trim: true,
+    },
     location: {
       type: String,
       default: "",
@@ -173,7 +182,7 @@ measurementBookEntrySchema.pre("save", function () {
     }
   }
 
-//   next();
+  //   next();
 });
 
 measurementBookEntrySchema.index({

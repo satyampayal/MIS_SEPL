@@ -17,8 +17,8 @@ const emptyForm = {
     measurementDate: new Date().toISOString().slice(0, 10),
     executedByType: "SEPL",
     // todayQty: "",
-
-
+    teamName: "",
+    manPowerCount:0,
     location: "",
     floor: "",
     area: "",
@@ -207,7 +207,7 @@ export default function MeasurementBookPage() {
         */
 
 
-        //  Fill MB FROM DAILY PLAN
+    //  Fill MB FROM DAILY PLAN
     const handleFillFromDailyPlan = (payload) => {
         setForm((prev) => ({
             ...prev,
@@ -223,12 +223,14 @@ export default function MeasurementBookPage() {
             floor: item.floor || "",
             area: item.area || "",
             remarks: item.remarks || "",
+            teamName: item.teamName || "",
+            manPowerCount: item.manPowerCount || 0,
         }));
 
         setSelectedItems(mappedItems);
         setDailyPlanCopiedItems(payload.items);
     };
-      //  Fill MB FROM DAILY PLAN
+    //  Fill MB FROM DAILY PLAN
 
     const markDailyPlanItemsCopied = async (mbRef) => {
         try {
@@ -293,6 +295,8 @@ export default function MeasurementBookPage() {
                     area: form.area,
 
                     remarks: form.remarks,
+                    teamName: form.teamName,
+                    manPowerCount: form.manPowerCount,
                 });
 
                 toast.success("MB updated");
@@ -302,6 +306,8 @@ export default function MeasurementBookPage() {
                         boqItemRef: item.boqItemRef,
                         todayQty: Number(item.todayQty || 0),
                         remarks: item.remarks || "",
+                        teamName: item.teamName || "",
+                        manPowerCount: item.manPowerCount || 0,
                     }))
                     .filter((item) => item.boqItemRef && item.todayQty > 0);
 
@@ -318,6 +324,8 @@ export default function MeasurementBookPage() {
                     location: form.location,
                     floor: form.floor,
                     area: form.area,
+                    manPowerCount: form.manPowerCount,
+                    teamName: form.teamName,
                     remarks: form.remarks,
                     items: validItems,
                 });
@@ -337,7 +345,7 @@ export default function MeasurementBookPage() {
             setSaving(false);
         }
     };
-    
+
     const submitEntry = async (id) => {
         try {
             await axios.put(`${MB_API}/submit/${id}`);
@@ -389,6 +397,8 @@ export default function MeasurementBookPage() {
             floor: entry.floor || "",
             area: entry.area || "",
             remarks: entry.remarks || "",
+            teamName: entry.teamName || "",
+            manPowerCount: entry.manPowerCount || 0,
 
             items: [
                 {
@@ -426,6 +436,8 @@ export default function MeasurementBookPage() {
             entry.boqItemRef?.boqSrNo,
             entry.executedByType,
             entry.approvalStatus,
+            entry.manPowerCount,
+            entry.teamName,
             entry.location,
             entry.floor,
             entry.area,
@@ -471,6 +483,8 @@ export default function MeasurementBookPage() {
             "Balance Qty": e.balanceQty || 0,
             Rate: e.rate || 0,
             Amount: e.amount || 0,
+            "Team Name": e.teamName || "",
+            "Man Power Count": e.manPowerCount || 0,
             Location: e.location || "",
             Floor: e.floor || "",
             Area: e.area || "",
@@ -576,6 +590,8 @@ export default function MeasurementBookPage() {
                 : "",
             executedByType: entry.executedByType || "SEPL",
 
+            teamName: entry.teamName || "",
+            manPowerCount: entry.manPowerCount || 0,
             location: entry.location || "",
             floor: entry.floor || "",
             area: entry.area || "",
@@ -621,6 +637,8 @@ export default function MeasurementBookPage() {
                 : "",
             executedByType: entry.executedByType || "SEPL",
 
+            manPowerCount: entry.manPowerCount || 0,
+            teamName: entry.teamName || "",
             location: entry.location || "",
             floor: entry.floor || "",
             area: entry.area || "",
@@ -772,6 +790,8 @@ export default function MeasurementBookPage() {
                             <th className="p-4 text-left">Date</th>
                             <th className="p-4 text-left">BOQ Item</th>
                             <th className="p-4 text-left">Executed By</th>
+                            <th className="p-4 text-left">Team Name</th>
+                            <th className="p-4 text-left">Man Power Count</th>
                             <th className="p-4 text-left">Today Qty</th>
                             <th className="p-4 text-left">Amount</th>
                             <th className="p-4 text-left">Status</th>
@@ -812,6 +832,8 @@ export default function MeasurementBookPage() {
                                     </td>
 
                                     <td className="p-4">{entry.executedByType}</td>
+                                    <td className="p-4">{entry.teamName}</td>
+                                    <td className="p-4">{entry.manPowerCount}</td>
 
                                     <td className="p-4">{entry.todayQty}</td>
 
@@ -1030,6 +1052,8 @@ function CreateMBModal({
                         balanceQty: item.balanceQty || 0,
                         installationRate: item.installationRate || 0,
                         contractorInstallationRate: item.contractorInstallationRate || 0,
+                        manPowerCount: item.manPowerCount ||0,
+                        teamName: item.teamName || "",
                         todayQty: "",
                         remarks: "",
                     },
@@ -1040,7 +1064,7 @@ function CreateMBModal({
 
     const selectedBoq = boqItems.find((b) => b._id === form.boqItemRef);
     const todayQty = Number(form.todayQty || 0);
-    console.log(form.items)
+    // console.log(form.items)
     // console.log(selectedBoq)
 
     const rate =
@@ -1391,6 +1415,19 @@ function CreateMBModal({
                         </div>
                     )}
 
+                    <FieldInput
+                        label="Team Name"
+                        name="teamName"
+                        value={form.teamName}
+                        onChange={update}
+                    />
+                    <FieldInput
+                        label="Man Power Count"
+                        name="manPowerCount"
+                        type="Number"
+                        value={form.manPowerCount}
+                        onChange={update}
+                    />
                     <FieldInput
                         label="Location"
                         name="location"

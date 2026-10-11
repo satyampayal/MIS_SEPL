@@ -81,6 +81,8 @@ export default function FillFromDailyPlanModal({
           description: item.description || "",
           uom: item.uom || "",
           todayQty: Number(item.doneQty || 0),
+          teamName:item?.teamName|| "",
+          manPowerCount:item?.manPowerCount||0,
           location: "",
           floor: "",
           area: "",
@@ -195,6 +197,8 @@ export default function FillFromDailyPlanModal({
                           <th className="px-4 py-3 text-left">Select</th>
                           <th className="px-4 py-3 text-left">Item</th>
                           <th className="px-4 py-3 text-right">Done Qty</th>
+                          <th className="px-4 py-3 text-right">Team Name</th>
+                          <th className="px-4 py-3 text-right">Man Power Count</th>
                           <th className="px-4 py-3 text-left">Location</th>
                           <th className="px-4 py-3 text-left">Floor</th>
                           <th className="px-4 py-3 text-left">Area</th>
@@ -234,6 +238,14 @@ export default function FillFromDailyPlanModal({
 
                               <td className="px-4 py-3 text-right text-emerald-300">
                                 {formatAmount(item.doneQty)}
+                              </td >
+                              <td className="px-4 py-3 text-right text-emerald-300">
+                                {item?.teamName || "-"}
+
+                              </td>
+
+                              <td className="px-4 py-3 text-right">
+                                {formatAmount(item.manPowerCount)}
                               </td>
 
                               <td className="px-4 py-3">

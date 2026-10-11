@@ -16,6 +16,8 @@ exports.createMBEntry = async (req, res) => {
             contractorRef,
             measurementDate,
             executedByType,
+            teamName,
+            manPowerCount,
             todayQty,
             location,
             floor,
@@ -69,8 +71,8 @@ exports.createMBEntry = async (req, res) => {
             executedByType === "CONTRACTOR"
                 ? Number(boqItem.contractorInstallationRate || 0)
                 : Number(boqItem?.installationRate || 0);
-                console.log(rate)
-                console.log( Number(boqItem?.installationRate || 0))
+                // console.log(rate)
+                // console.log( Number(boqItem?.installationRate || 0))
         const entry = await MeasurementBookEntry.create(
             [
                 {
@@ -88,6 +90,9 @@ exports.createMBEntry = async (req, res) => {
                     uom: boqItem.uom || "",
                     rate:rate,
                     amount: qty * rate,
+
+                    manpowerCount:manPowerCount ||0,
+                    teamName:teamName ||"",
 
                     location: location || "",
                     floor: floor || "",
@@ -136,12 +141,15 @@ exports.createBulkMBEntries = async (req, res) => {
       contractorRef,
       measurementDate,
       executedByType,
+      teamName,
+      manPowerCount,
       location,
       floor,
       area,
       remarks,
       items = [],
     } = req.body;
+    console.log("Received bulk MB entries:", req.body);
 
     if (!projectRef || !measurementDate || !executedByType) {
       return res.status(400).json({
@@ -210,6 +218,10 @@ exports.createBulkMBEntries = async (req, res) => {
             rate,
             amount: qty * rate,
 
+            manPowerCount: manPowerCount || 0,
+            teamName: teamName || "",
+
+
             location: location || "",
             floor: floor || "",
             area: area || "",
@@ -266,6 +278,8 @@ exports.getMBEntries = async (req, res) => {
             executedByType,
             fromDate,
             toDate,
+            manPowerCount,
+            teamName,
         } = req.query;
 
         const filter = {};
@@ -275,14 +289,17 @@ exports.getMBEntries = async (req, res) => {
         if (boqItemRef) filter.boqItemRef = boqItemRef;
         if (approvalStatus) filter.approvalStatus = approvalStatus;
         if (executedByType) filter.executedByType = executedByType;
+        if (manPowerCount) filter.manPowerCount = manPowerCount;
+        if (teamName) filter.teamName = teamName;
 
         if (fromDate || toDate) {
-            filter.measurementDate = {};
+
             if (fromDate) filter.measurementDate.$gte = new Date(fromDate);
             if (toDate) filter.measurementDate.$lte = new Date(toDate);
         }
 
         const entries = await MeasurementBookEntry.find(filter)
+        .populate("manPowerCount", "teamName")
             .populate("projectRef", "projectName name")
             .populate("contractorRef", "contractorName mobile")
             .populate(

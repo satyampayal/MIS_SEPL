@@ -312,7 +312,7 @@ export default function MainStoreLiveStockPage() {
             negative: filteredStocks.filter((s) => s.stockStatus === "NEGATIVE_STOCK").length,
         };
     }, [filteredStocks]);
-    console.log(filteredStocks)
+    // console.log(filteredStocks)
 
     const totalPages = Math.max(1, Math.ceil(filteredStocks.length / itemsPerPage));
 
@@ -1147,7 +1147,7 @@ function OpeningStockModal({
                             {item?.category || "-"}
                           </p>
                            <p className="mt-2 text-xs  text-cyan-300">
-                           Avl: {item?.availableStock || "0"}
+                           {/* Avl: {item.availableStock} */}
                           </p>
                         </div>
 
