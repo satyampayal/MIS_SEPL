@@ -35,6 +35,7 @@ const contractorRouter = require("./Routes/contractorRouter");
 
 const boqDailyPlanRouter = require("./Routes/boqDailyPlanRouter");
 
+const workPlanRouter = require("./Routes/workPlanRoutes");
 
 
 // alllow  other Port use server Resources
@@ -107,6 +108,8 @@ app.use("/procurement-plan", ProcuremnetPlanRouter);
 // All ANalytics
 app.use("/analytics", analyticalRouter);
 app.use("/head-store", headStoreItemRoutes);
+// Work Plan Routes
+app.use('/work-plans',workPlanRouter);
 app.get("/", (req, res) => {
   res.send("Server Running...");
 });

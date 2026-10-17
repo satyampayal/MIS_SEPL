@@ -40,6 +40,7 @@ export default function BOQDetailPage() {
     category: "",
     subCategory: "",
     remarks: "",
+    storeItemCode:[],
   });
 
   const fetchBOQDetails = async () => {
@@ -79,6 +80,7 @@ export default function BOQDetailPage() {
       category: "",
       subCategory: "",
       remarks: "",
+      storeItemCode: [],
     });
     setSelectedItem(null);
     setMode("add");
@@ -106,6 +108,7 @@ export default function BOQDetailPage() {
       category: item.category || "",
       subCategory: item.subCategory || "",
       remarks: item.remarks || "",
+      storeItemCode: Array.isArray(item.storeItemCode) ? item.storeItemCode : [],
     });
 
     setShowItemModal(true);
@@ -317,6 +320,7 @@ export default function BOQDetailPage() {
               <tr>
                 <th className="p-3 text-left">Sr</th>
                 <th className="p-3 text-left">General Name</th>
+                <th className="p-3 text-left">Store Item Code</th>
                 <th className="p-3 text-left">Original Description</th>
                 <th className="p-3 text-left">UOM</th>
                 <th className="p-3 text-right">Qty</th>
@@ -347,6 +351,9 @@ export default function BOQDetailPage() {
 
                     <td className="p-3 font-medium text-slate-800">
                       {item.generalName || "-"}
+                    </td>
+                    <td className="p-3">
+                      {Array.isArray(item.storeItemCode) ? item.storeItemCode.join(", ") : item.storeItemCode || "-"}
                     </td>
 
                     <td className="p-3 max-w-md">
@@ -442,6 +449,14 @@ export default function BOQDetailPage() {
                 value={formData.generalName}
                 onChange={(e) =>
                   setFormData({ ...formData, generalName: e.target.value })
+                }
+                className="border rounded-xl px-3 py-2 md:col-span-2"
+              />
+                <input
+                placeholder="Store Item Code"
+                value={formData.storeItemCode.join(", ")}
+                onChange={(e) =>
+                  setFormData({ ...formData, storeItemCode: e.target.value.split(", ").map((s) => s.trim()) })
                 }
                 className="border rounded-xl px-3 py-2 md:col-span-2"
               />

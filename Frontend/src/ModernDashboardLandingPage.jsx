@@ -349,7 +349,7 @@ export default function ModernDashboardLandingPage() {
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="bg-white border-b shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-6 items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 py- flex flex-wrap gap-6 items-center justify-between">
           <div className="flex items-center gap-8">
             <div className="text-xl font-bold text-blue-600">
               Sachin Electrical Pvt. Ltd.

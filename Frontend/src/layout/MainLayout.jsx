@@ -167,7 +167,8 @@ export default function MainLayout() {
       icon: PackageSearch,
       path: "/project-material-planning",
       roles: ["Super Admin", "Admin", "Manager", "MIS"],
-    },{
+    },
+    {
        
              title: "MRQ",
             icon: ClipboardList,
@@ -175,6 +176,12 @@ export default function MainLayout() {
             // actionType: "materialMovementHistory",
           // roles: ["Store Manager", "MIS User"],   
           
+    },
+    {
+      title:"Planned Work",
+      icon:FileText,
+      path:"/work-plan-update",
+      roles:["Supper Admin","Admin","Project Manager","MIS User"]
     }
   ];
 
@@ -210,10 +217,10 @@ export default function MainLayout() {
       roles: ["Super Admin", "Admin"],
     },
       {
-      title: "DPR",
+      title: "Work Plan",
       icon: BarChart3,
-      path: "/dpr",
-      roles: ["Super Admin", "Admin"],
+      path:"/work-plan",
+      roles:["Supper Admin","Admin","Project Manager","MIS User"]
     },
   ];
 
@@ -383,7 +390,7 @@ const refreshTasks = async () => {
   }, [menuOpen]);
 
   return (
-    <div className="min-h-screen bg-[#07111f] text-white relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#07111f] text-white relative overflow-x-hidden ">
       <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-500/20 blur-[130px] rounded-full" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-fuchsia-500/20 blur-[130px] rounded-full" />
 
@@ -407,7 +414,7 @@ const refreshTasks = async () => {
 
               <div>
                 <h1 className="text-xl font-black bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                  Sachin Electrical MIS
+                  MIS Portal 
                 </h1>
                 <p className="text-xs text-slate-400">
                   Operational Control Center

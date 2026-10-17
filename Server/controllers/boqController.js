@@ -1,18 +1,19 @@
 const BOQMaster = require("../model/boqMaster");
 const BOQItem = require("../model/boqItem");
+const ItemIdentity= require('../model/ItemIdentity');
 const XLSX = require("xlsx");
 const mongoose = require("mongoose");
 const toNumber = (value) => {
-     if (
-    value === undefined ||
-    value === null ||
-    value === "" ||
-    value === "NA" ||
-    value === "N/A" ||
-    value === "-"
-  ) {
-    return 0;
-  }
+    if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        value === "NA" ||
+        value === "N/A" ||
+        value === "-"
+    ) {
+        return 0;
+    }
 
     const cleaned = String(value)
         .replace(/,/g, "")
@@ -42,6 +43,21 @@ const buildKeywords = (row) => {
         .filter((w) => w.length > 2);
 };
 
+const normalizeStoreItemCodes = (value) => {
+    const values = Array.isArray(value)
+        ? value
+        : typeof value === "string"
+            ? value.split(",")
+            : [];
+
+    return [
+        ...new Set(
+            values
+                .map((code) => String(code ?? "").trim())
+                .filter(Boolean)
+        ),
+    ];
+};
 // CREATE BOQ MASTER
 exports.createBOQ = async (req, res) => {
     try {
@@ -137,6 +153,55 @@ exports.getAllBOQ = async (req, res) => {
 };
 
 // GET SINGLE BOQ WITH ITEMS
+// exports.getSingleBOQ = async (req, res) => {
+//     try {
+//         const { boqId } = req.params;
+//         if (!boqId || boqId === "undefined" || !mongoose.Types.ObjectId.isValid(boqId)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid BOQ ID",
+//             });
+//         }
+
+//         const boq = await BOQMaster.findById(boqId)
+//             .populate("projectRef", "projectName name siteName clientName complitionDate")
+//             .populate("contractorRef", "contractorName mobile");
+
+//         if (!boq) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "BOQ not found",
+//             });
+//         }
+
+//         const items = await BOQItem.find({ boqRef: boqId }).sort({
+//             sourceRowNumber: 1,
+//             createdAt: 1,
+//         });
+
+
+
+
+//         // if(items?.storeItemCode?.length>0){
+//         //     const itemIdentities = await ItemIdentity.find({ storeItemCode: { $in: items.map(item => item.storeItemCode) } });
+//         // }
+
+//         return res.status(200).json({
+//             success: true,
+//             boq,
+//             items,
+//         });
+//     } catch (error) {
+//         console.error("Get Single BOQ Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to fetch BOQ details",
+//             error: error.message,
+//         });
+//     }
+// };
+
+
 exports.getSingleBOQ = async (req, res) => {
     try {
         const { boqId } = req.params;
@@ -158,15 +223,41 @@ exports.getSingleBOQ = async (req, res) => {
             });
         }
 
-        const items = await BOQItem.find({ boqRef: boqId }).sort({
+        // 1. Fetch the BOQ items
+        const rawItems = await BOQItem.find({ boqRef: boqId }).sort({
             sourceRowNumber: 1,
             createdAt: 1,
         });
 
+        // 2. Map through each item to match its specific storeItemCode array with Item Identities
+        const itemsWithIdentities = [];
+
+        for (const item of rawItems) {
+            // Convert Mongoose document to a plain JavaScript object so we can add custom fields
+            const itemObj = item.toObject(); 
+            
+            // Check if the current item has a valid, non-empty storeItemCode array
+            if (Array.isArray(itemObj.storeItemCode) && itemObj.storeItemCode.length > 0) {
+                // Find only the identities that belong to THIS specific item's code array
+                const identities = await ItemIdentity.find({
+                    itemCode: { $in: itemObj.storeItemCode } // Change "itemCode" to your exact schema field name if different
+                });
+                
+                // Attach the array of matching identities directly into this item
+                itemObj.itemIdentityDetails = identities;
+            } else {
+                // Fallback to an empty array if no codes exist for this item
+                itemObj.itemIdentityDetails = [];
+            }
+
+            itemsWithIdentities.push(itemObj);
+        }
+
+        // 3. Send the modified items array back in the response
         return res.status(200).json({
             success: true,
             boq,
-            items,
+            items: itemsWithIdentities,
         });
     } catch (error) {
         console.error("Get Single BOQ Error:", error);
@@ -176,8 +267,7 @@ exports.getSingleBOQ = async (req, res) => {
             error: error.message,
         });
     }
-};
-
+}
 // DELETE BOQ + ITS ITEMS
 exports.deleteBOQ = async (req, res) => {
     try {
@@ -245,6 +335,7 @@ exports.addBOQItem = async (req, res) => {
             category,
             subCategory,
             aliases,
+            storeItemCode,// Add Filed New at 11 Oct
         } = req.body;
 
         if (!description && !activity && !generalName) {
@@ -296,6 +387,7 @@ exports.addBOQItem = async (req, res) => {
             subCategory: subCategory || "",
             aliases: Array.isArray(aliases) ? aliases : [],
             remarks: remarks || "",
+            storeItemCode: normalizeStoreItemCodes(storeItemCode)
         };
 
         payload.keywords = buildKeywords(payload);
@@ -356,6 +448,7 @@ exports.updateBOQItem = async (req, res) => {
             subCategory,
             aliases,
             status,
+            storeItemCode// Add Filed New At  Oct
         } = req.body;
 
         if (boqItemCode !== undefined || itemCode !== undefined) {
@@ -403,6 +496,9 @@ exports.updateBOQItem = async (req, res) => {
         item.subCategory = subCategory ?? item.subCategory;
         item.remarks = remarks ?? item.remarks;
         item.status = status ?? item.status;
+        if (storeItemCode !== undefined) {
+            item.storeItemCode = normalizeStoreItemCodes(storeItemCode);
+        }
 
         if (Array.isArray(aliases)) {
             item.aliases = aliases;
@@ -542,6 +638,14 @@ exports.uploadBOQExcelItems = async (req, res) => {
                     row["Contractor Installation Amount"]
                 );
 
+                const storeItemCode = normalizeStoreItemCodes(
+                    row["Store Item Code"] ||
+                    row["Store ItemCode"] ||
+                    row["StoreItemCode"] ||
+                    row["StoreItem Code"] ||
+                    ""
+                );
+
                 if (!installationAmount && poQty && installationRate) {
                     installationAmount = poQty * installationRate;
                 }
@@ -617,14 +721,15 @@ exports.uploadBOQExcelItems = async (req, res) => {
                     aliases: [],
                     sourceRowNumber: index + 2,
                     remarks: cleanText(row["Remarks"] || row["Remark"]),
+                    storeItemCode,
                 };
 
                 payload.keywords = buildKeywords(payload);
 
-                if (!payload.activity && !payload.generalName && !payload.description) {
+                if (!payload.activity && !payload.storeItemCode && !payload.description) {
                     skippedRows.push({
                         rowNumber: index + 2,
-                        reason: "Activity / General Name / Description missing",
+                        reason: "Activity / Store Item Code / Description missing",
                     });
                     return null;
                 }

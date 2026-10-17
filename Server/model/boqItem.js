@@ -59,7 +59,16 @@ const boqItemSchema = new mongoose.Schema(
       default: "",
       index: true,
     },
-
+    
+     storeItemCode: {
+      type: [String],
+      default: []
+    },
+    itemIdentityRef:[{
+      type:mongoose.Schema.Types.ObjectId,
+      ref:"ItemIdentity",
+      default:[],
+    }],
     description: {
       type: String,
       trim: true,

@@ -16,6 +16,8 @@ import ContractorPage from "./pages/Contractor/ContractorPage";
 import BOQManagementPage from "./pages/BOQ/BOQManagementPage";
 import DPRManagementPage from "./pages/DPR/DPRManagementPage";
 import BOQAnalyticsPage from "./pages/BOQ/BOQAnalyticsPage";
+import WorkPlanManagementPage from "./pages/WorkPlan/WorkPlanManagementPage";
+import WorkPlanManagementPageUpdated from "./pages/WorkPlan/WorkPlanManagementPage.updated";
 
 // Lazy loaded pages
 const MultiItemExcelEntryUI = lazy(() => import("./MultipleItemExcelEntryUI"));
@@ -107,7 +109,6 @@ const StockTransactionPage = lazy(() =>
 const LowStockDashboardPage = lazy(() =>
   import("./Store/LowStockDashboardPage")
 );
-
 function PageSkeleton() {
   return (
     <div className="min-h-screen bg-slate-950 p-6 text-slate-100">
@@ -625,6 +626,27 @@ function App() {
               allowedRoles={["Super Admin", "Admin", "Manager"]}
               >
                 <DPRManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Work Plan */}
+              <Route
+            path="/work-plan"
+            element={
+              <ProtectedRoute
+              allowedRoles={["Super Admin", "Admin", "Manager","MIS User"]}
+              >
+                <WorkPlanManagementPage />
+              </ProtectedRoute>
+            }
+          />
+              <Route
+            path="/work-plan-update"
+            element={
+              <ProtectedRoute
+              allowedRoles={["Super Admin", "Admin", "Manager","MIS User"]}
+              >
+                <WorkPlanManagementPageUpdated />
               </ProtectedRoute>
             }
           />
